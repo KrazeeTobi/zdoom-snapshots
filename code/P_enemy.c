@@ -525,7 +525,11 @@ BOOL P_LookForPlayers (mobj_t *actor, BOOL allaround)
 		if (c++ == 2 || actor->lastlook == stop)
 		{
 			// done looking		// [RH] use goal as target
-			return (actor->target = actor->goal) ? true : false;
+			if (!actor->target && actor->goal) {
+				actor->target = actor->goal;
+				return true;
+			}
+			return false;
 		}
 		
 		player = &players[actor->lastlook];
@@ -568,16 +572,19 @@ BOOL P_LookForPlayers (mobj_t *actor, BOOL allaround)
 
 	// Use last known enemy if no players sighted -- killough 2/15/98:
 
-	if (/*smartypants && */ !olddemo)
-		if (actor->lastenemy && actor->lastenemy->health > 0)
-		{
-			actor->target = actor->lastenemy;
-			actor->lastenemy = NULL;
-			return true;
-		}
+	if (actor->lastenemy && actor->lastenemy->health > 0)
+	{
+		actor->target = actor->lastenemy;
+		actor->lastenemy = NULL;
+		return true;
+	}
 
 	// [RH] Use goal as a last resort
-	return (actor->target = actor->goal) ? true : false;
+	if (!actor->target && actor->goal) {
+		actor->target = actor->goal;
+		return true;
+	}
+	return false;
 
 }
 

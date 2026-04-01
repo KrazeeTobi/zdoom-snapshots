@@ -888,7 +888,7 @@ BOOL G_CheckSpot (int playernum, mapthing2_t *mthing)
 {
 	fixed_t 			x;
 	fixed_t 			y;
-	fixed_t				z;
+	fixed_t				z, oldz;
 	subsector_t*		ss;
 	unsigned			an;
 	mobj_t* 			mo;
@@ -910,6 +910,7 @@ BOOL G_CheckSpot (int playernum, mapthing2_t *mthing)
 		return true;
 	}
 
+	oldz = players[playernum].mo->z;	// [RH] Need to save corpse's z-height
 	players[playernum].mo->z = z;	// [RH] Checks are now full 3-D
 
 	// killough 4/2/98: fix bug where P_CheckPosition() uses a non-solid
@@ -922,6 +923,7 @@ BOOL G_CheckSpot (int playernum, mapthing2_t *mthing)
 	players[playernum].mo->flags |=  MF_SOLID;
 	i = P_CheckPosition(players[playernum].mo, x, y);
 	players[playernum].mo->flags &= ~MF_SOLID;
+	players[playernum].mo->z = oldz;	// [RH] Restore corpse's height
 	if (!i)
 		return false;
 
