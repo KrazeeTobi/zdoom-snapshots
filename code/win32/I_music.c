@@ -27,8 +27,7 @@ struct MusInfo {
 	PSTREAMBUF currBuffer;
 	enum {
 		cb_play,
-		cb_die,
-		cb_dead
+		cb_die
 	} callbackStatus;
 	union {
 		MIDASmodulePlayHandle handle;
@@ -46,6 +45,7 @@ static info_t  *currSong;
 static HANDLE	BufferReturnEvent;
 static int		nomusic = 0;
 static char		modName[512];
+static int		musicdies=-1;
 static int		musicvolume;
 static DWORD	midivolume;
 static cvar_t  *snd_mididevice;
@@ -76,7 +76,7 @@ static void ChangeMIDIDevice (cvar_t *var)
 	UINT oldmididev = mididevice;
 
 	if (((int)var->value >= (signed)nummididevices) || (var->value < -1.0f)) {
-		Printf (PRINT_HIGH, "ID out of range. Using MIDI mapper.\n");
+		Printf ("ID out of range. Using MIDI mapper.\n");
 		SetCVarFloat (var, -1.0f);
 		return;
 	} else if (var->value < 0) {
@@ -100,9 +100,9 @@ static void ListMIDIDevices (void *plyr, int argc, char **argv)
 	MMRESULT res;
 
 	if (nummididevices) {
-		Printf (PRINT_HIGH, "-1. MIDI Mapper\n");
+		Printf ("-1. MIDI Mapper\n");
 	} else {
-		Printf (PRINT_HIGH, "No MIDI devices installed.\n");
+		Printf ("No MIDI devices installed.\n");
 		return;
 	}
 
@@ -115,7 +115,7 @@ static void ListMIDIDevices (void *plyr, int argc, char **argv)
 		} else if (res != MMSYSERR_NOERROR) {
 			continue;
 		}
-		Printf (PRINT_HIGH, "% 2d. %s\n", id, caps.szPname);
+		Printf ("% 2d. %s\n", id, caps.szPname);
 	}
 }
 
@@ -123,7 +123,7 @@ void I_InitMusic (void)
 {
 	char *temp;
 
-	Printf (PRINT_HIGH, "I_InitMusic\n");
+	Printf ("I_InitMusic\n");
 	
 	snd_mididevice = cvar ("snd_mididevice", "-1", CVAR_ARCHIVE|CVAR_CALLBACK);
 	snd_mididevice->u.callback = ChangeMIDIDevice;
@@ -135,7 +135,7 @@ void I_InitMusic (void)
 
 	if (!nomusic) {
 		if ((BufferReturnEvent = CreateEvent (NULL, FALSE, FALSE, NULL)) == NULL) {
-			Printf (PRINT_HIGH, "Could not create MIDI callback event.\nMIDI music will be disabled.\n");
+			Printf ("Could not create MIDI callback event.\nMIDI music will be disabled.\n");
 			nomusic = true;
 		}
 	}
@@ -156,7 +156,7 @@ void I_InitMusic (void)
 }
 
 
-void STACK_ARGS I_ShutdownMusic(void)
+void I_ShutdownMusic(void)
 {
 	if (currSong) {
 		I_UnRegisterSong ((int)currSong);
@@ -174,7 +174,7 @@ static void MCIError (MMRESULT res, const char *descr)
 
 	mciGetErrorString (res, errorStr, 255);
 	Printf_Bold ("An error occured while %s:\n", descr);
-	Printf (PRINT_HIGH, "%s\n", errorStr);
+	Printf ("%s\n", errorStr);
 }
 
 static void UnprepareMIDIHeaders (info_t *info)
@@ -210,6 +210,11 @@ static BOOL PrepareMIDIHeaders (info_t *info)
 										&buffer->midiHeader, sizeof(MIDIHDR));
 			if (res != MMSYSERR_NOERROR) {
 				MCIError (res, "preparing headers");
+				Printf ("stream: %08p\n", info->midiStream);
+				Printf ("data: %08p\n", buffer->midiHeader.lpData);
+				Printf ("bufflen: %d\n", buffer->midiHeader.dwBufferLength);
+				Printf ("recorded: %d\n", buffer->midiHeader.dwBytesRecorded);
+				Printf ("sizeof: %d\n", sizeof(MIDIHDR));
 				UnprepareMIDIHeaders (info);
 				return false;
 			} else
@@ -248,15 +253,11 @@ static void AllChannelsOff (info_t *info)
 static void CALLBACK MidiProc (HMIDIIN hMidi, UINT uMsg, info_t *info,
 							  DWORD dwParam1, DWORD dwParam2 )
 {
-	if (info->callbackStatus == cb_dead)
-		return;
-
 	switch (uMsg) {
 		case MOM_DONE:
-			if (info->callbackStatus == cb_die) {
+			if (info->callbackStatus == cb_die)
 				SetEvent (BufferReturnEvent);
-				info->callbackStatus = cb_dead;
-			} else {
+			else {
 				if (info->currBuffer == info->buffers) {
 					// Stop all notes before restarting the song
 					// in case any are left hanging.
@@ -377,7 +378,7 @@ void I_PlaySong (int handle, int _looping)
 			} else {
 				MCIError (res, "opening MIDI stream");
 				if (snd_mididevice->value != -1) {
-					Printf (PRINT_HIGH, "Trying again with MIDI mapper\n");
+					Printf ("Trying again with MIDI mapper\n");
 					SetCVarFloat (snd_mididevice, -1.0f);
 				}
 			}
@@ -442,11 +443,10 @@ void I_StopSong (int handle)
 	switch (info->type) {
 		case TYPE_MUS:
 		case TYPE_MIDI:
+			info->callbackStatus = cb_die;
 			if (info->midiStream) {
-				if (info->callbackStatus != cb_dead)
-					info->callbackStatus = cb_die;
 				midiStreamStop (info->midiStream);
-				WaitForSingleObject (BufferReturnEvent, 5000);
+				WaitForSingleObject (BufferReturnEvent, INFINITE);
 				midiOutReset ((HMIDIOUT)info->midiStream);
 				UnprepareMIDIHeaders (info);
 				midiStreamClose (info->midiStream);
@@ -488,6 +488,7 @@ void I_UnRegisterSong (int handle)
 
 int I_RegisterSong (void *data, int musicLen)
 {
+	int ow = 2;
 	info_t *info;
 
 	if (!(info = malloc (sizeof(info_t))))
@@ -498,16 +499,14 @@ int I_RegisterSong (void *data, int musicLen)
 	if (*(int *)data == (('M')|(('U')<<8)|(('S')<<16)|((0x1a)<<24))) {
 		// This is a mus file
 		info->type = TYPE_MUS;
-		if (!nummididevices
-			|| !(info->buffers = mus2strmConvert ((LPBYTE)data, musicLen))) {
+		if (!(info->buffers = mus2strmConvert ((LPBYTE)data, musicLen))) {
 			free (info);
 			return 0;
 		}
 	} else if (*(int *)data == (('M')|(('T')<<8)|(('h')<<16)|(('d')<<24))) {
 		// This is a midi file
 		info->type = TYPE_MIDI;
-		if (!nummididevices
-			|| !(info->buffers = mid2strmConvert ((LPBYTE)data, musicLen))) {
+		if (!(info->buffers = mid2strmConvert ((LPBYTE)data, musicLen))) {
 			free (info);
 			return 0;
 		}
@@ -515,13 +514,13 @@ int I_RegisterSong (void *data, int musicLen)
 		FILE *f;
 
 		if ((f = fopen (modName, "wb")) == NULL) {
-			Printf (PRINT_HIGH, "Unable to open temporary music file %s\n", modName);
+			Printf ("Unable to open temporary music file %s\n", modName);
 			free (info);
 			return 0;
 		}
 		if (fwrite (data, musicLen, 1, f) != 1) {
 			fclose (f);
-			Printf (PRINT_HIGH, "Unable to write temporary music file\n");
+			Printf ("Unable to write temporary music file\n");
 			free (info);
 			return 0;
 		}
@@ -535,7 +534,7 @@ int I_RegisterSong (void *data, int musicLen)
 			// (or could not load mod)
 			free (info);
 			info = NULL;
-			Printf (PRINT_HIGH, "midas failed to load song:\n%s\n", MIDASgetErrorMessage(MIDASgetLastError()));
+			Printf ("midas failed to load song:\n%s\n", MIDASgetErrorMessage(MIDASgetLastError()));
 		}
 		remove (modName);
 	}

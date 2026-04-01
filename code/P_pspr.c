@@ -43,10 +43,7 @@
 #define RAISESPEED				FRACUNIT*6
 
 #define WEAPONBOTTOM			128*FRACUNIT
-// [RH] +0x6000 helps it meet the screen bottom
-//		at higher resolutions while still being in
-//		the right spot at 320x200.
-#define WEAPONTOP				(32*FRACUNIT+0x6000)
+#define WEAPONTOP				32*FRACUNIT
 
 
 
@@ -108,13 +105,17 @@ void P_CalcSwing (player_t *player)
 	fixed_t 	swing;
 	int 		angle;
 		
+	// OPTIMIZE: tablify this.
+	// A LUT would allow for different modes,
+	//	and add flexibility.
+
 	swing = player->bob;
 
 	angle = (FINEANGLES/(TICRATE*2)*level.time)&FINEMASK;
-	swingx = FixedMul (swing, finesine[angle]);
+	swingx = FixedMul ( swing, finesine[angle]);
 
 	angle = (FINEANGLES/(TICRATE*2)*level.time+FINEANGLES/2)&FINEMASK;
-	swingy = -FixedMul (swingx, finesine[angle]);
+	swingy = -FixedMul ( swingx, finesine[angle]);
 }
 
 
@@ -133,7 +134,7 @@ void P_BringUpWeapon (player_t *player)
 		player->pendingweapon = player->readyweapon;
 				
 	if (player->pendingweapon == wp_chainsaw)
-		S_Sound (player->mo, CHAN_WEAPON, "weapons/sawup", 1, ATTN_NORM);
+		S_StartSound (player->mo, "weapons/sawup", 64);
 				
 	newstate = weaponinfo[player->pendingweapon].upstate;
 
@@ -283,7 +284,7 @@ void A_WeaponReady (player_t *player, pspdef_t *psp)
 	if (player->readyweapon == wp_chainsaw
 		&& psp->state == &states[S_SAW])
 	{
-		S_Sound (player->mo, CHAN_WEAPON, "weapons/sawidle", 1, ATTN_NORM);
+		S_StartSound (player->mo, "weapons/sawidle", 118);
 	}
 	
 	// check for change
@@ -291,7 +292,7 @@ void A_WeaponReady (player_t *player, pspdef_t *psp)
 	if (player->pendingweapon != wp_nochange || !player->health)
 	{
 		// change weapon
-		//	(pending weapon should already be validated)
+		//	(pending weapon should allready be validated)
 		newstate = weaponinfo[player->readyweapon].downstate;
 		P_SetPsprite (player, ps_weapon, newstate);
 		return; 
@@ -329,6 +330,7 @@ void A_WeaponReady (player_t *player, pspdef_t *psp)
 //
 void A_ReFire (player_t *player, pspdef_t *psp)
 {
+	
 	// check for fire
 	//	(if a weaponchange is pending, let it go through instead)
 	if ( (player->cmd.ucmd.buttons & BT_ATTACK) 
@@ -458,7 +460,7 @@ void A_Punch (player_t *player, pspdef_t *psp)
 	// turn to face target
 	if (linetarget)
 	{
-		S_Sound (player->mo, CHAN_WEAPON, "*fist", 1, ATTN_NORM);
+		S_StartSound (player->mo, "*fist", 64);
 		player->mo->angle = R_PointToAngle2 (player->mo->x,
 											 player->mo->y,
 											 linetarget->x,
@@ -474,6 +476,7 @@ void A_Saw (player_t *player, pspdef_t *psp)
 {
 	angle_t 	angle;
 	int 		damage;
+	int 		slope;
 	int			t;
 
 	damage = 2 * (P_Random (pr_saw)%10+1);
@@ -482,15 +485,15 @@ void A_Saw (player_t *player, pspdef_t *psp)
 	angle += (t - P_Random (pr_saw)) << 18;
 	
 	// use meleerange + 1 so the puff doesn't skip the flash
-	P_LineAttack (player->mo, angle, MELEERANGE+1,
-				  P_AimLineAttack (player->mo, angle, MELEERANGE+1), damage);
+	slope = P_AimLineAttack (player->mo, angle, MELEERANGE+1);
+	P_LineAttack (player->mo, angle, MELEERANGE+1, slope, damage);
 
 	if (!linetarget)
 	{
-		S_Sound (player->mo, CHAN_WEAPON, "weapons/sawfull", 1, ATTN_NORM);
+		S_StartSound (player->mo, "weapons/sawfull", 64);
 		return;
 	}
-	S_Sound (player->mo, CHAN_WEAPON, "weapons/sawhit", 1, ATTN_NORM);
+	S_StartSound (player->mo, "weapons/sawhit", 64);
 		
 	// turn to face target
 	angle = R_PointToAngle2 (player->mo->x, player->mo->y,
@@ -560,46 +563,11 @@ void A_FirePlasma (player_t *player, pspdef_t *psp)
 
 	P_SetPsprite (player,
 				  ps_flash,
-				  weaponinfo[player->readyweapon].flashstate+(P_Random (pr_fireplasma)&1));
+				  weaponinfo[player->readyweapon].flashstate+(P_Random (pr_fireplasma)&1) );
 
 	P_SpawnPlayerMissile (player->mo, MT_PLASMA);
 }
 
-
-
-//
-// [RH] A_FireRailgun
-//
-void A_FireRailgun (player_t *player, pspdef_t *psp)
-{
-	int damage;
-
-	if (player->ammo[weaponinfo[player->readyweapon].ammo] < 10) {
-		int ammo = player->ammo[weaponinfo[player->readyweapon].ammo];
-		player->ammo[weaponinfo[player->readyweapon].ammo] = 0;
-		P_CheckAmmo (player);
-		player->ammo[weaponinfo[player->readyweapon].ammo] = ammo;
-		return;
-	}
-
-	if (!(dmflags & DF_INFINITE_AMMO))
-		player->ammo[weaponinfo[player->readyweapon].ammo] -= 10;
-
-	P_SetPsprite (player,
-				  ps_flash,
-				  weaponinfo[player->readyweapon].flashstate+(P_Random (pr_fireplasma)&1));
-
-	if (deathmatch->value)
-		damage = 100;
-	else
-		damage = 150;
-
-	P_RailAttack (player->mo, damage);
-}
-
-void A_RailWait (player_t *player, pspdef_t *psp)
-{
-}
 
 
 //
@@ -670,7 +638,7 @@ void P_GunShot (mobj_t *mo, BOOL accurate)
 //
 void A_FirePistol (player_t *player, pspdef_t *psp)
 {
-	S_Sound (player->mo, CHAN_WEAPON, "weapons/pistol", 1, ATTN_NORM);
+	S_StartSound (player->mo, "weapons/pistol", 64);
 
 	P_SetMobjState (player->mo, S_PLAY_ATK2);
 	if (!(dmflags & DF_INFINITE_AMMO))
@@ -692,7 +660,7 @@ void A_FireShotgun (player_t *player, pspdef_t *psp)
 {
 	int i;
 		
-	S_Sound (player->mo, CHAN_WEAPON,  "weapons/shotgf", 1, ATTN_NORM);
+	S_StartSound (player->mo, "weapons/shotgf", 64);
 	P_SetMobjState (player->mo, S_PLAY_ATK2);
 
 	if (!(dmflags & DF_INFINITE_AMMO))
@@ -721,7 +689,7 @@ void A_FireShotgun2 (player_t *player, pspdef_t *psp)
 	int			t;
 				
 		
-	S_Sound (player->mo, CHAN_WEAPON, "weapons/sshotf", 1, ATTN_NORM);
+	S_StartSound (player->mo, "weapons/sshotf", 64);
 	P_SetMobjState (player->mo, S_PLAY_ATK2);
 
 	if (!(dmflags & DF_INFINITE_AMMO))
@@ -753,7 +721,7 @@ void A_FireShotgun2 (player_t *player, pspdef_t *psp)
 //
 void A_FireCGun (player_t *player, pspdef_t *psp)
 {
-	S_Sound (player->mo, CHAN_WEAPON, "weapons/chngun", 1, ATTN_NORM);
+	S_StartSound (player->mo, "weapons/chngun", 64);
 
 	if (!player->ammo[weaponinfo[player->readyweapon].ammo])
 		return;
@@ -775,6 +743,9 @@ void A_FireCGun (player_t *player, pspdef_t *psp)
 
 
 
+//
+// ?
+//
 void A_Light0 (player_t *player, pspdef_t *psp)
 {
 	player->extralight = 0;
@@ -821,7 +792,8 @@ void A_BFGSpray (mobj_t *mo)
 		P_SpawnMobj (linetarget->x,
 					 linetarget->y,
 					 linetarget->z + (linetarget->height>>2),
-					 MT_EXTRABFG);
+					 MT_EXTRABFG,
+					 0);
 		
 		damage = 0;
 		for (j=0;j<15;j++)
@@ -837,7 +809,7 @@ void A_BFGSpray (mobj_t *mo)
 //
 void A_BFGsound (player_t *player, pspdef_t *psp)
 {
-	S_Sound (player->mo, CHAN_WEAPON, "weapons/bfgf", 1, ATTN_NORM);
+	S_StartSound (player->mo, "weapons/bfgf", 64);
 }
 
 

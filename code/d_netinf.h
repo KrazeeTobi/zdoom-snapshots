@@ -18,7 +18,6 @@ struct userinfo_s {
 	int			color;
 	int			skin;
 	int			gender;
-	BOOL		neverswitch;
 };
 typedef struct userinfo_s userinfo_t;
 

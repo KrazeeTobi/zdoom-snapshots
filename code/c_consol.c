@@ -15,7 +15,6 @@
 #include "i_system.h"
 #include "i_video.h"
 #include "m_swap.h"
-#include "v_palett.h"
 #include "v_video.h"
 #include "v_text.h"
 #include "w_wad.h"
@@ -24,7 +23,6 @@
 #include "r_draw.h"
 #include "st_stuff.h"
 #include "s_sound.h"
-#include "s_sndseq.h"
 
 #include "doomstat.h"
 
@@ -43,7 +41,7 @@ int			ConRows, ConCols, PhysRows;
 char		*Lines, *Last = NULL;
 BOOL		vidactive = false, gotconback = false;
 BOOL		cursoron = false;
-int			SkipRows, ConBottom, ConScroll, RowAdjust;
+int			ShowRows, SkipRows, ConsoleTicker, ConBottom, ConScroll, RowAdjust;
 int			CursorTicker, ScrollState = 0;
 constate_e	ConsoleState = c_up;
 char		VersionString[8];
@@ -58,10 +56,8 @@ BOOL		KeysShifted;
 #define SCROLLNO 0
 
 extern cvar_t *showMessages;
-
-cvar_t *msglevel;
-static unsigned int TickerAt, TickerMax;
-static const char *TickerLabel;
+extern BOOL message_dontfuckwithme;
+extern BOOL chat_on;
 
 struct History {
 	struct History *Older;
@@ -81,72 +77,32 @@ static byte printxormask;
 static struct History *HistHead = NULL, *HistTail = NULL, *HistPos = NULL;
 static int HistSize;
 
-#define NUMNOTIFIES 4
-cvar_t *con_notifytime;
-cvar_t *con_scaletext;		// Scale notify text at high resolutions?
-static struct NotifyText {
-	int timeout;
-	int printlevel;
-	byte text[256];
-} NotifyStrings[NUMNOTIFIES];
-
-#define PRINTLEVELS 5
-int PrintColors[PRINTLEVELS+1] = { CR_RED, CR_GOLD, CR_GRAY, CR_GREEN, CR_GREEN, CR_GOLD };
-
-cvar_t *msg0color, *msg1color, *msg2color, *msg3color, *msg4color, *msgmidcolor;
-static void setmsgcolor (int index, const char *color);
-static void cb_msg0color (cvar_t *var);
-static void cb_msg1color (cvar_t *var);
-static void cb_msg2color (cvar_t *var);
-static void cb_msg3color (cvar_t *var);
-static void cb_msg4color (cvar_t *var);
-static void cb_msgmidcolor (cvar_t *var);
+cvar_t *NotifyTime;
+static byte NotifyStrings[4][256];
 
 FILE *Logfile = NULL;
 
 
+extern patch_t *hu_font[HU_FONTSIZE];	// from hu_stuff.c
+
 BOOL C_HandleKey (event_t *ev, byte *buffer, int len);
 
 
-static void maybedrawnow (void) {
-	if (vidactive &&
-		((gameaction != ga_nothing && ConsoleState == c_down)
-		|| gamestate == GS_STARTUP)) {
-		static size_t lastprinttime = 0;
-		size_t nowtime = I_GetTime();
+static int C_hu_CharWidth (int c)
+{
+	c = toupper((c++) & 0x7f) - HU_FONTSTART;
+	if (c < 0 || c >= HU_FONTSIZE)
+		return 4;
 
-		if (nowtime - lastprinttime > 1) {
-			I_BeginUpdate ();
-			C_DrawConsole ();
-			I_FinishUpdate ();
-			lastprinttime = nowtime;
-		}
-	}
+	return hu_font[c]->width;
 }
 
 void C_InitConsole (int width, int height, BOOL ingame)
 {
 	int row;
-	byte *zap;
-	byte *old;
+	char *zap;
+	char *old;
 	int cols, rows;
-
-	if (!msglevel) {
-		msglevel = cvar ("msg", "0", CVAR_ARCHIVE);
-
-		msg0color = cvar ("msg0color", "6", CVAR_ARCHIVE|CVAR_CALLBACK);
-		msg0color->u.callback = cb_msg0color;
-		msg1color = cvar ("msg1color", "5", CVAR_ARCHIVE|CVAR_CALLBACK);
-		msg1color->u.callback = cb_msg1color;
-		msg2color = cvar ("msg2color", "2", CVAR_ARCHIVE|CVAR_CALLBACK);
-		msg2color->u.callback = cb_msg2color;
-		msg3color = cvar ("msg3color", "3", CVAR_ARCHIVE|CVAR_CALLBACK);
-		msg3color->u.callback = cb_msg3color;
-		msg4color = cvar ("msg4color", "3", CVAR_ARCHIVE|CVAR_CALLBACK);
-		msg4color->u.callback = cb_msg4color;
-		msgmidcolor = cvar ("msgmidcolor", "5", CVAR_ARCHIVE|CVAR_CALLBACK);
-		msgmidcolor->u.callback = cb_msgmidcolor;
-	}
 
 	if ( (vidactive = ingame) ) {
 		if (!gotconback) {
@@ -156,8 +112,8 @@ void C_InitConsole (int width, int height, BOOL ingame)
 
 			num = W_CheckNumForName ("CONBACK");
 			if (num == -1) {
+				num = W_CheckNumForName ("TITLEPIC");
 				stylize = true;
-				num = W_GetNumForName ("TITLEPIC");
 			}
 
 			patch = W_CacheLumpNum (num, PU_CACHE);
@@ -243,10 +199,10 @@ void C_InitConsole (int width, int height, BOOL ingame)
 			} else {
 				string[zap[1]] = 0;
 			}
-			Printf (PRINT_HIGH, "%s", string);
+			Printf ("%s", string);
 		}
 		free (old);
-		C_FlushDisplay ();
+		ShowRows = 0;
 
 		Logfile = templog;
 		gamestate = oldstate;
@@ -256,117 +212,40 @@ void C_InitConsole (int width, int height, BOOL ingame)
 		C_FullConsole ();
 }
 
-static void setmsgcolor (int index, const char *color)
+void C_AddNotifyString (const char *source)
 {
+	brokenlines_t *lines;
 	int i;
 
-	i = atoi (color);
-	if (i < 0 || i >= NUM_TEXT_COLORS)
-		i = 0;
-	PrintColors[index] = i;
-}
-
-static void cb_msg0color (cvar_t *var)
-{
-	setmsgcolor (0, var->string);
-}
-
-static void cb_msg1color (cvar_t *var)
-{
-	setmsgcolor (1, var->string);
-}
-
-static void cb_msg2color (cvar_t *var)
-{
-	setmsgcolor (2, var->string);
-}
-
-static void cb_msg3color (cvar_t *var)
-{
-	setmsgcolor (3, var->string);
-}
-
-static void cb_msg4color (cvar_t *var)
-{
-	setmsgcolor (4, var->string);
-}
-
-static void cb_msgmidcolor (cvar_t *var)
-{
-	setmsgcolor (PRINTLEVELS, var->string);
-}
-
-
-void C_AddNotifyString (int printlevel, const char *source)
-{
-	static enum
-	{
-		NEWLINE,
-		APPENDLINE,
-		REPLACELINE
-	} addtype = NEWLINE;
-
-	char work[2048];
-	brokenlines_t *lines;
-	int i, len, width;
-
-	if ((printlevel != 128 && !showMessages->value) ||
-		!(len = strlen (source)) ||
-		gamestate != GS_LEVEL)
-		return;
-
-	if (con_scaletext->value)
-		width = screens[0].width / CleanXfac;
-	else
-		width = screens[0].width;
-
-	if (addtype == APPENDLINE && NotifyStrings[NUMNOTIFIES-1].printlevel == printlevel) {
-		sprintf (work, "%s%s", NotifyStrings[NUMNOTIFIES-1].text, source);
-		lines = V_BreakLines (width, work);
-	} else {
-		lines = V_BreakLines (width, source);
-		addtype = (addtype == APPENDLINE) ? NEWLINE : addtype;
-	}
-
-	if (!lines)
+	if (!(lines = V_BreakLines (320, source)))
 		return;
 
 	for (i = 0; lines[i].width != -1; i++) {
-		if (addtype == NEWLINE)
-			memmove (&NotifyStrings[0], &NotifyStrings[1], sizeof(struct NotifyText) * (NUMNOTIFIES-1));
-		strcpy (NotifyStrings[NUMNOTIFIES-1].text, lines[i].string);
-		NotifyStrings[NUMNOTIFIES-1].timeout = gametic + (int)(con_notifytime->value * TICRATE);
-		NotifyStrings[NUMNOTIFIES-1].printlevel = printlevel;
-		addtype = NEWLINE;
+		memmove (NotifyStrings[0], NotifyStrings[1], 256 * 3);
+		strcpy (NotifyStrings[3], lines[i].string);
 	}
 
 	V_FreeBrokenLines (lines);
 
-	switch (source[len-1]) {
-		case '\r':
-			addtype = REPLACELINE;
-			break;
-		case '\n':
-			addtype = NEWLINE;
-			break;
-		default:
-			addtype = APPENDLINE;
-			break;
-	}
+	ShowRows += i;
+
+	if (ShowRows > 4)
+		ShowRows = 4;
+
+	if (showMessages->value == 0.0)
+		ShowRows = message_dontfuckwithme;
+
+	ConsoleTicker = (int)(NotifyTime->value * TICRATE) + gametic;
 }
 
 /* Provide our own Printf() that is sensitive of the
  * console status (in or out of game)
  */
-int PrintString (int printlevel, const char *outline) {
+int PrintString (const char *outline) {
 	const char *cp, *newcp;
 	static int xp = 0;
 	int newxp;
-	int mask;
 	BOOL scroll;
-
-	if (printlevel < (int)msglevel->value)
-		return 0;
 
 	if (Logfile) {
 		fputs (outline, Logfile);
@@ -376,26 +255,26 @@ int PrintString (int printlevel, const char *outline) {
 	}
 
 	if (vidactive)
-		C_AddNotifyString (printlevel, outline);
-
-	if (printlevel >= PRINT_CHAT && printlevel < 64)
-		mask = 0x80;
-	else
-		mask = printxormask;
+		C_AddNotifyString (outline);
 
 	cp = outline;
 	while (*cp) {
 		for (newcp = cp, newxp = xp;
-			 *newcp != '\n' && *newcp != '\0' && *newcp != '\x8a' && newxp < ConCols;
-			 newcp++, newxp++)
-			;
+			*newcp != '\n' && *newcp != '\0' && newxp < ConCols;
+			 newcp++, newxp++) {
+			if (*newcp == '\x8') {
+				if (xp) xp--;
+				newxp = xp;
+				cp++;
+			}
+		}
 
 		if (*cp) {
 			const char *poop;
 			int x;
 
 			for (x = xp, poop = cp; poop < newcp; poop++, x++) {
-				Last[x+2] = ((*poop) < 32) ? (*poop) : ((*poop) ^ mask);
+				Last[x+2] = ((*poop) < 32) ? (*poop) : ((*poop) ^ printxormask);
 			}
 
 			if (Last[1] < xp + (newcp - cp))
@@ -411,21 +290,8 @@ int PrintString (int printlevel, const char *outline) {
 				newxp = 0;
 				scroll = true;
 			} else {
-				if (*newcp == '\x8a') {
-					switch (newcp[1]) {
-						case 0:
-							break;
-						case '+':
-							mask = printxormask ^ 0x80;
-							break;
-						default:
-							mask = printxormask;
-							break;
-					}
-				}
 				scroll = false;
 			}
-
 			if (!vidactive) {
 				I_PrintStr (xp, cp, newcp - cp, scroll);
 			}
@@ -441,8 +307,6 @@ int PrintString (int printlevel, const char *outline) {
 
 			if (*newcp == '\n')
 				cp = newcp + 1;
-			else if (*newcp == '\x8a' && newcp[1])
-				cp = newcp + 2;
 			else
 				cp = newcp;
 		}
@@ -450,13 +314,25 @@ int PrintString (int printlevel, const char *outline) {
 
 	printxormask = 0;
 
-	maybedrawnow ();
+	if (vidactive &&
+		((gameaction != ga_nothing && ConsoleState == c_down)
+		|| gamestate == GS_STARTUP)) {
+		static size_t lastprinttime = 0;
+		size_t nowtime = I_GetTime();
+
+		if (nowtime - lastprinttime > 1) {
+			I_BeginUpdate ();
+			C_DrawConsole ();
+			I_FinishUpdate ();
+			lastprinttime = nowtime;
+		}
+	}
 
 	return strlen (outline);
 }
 
 extern BOOL gameisdead;
-int VPrintf (int printlevel, const char *format, va_list parms)
+int VPrintf (const char *format, va_list parms)
 {
 	char outline[8192];
 
@@ -464,42 +340,42 @@ int VPrintf (int printlevel, const char *format, va_list parms)
 		return 0;
 
 	vsprintf (outline, format, parms);
-	return PrintString (printlevel, outline);
+	return PrintString (outline);
 }
 
-int STACK_ARGS Printf (int printlevel, const char *format, ...)
+int Printf (const char *format, ...)
 {
 	va_list argptr;
 	int count;
 
 	va_start (argptr, format);
-	count = VPrintf (printlevel, format, argptr);
+	count = VPrintf (format, argptr);
 	va_end (argptr);
 
 	return count;
 }
 
-int STACK_ARGS Printf_Bold (const char *format, ...)
+int Printf_Bold (const char *format, ...)
 {
 	va_list argptr;
 	int count;
 
 	printxormask = 0x80;
 	va_start (argptr, format);
-	count = VPrintf (PRINT_HIGH, format, argptr);
+	count = VPrintf (format, argptr);
 	va_end (argptr);
 
 	return count;
 }
 
-int STACK_ARGS DPrintf (const char *format, ...)
+int DPrintf (const char *format, ...)
 {
 	va_list argptr;
 	int count;
 
 	if (developer->value) {
 		va_start (argptr, format);
-		count = VPrintf (PRINT_HIGH, format, argptr);
+		count = VPrintf (format, argptr);
 		va_end (argptr);
 		return count;
 	} else {
@@ -509,24 +385,21 @@ int STACK_ARGS DPrintf (const char *format, ...)
 
 void C_FlushDisplay (void)
 {
-	int i;
-
-	for (i = 0; i < NUMNOTIFIES; i++)
-		NotifyStrings[i].timeout = 0;
+	ShowRows = 0;
 }
 
 void C_AdjustBottom (void)
 {
 	if (gamestate == GS_FULLCONSOLE || gamestate == GS_STARTUP)
-		ConBottom = screens[0].height;
-	else if (ConBottom > screens[0].height / 2 || ConsoleState == c_down)
-		ConBottom = screens[0].height / 2;
+		ConBottom = screens[0].height / 8;
+	else if (ConBottom > screens[0].height / 16 || ConsoleState == c_down)
+		ConBottom = screens[0].height / 16;
 }
 
 void C_NewModeAdjust (void)
 {
 	C_InitConsole (screens[0].width, screens[0].height, true);
-	C_FlushDisplay ();
+	ShowRows = 0;
 	C_AdjustBottom ();
 }
 
@@ -560,22 +433,27 @@ void C_Ticker (void)
 		}
 
 		if (ConsoleState == c_falling) {
-			ConBottom += (gametic - lasttic) * (screens[0].height*2/25);
-			if (ConBottom >= screens[0].height / 2) {
-				ConBottom = screens[0].height / 2;
+			ConBottom += (gametic - lasttic) * (screens[0].height / 100);
+			if (ConBottom >= screens[0].height / 16) {
+				ConBottom = screens[0].height / 16;
 				ConsoleState = c_down;
 			}
 		} else if (ConsoleState == c_rising) {
-			ConBottom -= (gametic - lasttic) * (screens[0].height*2/25);
+			ConBottom -= (gametic - lasttic) * (screens[0].height / 100);
 			if (ConBottom <= 0) {
 				ConsoleState = c_up;
 				ConBottom = 0;
 			}
 		}
 
-		if (SkipRows + RowAdjust + (ConBottom/8) + 1 > ConRows) {
+		if (SkipRows + RowAdjust + ConBottom + 1 > ConRows) {
 			RowAdjust = ConRows - SkipRows - ConBottom;
 		}
+	}
+
+	if (ShowRows && gametic >= ConsoleTicker) {
+		ShowRows--;
+		ConsoleTicker = (int)(NotifyTime->value * TICRATE) + gametic;
 	}
 
 	if (--CursorTicker <= 0) {
@@ -585,71 +463,49 @@ void C_Ticker (void)
 
 	lasttic = gametic;
 }
+extern byte *WhiteMap;
+extern byte *Ranges;
 
 static void C_DrawNotifyText (void)
 {
-	int i, line, color;
+	int lines, fact;
 	
-	if (gamestate != GS_LEVEL || menuactive)
+	if (ShowRows == 0 || gamestate != GS_LEVEL || chat_on || menuactive)
 		return;
 
-	line = 0;
+	fact = 8 * CleanYfac;
 
-	BorderTopRefresh = true;
-
-	for (i = 0; i < NUMNOTIFIES; i++) {
-		if (NotifyStrings[i].timeout > gametic) {
-			if (!showMessages->value && NotifyStrings[i].printlevel != 128)
-				continue;
-
-			if (NotifyStrings[i].printlevel >= PRINTLEVELS)
-				color = CR_RED;
-			else
-				color = PrintColors[NotifyStrings[i].printlevel];
-
-			if (con_scaletext->value) {
-				V_DrawTextClean (color, 0, line, NotifyStrings[i].text);
-				line += 8 * CleanYfac;
-			} else {
-				V_DrawText (color, 0, line, NotifyStrings[i].text);
-				line += 8;
-			}
-		}
+	if (viewactive && (viewwindowy || viewwindowx)) {
+		C_EraseLines (0, (ShowRows + (ShowRows < 4)) * fact);
 	}
-}
 
-void C_InitTicker (const char *label, unsigned int max)
-{
-	TickerMax = max;
-	TickerLabel = label;
-	TickerAt = 0;
-	maybedrawnow ();
-}
+	{
+		byte *holdmap = WhiteMap;
 
-void C_SetTicker (unsigned int at)
-{
-	TickerAt = at > TickerMax ? TickerMax : at;
-	maybedrawnow ();
+		// Use normal red map. Quick hack until this is truly customizable.
+		WhiteMap = Ranges + 6 * 256;
+
+		for (lines = 0; lines < ShowRows; lines++) {
+			V_DrawTextClean (0, (ShowRows - lines - 1) * fact, NotifyStrings[3 - lines]);
+		}
+
+		WhiteMap = holdmap;
+	}
 }
 
 void C_DrawConsole (void)
 {
 	char *zap;
-	int lines, left, offset;
+	int lines, left;
 	static int oldbottom = 0;
 
 	left = 8;
-	lines = (ConBottom-12)/8;
-	if (-12 + lines*8 > ConBottom - 28)
-		offset = -16;
-	else
-		offset = -12;
+	lines = ConBottom - 2;
 	zap = Last - (SkipRows + RowAdjust) * (ConCols + 2);
 
 	if ((ConBottom < oldbottom) && (gamestate == GS_LEVEL) && (viewwindowx || viewwindowy)
-		&& !automapactive)
-	{
-		BorderNeedRefresh = true;
+		&& !automapactive) {
+		C_EraseLines (ConBottom * 8, oldbottom * 8);
 	}
 
 	oldbottom = ConBottom;
@@ -660,39 +516,18 @@ void C_DrawConsole (void)
 	} else if (ConBottom) {
 		int visheight, realheight;
 
-		visheight = ConBottom;
+		visheight = ConBottom * 8;
 		realheight = (visheight * conback.height) / screens[0].height;
 
 		V_Blit (&conback, 0, conback.height - realheight, conback.width, realheight,
 				&screens[0], 0, 0, screens[0].width, visheight);
 
-		if (ConBottom >= 12) {
+		if (ConBottom >= 2) {
 			V_PrintStr (screens[0].width - 8 - strlen(VersionString) * 8,
-						ConBottom - 12,
+						ConBottom * 8 - 16,
 						VersionString, strlen (VersionString));
-			if (TickerMax) {
-				char tickstr[256];
-				unsigned int i, tickend = ConCols - screens[0].width / 90 - 6;
-				unsigned int tickbegin = 0;
-
-				if (TickerLabel) {
-					tickbegin = strlen (TickerLabel) + 2;
-					tickend -= tickbegin;
-					sprintf (tickstr, "%s: ", TickerLabel);
-				}
-				if (tickend > 256 - 8)
-					tickend = 256 - 8;
-				tickstr[tickbegin] = 0x80;
-				memset (tickstr + tickbegin + 1, 0x81, tickend - tickbegin);
-				tickstr[tickend + 1] = 0x82;
-				tickstr[tickend + 2] = ' ';
-				i = tickbegin + 1 + (TickerAt * (tickend - tickbegin - 1)) / TickerMax;
-				if (i > tickend)
-					i = tickend;
-				tickstr[i] = 0x83;
-				sprintf (tickstr + tickend + 3, "%u%%", (TickerAt * 100) / TickerMax);
-				V_PrintStr (8, ConBottom - 12, tickstr, strlen (tickstr));
-			}
+			if (gamestate == GS_STARTUP)
+				V_PrintStr (8, ConBottom * 8 - 16, DoomStartupTitle, strlen (DoomStartupTitle));
 		}
 	}
 
@@ -700,31 +535,29 @@ void C_DrawConsole (void)
 		return;
 
 	if (lines > 0) {
-		for (; lines > 1; lines--) {
-			V_PrintStr (left, offset + lines * 8, &zap[2], zap[1]);
+		for (; lines; lines--) {
+			V_PrintStr (left, -8 + lines * 8, &zap[2], zap[1]);
 			zap -= ConCols + 2;
 		}
-		if (ConBottom >= 20) {
-			if (gamestate == GS_STARTUP)
-				V_PrintStr (8, ConBottom - 20, DoomStartupTitle, strlen (DoomStartupTitle));
-			else
-				V_PrintStr (left, ConBottom - 20, "\x8c", 1);
+		if (ConBottom > 1) {
+			if (gamestate != GS_STARTUP)
+				V_PrintStr (left, (ConBottom - 2) * 8, "\x8c", 1);
 #define MIN(a,b) (((a)<(b))?(a):(b))
-			V_PrintStr (left + 8, ConBottom - 20,
+			V_PrintStr (left + 8, (ConBottom - 2) * 8,
 						&CmdLine[2+CmdLine[259]],
 						MIN(CmdLine[0] - CmdLine[259], ConCols - 1));
 #undef MIN
 			if (cursoron) {
 				V_PrintStr (left + 8 + (CmdLine[1] - CmdLine[259])* 8,
-							ConBottom - 20, "\xb", 1);
+							(ConBottom - 2) * 8, "\xb", 1);
 			}
-			if (RowAdjust && ConBottom >= 28) {
+			if (RowAdjust && ConBottom > 2) {
 				char c;
 
 				// Indicate that the view has been scrolled up (10)
 				// and if we can scroll no further (12)
-				c = (SkipRows + RowAdjust + ConBottom/8 != ConRows) ? 10 : 12;
-				V_PrintStr (0, ConBottom - 28, &c, 1);
+				c = (SkipRows + RowAdjust + ConBottom != ConRows) ? 10 : 12;
+				V_PrintStr (0, (ConBottom - 3) * 8 + 4, &c, 1);
 			}
 		}
 	}
@@ -742,8 +575,6 @@ void C_FullConsole (void)
 		gamestate = GS_FULLCONSOLE;
 		level.music[0] = '\0';
 		S_Start ();
-		SN_StopAllSequences ();
-		V_SetBlend (0,0,0,0);
 		I_PauseMouse ();
 	} else
 		C_AdjustBottom ();
@@ -753,14 +584,13 @@ void C_ToggleConsole (void)
 {
 	if (gamestate == GS_DEMOSCREEN || demoplayback) {
 		gameaction = ga_fullconsole;
-	} else if (!chatmodeon && (ConsoleState == c_up || ConsoleState == c_rising)) {
+	} else if (!chat_on && (ConsoleState == c_up || ConsoleState == c_rising)) {
 		ConsoleState = c_falling;
 		HistPos = NULL;
 		TabbedLast = false;
 		I_PauseMouse ();
 	} else if (gamestate != GS_FULLCONSOLE && gamestate != GS_STARTUP) {
 		ConsoleState = c_rising;
-		C_FlushDisplay ();
 		I_ResumeMouse ();
 	}
 }
@@ -815,7 +645,7 @@ BOOL C_HandleKey (event_t *ev, byte *buffer, int len)
 		case KEY_PGUP:
 			if (KeysShifted)
 				// Move to top of console buffer
-				RowAdjust = ConRows - SkipRows - ConBottom/8;
+				RowAdjust = ConRows - SkipRows - ConBottom;
 			else
 				// Start scrolling console buffer up
 				ScrollState = SCROLLUP;
@@ -973,7 +803,7 @@ BOOL C_HandleKey (event_t *ev, byte *buffer, int len)
 					}
 				}
 				HistPos = NULL;
-				Printf (127, "]%s\n", &buffer[2]);
+				Printf ("]%s\n", &buffer[2]);
 				buffer[0] = buffer[1] = buffer[len+4] = 0;
 				AddCommandString (&buffer[2]);
 				TabbedLast = false;
@@ -1041,23 +871,7 @@ BOOL C_Responder (event_t *ev)
 				return false;
 		}
 	} else if (ev->type == ev_keydown) {
-		// Okay, fine. Most keys don't repeat
-		switch (ev->data1) {
-			case KEY_RIGHTARROW:
-			case KEY_LEFTARROW:
-			case KEY_UPARROW:
-			case KEY_DOWNARROW:
-			case KEY_SPACE:
-			case KEY_BACKSPACE:
-			case KEY_DEL:
-				RepeatCountdown = KeyRepeatDelay;
-				break;
-			default:
-				RepeatCountdown = 0;
-				break;
-		}
-
-		/*
+		// Some keys don't repeat
 		if (ev->data1 == KEY_PGUP ||
 			ev->data1 == KEY_PGDN ||
 			ev->data1 == KEY_RSHIFT ||
@@ -1069,12 +883,10 @@ BOOL C_Responder (event_t *ev)
 		else
 		// Others do.
 			RepeatCountdown = KeyRepeatDelay;
-			*/
 		RepeatEvent = *ev;
 		return C_HandleKey (ev, CmdLine, 255);
-	}
-
-	return false;
+	} else
+		return false;
 }
 
 void Cmd_History (player_t *plyr, int argc, char **argv)
@@ -1082,7 +894,7 @@ void Cmd_History (player_t *plyr, int argc, char **argv)
 	struct History *hist = HistTail;
 
 	while (hist) {
-		Printf (PRINT_HIGH, "   %s\n", hist->String);
+		Printf ("   %s\n", hist->String);
 		hist = hist->Newer;
 	}
 }
@@ -1092,8 +904,7 @@ void Cmd_Clear (player_t *plyr, int argc, char **argv)
 	int i;
 	char *row = Lines;
 
-	RowAdjust = 0;
-	C_FlushDisplay ();
+	RowAdjust = ShowRows = 0;
 	for (i = 0; i < ConRows; i++, row += ConCols + 2)
 		row[1] = 0;
 }
@@ -1101,14 +912,13 @@ void Cmd_Clear (player_t *plyr, int argc, char **argv)
 void Cmd_Echo (player_t *plyr, int argc, char **argv)
 {
 	if (argc > 1)
-		Printf (PRINT_HIGH, "%s\n", BuildString (argc - 1, argv + 1));
+		Printf ("%s\n", BuildString (argc - 1, argv + 1));
 }
 
 /* Printing in the middle of the screen */
 
 static brokenlines_t *MidMsg = NULL;
 static int MidTicker = 0, MidLines;
-cvar_t *con_midtime;
 
 void C_MidPrint (char *msg)
 {
@@ -1117,8 +927,8 @@ void C_MidPrint (char *msg)
 	if (MidMsg)
 		V_FreeBrokenLines (MidMsg);
 
-	if ( (MidMsg = V_BreakLines (con_scaletext->value ? screens[0].width / CleanXfac : screens[0].width, msg)) ) {
-		MidTicker = (int)(con_midtime->value * TICRATE) + gametic;
+	if ( (MidMsg = V_BreakLines (320, msg)) ) {
+		MidTicker = (int)(NotifyTime->value * TICRATE) + gametic;
 
 		for (i = 0; MidMsg[i].width != -1; i++)
 			;
@@ -1127,35 +937,43 @@ void C_MidPrint (char *msg)
 	}
 }
 
+extern byte *WhiteMap, *Ranges;
+
 void C_DrawMid (void)
 {
 	if (MidMsg) {
-		int i, line, x, y, xscale, yscale;
-		void (*textfunc)(int,int,int,const byte *);
+		int i, line, x, y;
+		byte *holdwhite = WhiteMap;
 
-		if (con_scaletext->value) {
-			xscale = CleanXfac;
-			yscale = CleanYfac;
-			textfunc = V_DrawTextClean;
-		} else {
-			xscale = yscale = 1;
-			textfunc = V_DrawText;
-		}
-
-		y = 8 * yscale;
+		// Hack! Hack! I need to get multi-colored text output written (still)...
+		WhiteMap = Ranges + 5 * 256;
+		y = 8 * CleanYfac;
 		x = screens[0].width >> 1;
-		for (i = 0, line = (ST_Y * 3) / 8 - MidLines * 4 * yscale; i < MidLines; i++, line += y) {
-			textfunc (PrintColors[PRINTLEVELS],
-				x - (MidMsg[i].width >> 1) * xscale,
-				line,
-				MidMsg[i].string);
+		for (i = 0, line = (ST_Y * 3) / 8 - MidLines * 4 * CleanYfac; i < MidLines; i++, line += y) {
+			V_DrawTextClean (x - (MidMsg[i].width >> 1) * CleanXfac, line, MidMsg[i].string);
 		}
 
 		if (gametic >= MidTicker) {
 			V_FreeBrokenLines (MidMsg);
 			MidMsg = NULL;
-			BorderNeedRefresh = true;
 		}
+
+		WhiteMap = holdwhite;
+	}
+}
+
+void C_EraseLines (int top, int bottom)
+{
+	if (top < viewwindowy) {
+		// Erase top border
+		R_VideoErase (0, top, screens[0].width,
+					  (bottom <= viewwindowy) ? bottom : viewwindowy);
+	}
+	if (bottom > viewwindowy) {
+		if (top < viewwindowy)
+			top = viewwindowy;
+		R_VideoErase (0, top, viewwindowx, bottom);				// Erase left border
+		R_VideoErase (viewwindowx+realviewwidth, top, screens[0].width, bottom);	// Erase right border
 	}
 }
 

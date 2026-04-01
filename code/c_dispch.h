@@ -3,13 +3,11 @@
 
 #define HASH_SIZE	251				// I think this is prime
 
-struct player_s;
-
 struct CmdData {
 	struct CmdData *next;
 	char		   *name;
 	union {
-		void	  (*func)(struct player_s *,int,char**);		// For an actual command
+		void	  (*func)();		// For an actual command
 		char	   *command;		// For an alias
 		void	   *generic;
 	} call;
@@ -18,7 +16,7 @@ struct CmdData {
 // For passing to C_RegisterCommand(s)
 struct CmdDispatcher {
 	char *CmdName;
-	void (*Command)(struct player_s *, int, char**);
+	void (*Command)();
 };
 
 void C_RegisterCommand (char *name, void (*func)());

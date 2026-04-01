@@ -26,11 +26,17 @@
 #include "z_zone.h"
 #include "doomdef.h"
 #include "p_local.h"
+
 #include "s_sound.h"
-#include "s_sndseq.h"
+
+
+// State.
 #include "doomstat.h"
 #include "r_state.h"
+
+// Data.
 #include "dstrings.h"
+
 #include "c_consol.h"
 
 
@@ -43,20 +49,12 @@ static void DoorSound (vldoor_t *door, fixed_t speed, BOOL raise)
 {
 	char *snd;
 
-	if (door->sector->seqType >= 0)
-	{
-		SN_StartSequence ((mobj_t *)&door->sector->soundorg,
-			door->sector->seqType, SEQ_DOOR);
-	}
+	if (raise)
+		snd = (speed >= FRACUNIT*8) ? "doors/dr2_open" : "doors/dr1_open";
 	else
-	{
-		if (raise)
-			snd = (speed >= FRACUNIT*8) ? "DoorOpenBlazing" : "DoorOpenNormal";
-		else
-			snd = (speed >= FRACUNIT*8) ? "DoorCloseBlazing" : "DoorCloseNormal";
+		snd = (speed >= FRACUNIT*8) ? "doors/dr2_clos" : "doors/dr1_clos";
 
-		SN_StartSequenceName ((mobj_t *)&door->sector->soundorg, snd);
-	}
+	S_StartSound ((mobj_t *)&door->sector->soundorg, snd, 100);
 }
 
 //
@@ -116,7 +114,6 @@ void T_VerticalDoor (vldoor_t *door)
 						  -1,1,door->direction);
 		if (res == pastdest)
 		{
-			SN_StopSequence ((mobj_t *)&door->sector->soundorg);
 			switch(door->type)
 			{
 			  case doorRaise:
@@ -158,7 +155,6 @@ void T_VerticalDoor (vldoor_t *door)
 		
 		if (res == pastdest)
 		{
-			SN_StopSequence ((mobj_t *)&door->sector->soundorg);
 			switch(door->type)
 			{
 			  case doorRaise:
@@ -242,7 +238,7 @@ BOOL EV_DoDoor (vldoor_e type, line_t *line, mobj_t *thing,
 		// if the wrong side of door is pushed, give oof sound
 		if (line->sidenum[1]==-1)				// killough
 		{
-			S_Sound (thing, CHAN_VOICE, "*grunt1", 1, ATTN_NORM);
+			S_StartSound (thing, "*grunt1", 78);
 			return false;
 		}
 
@@ -259,7 +255,7 @@ BOOL EV_DoDoor (vldoor_e type, line_t *line, mobj_t *thing,
 				if (door->direction == -1) {
 					door->direction = 1;	// go back up
 				}
-				else if (GET_SPAC(line->flags) == SPAC_PUSH)
+				else if ((line->flags & ML_ACTIVATIONMASK) != ML_ACTIVATEPUSH)
 					// [RH] activate push doors don't go back down when you
 					//		run into them (otherwise opening them would be
 					//		a real pain).

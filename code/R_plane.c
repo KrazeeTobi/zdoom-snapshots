@@ -26,6 +26,10 @@
 // better performance usually but after a point they are wasted,
 // and memory and time overheads creep in.
 //
+// For more information on visplanes, see:
+//
+// http://classicgaming.com/doom/editing/
+//
 // Lee Killough
 //
 //-----------------------------------------------------------------------------
@@ -109,27 +113,30 @@ fixed_t 				*cachedxstep;
 fixed_t 				*cachedystep;
 
 
-//==========================================================================
 //
 // R_InitPlanes
+// Only at game startup.
 //
-// Called at game startup.
-//
-//==========================================================================
-
 void R_InitPlanes (void)
 {
 }
 
-//==========================================================================
 //
 // R_MapPlane
 //
-// Globals used: planeheight, ds_source, basexscale, baseyscale,
-// viewx, viewy, xoffs, yoffs, basecolormap.
+// Uses global vars:
+//	planeheight
+//	ds_source
+//	basexscale
+//	baseyscale
+//	viewx
+//	viewy
+//	xoffs
+//	yoffs
+//	basecolormap	// [RH]
 //
-//==========================================================================
-
+// BASIC PRIMITIVE
+//
 void R_MapPlane (int y, int x1, int x2)
 {
 	angle_t 	angle;
@@ -141,9 +148,9 @@ void R_MapPlane (int y, int x1, int x2)
 	if (x2 < x1
 		|| x1<0
 		|| x2>=viewwidth
-		|| (unsigned)y>=(unsigned)viewheight)
+		|| (unsigned)y>(unsigned)viewheight)
 	{
-		I_FatalError ("R_MapPlane: %i, %i at %i",x1,x2,y);
+		I_Error ("R_MapPlane: %i, %i at %i",x1,x2,y);
 	}
 #endif
 	if (planeheight != cachedheight[y])
@@ -167,9 +174,7 @@ void R_MapPlane (int y, int x1, int x2)
 	ds_xfrac = viewx + FixedMul(finecosine[angle], length) + xoffs;
 	ds_yfrac = -viewy - FixedMul(finesine[angle], length) + yoffs;
 
-	if (fixedlightlev)
-		ds_colormap = basecolormap + fixedlightlev;
-	else if (fixedcolormap)
+	if (fixedcolormap)
 		ds_colormap = fixedcolormap;
 	else
 	{
@@ -188,14 +193,11 @@ void R_MapPlane (int y, int x1, int x2)
 	spanfunc ();		
 }
 
-//==========================================================================
+
 //
 // R_ClearPlanes
+// At begining of frame.
 //
-// Called at the beginning of each frame.
-//
-//==========================================================================
-
 void R_ClearPlanes (void)
 {
 	int 		i;
@@ -205,8 +207,8 @@ void R_ClearPlanes (void)
 	for (i = 0; i < viewwidth ; i++)
 	{
 		floorclip[i] = (short)viewheight;
+		ceilingclip[i] = -1;
 	}
-	memset (ceilingclip, 0xff, sizeof(*ceilingclip) * viewwidth);
 
 	for (i = 0; i < MAXVISPLANES; i++)	// new code -- killough
 		for (*freehead = visplanes[i], visplanes[i] = NULL; *freehead; )
@@ -216,19 +218,18 @@ void R_ClearPlanes (void)
 	
 	// texture calculation
 	memset (cachedheight, 0, sizeof(*cachedheight) * screens[0].height);
-	angle = (viewangle - ANG90)>>ANGLETOFINESHIFT;	// left to right mapping
+
+	// left to right mapping
+	angle = (viewangle - ANG90)>>ANGLETOFINESHIFT;
+		
 	// scale will be unit scale at SCREENWIDTH/2 distance
-	basexscale = FixedDiv (finecosine[angle], centerxfrac);
-	baseyscale = -FixedDiv (finesine[angle], centerxfrac);
+	basexscale = FixedDiv (finecosine[angle],centerxfrac);
+	baseyscale = -FixedDiv (finesine[angle],centerxfrac);
 }
 
-//==========================================================================
-//
 // New function, by Lee Killough
 // [RH] top and bottom buffers get allocated immediately
 //		after the visplane.
-//
-//==========================================================================
 
 static visplane_t *new_visplane(unsigned hash)
 {
@@ -246,12 +247,10 @@ static visplane_t *new_visplane(unsigned hash)
 }
 
 
-//==========================================================================
 //
 // R_FindPlane
 //
 // killough 2/28/98: Add offsets
-//==========================================================================
 
 visplane_t *R_FindPlane (fixed_t height, int picnum, int lightlevel,
 						 fixed_t xoffs, fixed_t yoffs)
@@ -290,17 +289,17 @@ visplane_t *R_FindPlane (fixed_t height, int picnum, int lightlevel,
 	return check;
 }
 
-//==========================================================================
+
 //
 // R_CheckPlane
 //
-//==========================================================================
-
 visplane_t *R_CheckPlane (visplane_t *pl, int start, int stop)
 {
-	int intrl, intrh;
-	int unionl, unionh;
-	int x;
+	int 		intrl;
+	int 		intrh;
+	int 		unionl;
+	int 		unionh;
+	int 		x;
 		
 	if (start < pl->minx)
 	{
@@ -329,13 +328,11 @@ visplane_t *R_CheckPlane (visplane_t *pl, int start, int stop)
 
 	if (x > intrh)
 	{
-		// use the same visplane
 		pl->minx = unionl;
 		pl->maxx = unionh;
 	}
 	else
 	{
-		// make a new visplane
 		unsigned hash = visplane_hash (pl->picnum, pl->lightlevel, pl->height);
 		visplane_t *new_pl = new_visplane (hash);
 
@@ -354,12 +351,9 @@ visplane_t *R_CheckPlane (visplane_t *pl, int start, int stop)
 }
 
 
-//==========================================================================
 //
 // R_MakeSpans
 //
-//==========================================================================
-
 void R_MakeSpans (int x, int t1, int b1, int t2, int b2)
 {
 	for (; t1 < t2 && t1 <= b1; t1++)
@@ -372,166 +366,106 @@ void R_MakeSpans (int x, int t1, int b1, int t2, int b2)
 		spanstart[b2--] = x;
 }
 
-//==========================================================================
-//
-// [RH] R_DrawSky
-//
-// Can handle parallax skies. Note that the front sky is *not* masked in
-// in the normal convention for patches, but uses color 0 as a transparent
-// color.
-//
-//==========================================================================
+// [RH] This was separated from R_DrawPlanes() on 11.5.1998.
+//		Also added support for columns with holes since double skies
+//		opens up that possibility (modified from R_DrawMaskedColumn).
+//		One implication of this is that the sky should always wrap
+//		properly, provided that it is tall enough.
 
-static visplane_t *_skypl;
-
-static void _skycolumn (void (*drawfunc)(void), int x)
+static void R_DrawMaskedSky (int skytexture, int skypos, fixed_t scale, fixed_t height, visplane_t *pl)
 {
-	dc_yl = _skypl->top[x];
-	dc_yh = _skypl->bottom[x];
+	int x, angle;
+	column_t *col, *column;
+	fixed_t basetexturemid = dc_texturemid;
+	fixed_t yl, yh, topscreen;
+	int min_yl, max_yh;
+	unsigned int top, bottom;
 
-	if (dc_yl <= dc_yh)	{
-		int angle = ((((viewangle + xtoviewangle[x])>>(ANGLETOSKYSHIFT-16)) + sky1pos)>>16);
+	height = FixedMul (height, scale);
 
-		if (!(level.flags & LEVEL_DOUBLESKY))
-		{
-			dc_source = R_GetColumn (sky1texture, angle);
-			drawfunc ();
-		}
-		else
-		{
-			byte composite[256];	// Skies shouldn't be taller than this
-			byte *source;
-			byte *source2;
-			byte *dest;
-			int count;
-			int top;
-			int bottom;
+	for (x=pl->minx ; x <= pl->maxx ; x++)
+	{
+		dc_x = x;
+		angle = ((((viewangle + xtoviewangle[x])>>(ANGLETOSKYSHIFT-16)) + skypos)>>16);
+		column = (column_t *) ((byte *)R_GetColumn(skytexture, angle) - 3);
 
-			top = dc_texturemid + (dc_yl - centery) * dc_iscale;
-			bottom = top + (dc_yh - dc_yl) * dc_iscale;
-			top >>= FRACBITS;
-			bottom >>= FRACBITS;
-			count = bottom - top + 1;
+		if (column->topdelta == 0xff)
+			// empty colum
+			continue;
 
-			source = R_GetColumn (sky1texture, angle) + top;
-			angle = ((((viewangle + xtoviewangle[x])>>(ANGLETOSKYSHIFT-16)) + sky2pos)>>16);
-			source2 = R_GetColumn (sky2texture, angle) + top;
-			dest = composite + top;
+		top = pl->top[x];
+		bottom = pl->bottom[x];
 
-			do
-			{
-				if (*source) {
-					*dest++ = *source++;
-					source2++;
-				} else {
-					*dest++ = *source2++;
-					source++;
+		if (top <= bottom) {
+			min_yl = MAXINT;
+			max_yh = MININT;
+
+			topscreen = FixedMul (skytopfrac, scale);
+			while (topscreen > (signed)(top << FRACBITS))
+				topscreen -= height;
+
+			while (max_yh < (signed)bottom) {
+				col = column;
+				
+				while (col->topdelta != 0xff) {
+					yl = scale * col->topdelta;
+					yh = yl + scale * col->length;
+
+					dc_yl = (yl + FRACUNIT - 1 + topscreen) >> FRACBITS;
+					dc_yh = (yh - 1 + topscreen) >> FRACBITS;
+
+					if (dc_yl < (signed)top)
+						dc_yl = top;
+					if ((unsigned)dc_yh > bottom)
+						dc_yh = bottom;
+
+					if (dc_yl <= dc_yh)
+					{
+						if (dc_yh > max_yh)
+							max_yh = dc_yh;
+
+						dc_source = (byte *)col + 3;
+						dc_texturemid = basetexturemid - (col->topdelta<<FRACBITS);
+						colfunc ();
+					}
+
+					col = (column_t *) ((byte *)col + col->length + 4);
 				}
-			} while (--count);
-			dc_source = composite;
-			drawfunc ();
+				topscreen += height;
+			}
 		}
 	}
+
+	dc_texturemid = basetexturemid;
 }
 
-static void R_DrawSky (visplane_t *pl)
+static void R_DrawSky (int skytexture, int skypos, visplane_t *pl)
 {
-	int x;
+	int x, angle;
 
-	if (pl->minx > pl->maxx)
-		return;
+	for (x=pl->minx ; x <= pl->maxx ; x++) {
+		dc_yl = pl->top[x];
+		dc_yh = pl->bottom[x];
 
-	dc_mask = 255;
-	dc_iscale = skyiscale >> skystretch;
-	dc_texturemid = skytexturemid;
-	_skypl = pl;
-
-	if (!r_columnmethod->value) {
-		for (x = pl->minx; x <= pl->maxx; x++) {
+		if (dc_yl <= dc_yh)	{
+			angle = ((((viewangle + xtoviewangle[x])>>(ANGLETOSKYSHIFT-16)) + skypos)>>16);
 			dc_x = x;
-			_skycolumn (colfunc, x);
-		}
-	} else {
-		int stop = (pl->maxx+1) & ~3;
-
-		x = pl->minx;
-
-		if (x & 1) {
-			dc_x = x;
-			_skycolumn (colfunc, x);
-			x++;
-		}
-
-		if (x & 2) {
-			if (x < pl->maxx) {
-				rt_initcols();
-				dc_x = 0;
-				_skycolumn (hcolfunc_pre, x);
-				x++;
-				dc_x = 1;
-				_skycolumn (hcolfunc_pre, x);
-				rt_draw2cols (0, x - 1);
-				x++;
-			} else if (x == pl->maxx) {
-				dc_x = x;
-				_skycolumn (colfunc, x);
-				x++;
-			}
-		}
-
-		while (x < stop) {
-			rt_initcols();
-			dc_x = 0;
-			_skycolumn (hcolfunc_pre, x);
-			x++;
-			dc_x = 1;
-			_skycolumn (hcolfunc_pre, x);
-			x++;
-			dc_x = 2;
-			_skycolumn (hcolfunc_pre, x);
-			x++;
-			dc_x = 3;
-			_skycolumn (hcolfunc_pre, x);
-			rt_draw4cols (x - 3);
-			x++;
-		}
-
-		if (pl->maxx == x) {
-			dc_x = x;
-			_skycolumn (colfunc, x);
-			x++;
-		} else if (pl->maxx > x) {
-			rt_initcols();
-			dc_x = 0;
-			_skycolumn (hcolfunc_pre, x);
-			x++;
-			dc_x = 1;
-			_skycolumn (hcolfunc_pre, x);
-			rt_draw2cols (0, x - 1);
-			if (++x <= pl->maxx) {
-				dc_x = x;
-				_skycolumn (colfunc, x);
-				x++;
-			}
+			dc_source = R_GetColumn(skytexture, angle);
+			colfunc ();
 		}
 	}
 }
 
-//==========================================================================
 //
 // R_DrawPlanes
-//
 // At the end of each frame.
 //
-//==========================================================================
-
 void R_DrawPlanes (void)
 {
 	visplane_t *pl;
 	int i;
 	
 	for (i = 0; i < MAXVISPLANES; i++)
-	{
 		for (pl = visplanes[i]; pl; pl = pl->next)
 		{
 			if (pl->minx > pl->maxx)
@@ -540,31 +474,32 @@ void R_DrawPlanes (void)
 			// sky flat
 			if (pl->picnum == skyflatnum)
 			{
-				if (fixedlightlev) {
-					dc_colormap = DefaultPalette->maps.colormaps + fixedlightlev;
-				} else if (fixedcolormap) {
-					dc_colormap = fixedcolormap;
-				} else if (!fixedcolormap) {
-					dc_colormap = DefaultPalette->maps.colormaps;
-					colfunc = R_StretchColumn;
-					hcolfunc_post1 = rt_copy1col;
-					hcolfunc_post2 = rt_copy2cols;
-					hcolfunc_post4 = rt_copy4cols;
+				// Sky is allways drawn full bright,
+				//	i.e. colormaps[0] is used.
+				// Because of this hack, sky is not affected
+				//	by INVUL inverse mapping.
+				dc_colormap = DefaultPalette->maps.colormaps;
+
+				if (level.flags & LEVEL_DOUBLESKY) {
+					dc_iscale = sky2iscale >> sky2stretch;
+					dc_texturemid = sky2texturemid;
+					if (textureheight[sky2texture] == (128<<FRACBITS))
+						R_DrawSky (sky2texture, sky2pos, pl);
+					else
+						R_DrawMaskedSky (sky2texture, sky2pos, sky2scale, sky2height, pl);
 				}
 
-				R_DrawSky (pl);
-
-				colfunc = basecolfunc;
-				hcolfunc_post1 = rt_map1col;
-				hcolfunc_post2 = rt_map2cols;
-				hcolfunc_post4 = rt_map4cols;
+				dc_iscale = sky1iscale >> sky1stretch;
+				dc_texturemid = sky1texturemid;
+				if ((level.flags & LEVEL_DOUBLESKY) || (textureheight[sky1texture] != (128<<FRACBITS)))
+					R_DrawMaskedSky (sky1texture, sky1pos, sky1scale, sky1height, pl);
+				else
+					R_DrawSky (sky1texture, sky1pos, pl);
 			}
 			else
 			{
 				// regular flat
 				int light, stop, x;
-
-//				ds_color = pl->color;	// [RH] color if r_drawflat is 1
 
 				ds_source = W_CacheLumpNum(firstflat +
 										   flattranslation[pl->picnum],
@@ -574,7 +509,7 @@ void R_DrawPlanes (void)
 				yoffs = pl->yoffs;
 				basecolormap = pl->colormap;	// [RH] set basecolormap
 				planeheight = abs(pl->height-viewz);
-				light = (pl->lightlevel >> LIGHTSEGSHIFT) + (foggy ? 0 : extralight);
+				light = (pl->lightlevel >> LIGHTSEGSHIFT) + extralight;
 
 				if (light >= LIGHTLEVELS)
 					light = LIGHTLEVELS-1;
@@ -590,14 +525,15 @@ void R_DrawPlanes (void)
 
 				for (x = pl->minx; x <= stop; x++)
 				{
-					R_MakeSpans (x, pl->top[x-1], pl->bottom[x-1],
-									pl->top[x],	pl->bottom[x]);
+					R_MakeSpans(x,pl->top[x-1],
+								pl->bottom[x-1],
+								pl->top[x],
+								pl->bottom[x]);
 				}
 				
 				Z_ChangeTag (ds_source, PU_CACHE);
 			}
 		}
-	}
 }
 
 BOOL R_PlaneInitData (void)
@@ -612,8 +548,8 @@ BOOL R_PlaneInitData (void)
 	if (cachedxstep)	free (cachedxstep);
 	if (cachedystep)	free (cachedystep);
 
-	floorclip = Malloc (screens[0].width * sizeof(*floorclip));
-	ceilingclip = Malloc (screens[0].width * sizeof(*ceilingclip));
+	floorclip = Calloc (screens[0].width, sizeof(*floorclip));
+	ceilingclip = Calloc (screens[0].width, sizeof(*ceilingclip));
 
 	spanstart = Calloc (screens[0].height, sizeof(*spanstart));
 	spanstop = Calloc (screens[0].height, sizeof(*spanstop));

@@ -33,17 +33,20 @@
 // Init at program start...
 void I_InitSound();
 
-// ... shut down and relase at program termination.
-void STACK_ARGS I_ShutdownSound (void);
+// ... update sound buffer and audio device at runtime...
+void I_UpdateSound(void);
 
-void I_SetSfxVolume (int volume);
+// ... shut down and relase at program termination.
+void I_ShutdownSound(void);
+
+void I_SetSfxVolume(int volume);
 
 //
 //	SFX I/O
 //
 
-// Initialize channels
-void I_SetChannels (int);
+// Initialize channels?
+void I_SetChannels();
 
 // load a sound from disk
 void I_LoadSound (struct sfxinfo_struct *sfx);
@@ -55,7 +58,7 @@ I_StartSound
   int			vol,
   int			sep,
   int			pitch,
-  int			channel );
+  int			priority );
 
 
 // Stops a sound channel.

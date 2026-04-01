@@ -51,6 +51,7 @@ extern patch_t *hu_font[];
 
 #include "am_map.h"
 
+
 static int Background, YourColor, WallColor, TSWallColor,
 		   FDWallColor, CDWallColor, ThingColor,
 		   SecretWallColor, GridColor, XHairColor,
@@ -117,6 +118,9 @@ cvar_t	*am_showsecrets, *am_showmonsters, *am_showtime;
 // translates between frame-buffer and map coordinates
 #define CXMTOF(x)  (MTOF((x)-m_x)/* - f_x*/)
 #define CYMTOF(y)  (f_h - MTOF((y)-m_y)/* + f_y*/)
+
+// the following is crap
+#define LINE_NEVERSEE ML_DONTDRAW
 
 typedef struct {
 	int x, y;
@@ -206,6 +210,11 @@ static int 	cheating = 0;
 static int 	grid = 0;
 
 static int 	leveljuststarted = 1; 	// kluge until AM_LevelInit() is called
+
+// [RH] Avoid drawing outside of screens[0] lock.
+//		Also provides a way for the status bar to redraw
+//		itself when its scale changes.
+BOOL		am_needtodrawstatusbar = false;
 
 BOOL		automapactive = false;
 
@@ -342,8 +351,8 @@ void AM_restoreScaleAndLoc(void)
 		m_x = old_m_x;
 		m_y = old_m_y;
     } else {
-		m_x = plr->camera->x - m_w/2;
-		m_y = plr->camera->y - m_h/2;
+		m_x = plr->mo->x - m_w/2;
+		m_y = plr->mo->y - m_h/2;
     }
 	m_x2 = m_x + m_w;
 	m_y2 = m_y + m_h;
@@ -468,7 +477,7 @@ void AM_initVariables(void)
 	old_m_h = m_h;
 
 	// inform the status bar of the change
-	ST_Responder (&st_notify);
+	ST_Responder(&st_notify);
 }
 
 void AM_initColors (BOOL overlayed)
@@ -525,7 +534,6 @@ void AM_initColors (BOOL overlayed)
 	} else {
 		/* Use colors corresponding to the original Doom's */
 		Background = V_GetColorFromString (palette, "00 00 00");
-		YourColor = V_GetColorFromString (palette, "FF FF FF");
 		AlmostBackground = V_GetColorFromString (palette, "10 10 10");
 		SecretWallColor =
 			WallColor = V_GetColorFromString (palette, "fc 00 00");
@@ -600,10 +608,8 @@ void AM_Stop (void)
 
 	AM_unloadPics ();
 	automapactive = false;
-	ST_Responder (&st_notify);
+	ST_Responder(&st_notify);
 	stopped = true;
-	BorderNeedRefresh = true;
-	viewactive = true;
 }
 
 //
@@ -644,10 +650,6 @@ void AM_maxOutWindowScale(void)
 
 void Cmd_Togglemap (void *plyr, int argc, char **argv)
 {
-	if (gamestate != GS_LEVEL)
-		return;
-
-	SB_state = -1;
 	if (!automapactive) {
 		AM_Start ();
 		if (am_overlay->value)
@@ -657,8 +659,9 @@ void Cmd_Togglemap (void *plyr, int argc, char **argv)
 	} else {
 		if (am_overlay->value && viewactive) {
 			viewactive = false;
-			SB_state = -1;
+			am_needtodrawstatusbar = true;
 		} else {
+			viewactive = true;
 			AM_Stop ();
 		}
 	}
@@ -673,8 +676,9 @@ void Cmd_Togglemap (void *plyr, int argc, char **argv)
 BOOL AM_Responder (event_t *ev)
 {
 	int rc;
-	static int cheatstate = 0;
-	static int bigstate = 0;
+	static int cheatstate=0;
+	static int bigstate=0;
+	static char buffer[20];
 
 	rc = false;
 
@@ -721,19 +725,20 @@ BOOL AM_Responder (event_t *ev)
 					case AM_FOLLOWKEY:
 						followplayer = !followplayer;
 						f_oldloc.x = MAXINT;
-						Printf (PRINT_HIGH, followplayer ? AMSTR_FOLLOWON : AMSTR_FOLLOWOFF);
+						plr->message = followplayer ? AMSTR_FOLLOWON : AMSTR_FOLLOWOFF;
 						break;
 					case AM_GRIDKEY:
 						grid = !grid;
-						Printf (PRINT_HIGH, grid ? AMSTR_GRIDON : AMSTR_GRIDOFF);
+						plr->message = grid ? AMSTR_GRIDON : AMSTR_GRIDOFF;
 						break;
 					case AM_MARKKEY:
-						Printf (PRINT_HIGH, "%s %d", AMSTR_MARKEDSPOT, markpointnum);
+						sprintf(buffer, "%s %d", AMSTR_MARKEDSPOT, markpointnum);
+						plr->message = buffer;
 						AM_addMark();
 						break;
 					case AM_CLEARMARKKEY:
 						AM_clearMarks();
-						Printf (PRINT_HIGH, AMSTR_MARKSCLEARED);
+						plr->message = AMSTR_MARKSCLEARED;
 						break;
 					default:
 						cheatstate=0;
@@ -796,13 +801,18 @@ void AM_changeWindowScale (void)
 //
 void AM_doFollowPlayer(void)
 {
-    if (f_oldloc.x != plr->camera->x || f_oldloc.y != plr->camera->y) {
-		m_x = FTOM(MTOF(plr->camera->x)) - m_w/2;
-		m_y = FTOM(MTOF(plr->camera->y)) - m_h/2;
+    if (f_oldloc.x != plr->mo->x || f_oldloc.y != plr->mo->y) {
+		m_x = FTOM(MTOF(plr->mo->x)) - m_w/2;
+		m_y = FTOM(MTOF(plr->mo->y)) - m_h/2;
 		m_x2 = m_x + m_w;
 		m_y2 = m_y + m_h;
-		f_oldloc.x = plr->camera->x;
-		f_oldloc.y = plr->camera->y;
+		f_oldloc.x = plr->mo->x;
+		f_oldloc.y = plr->mo->y;
+
+		//  m_x = FTOM(MTOF(plr->mo->x - m_w/2));
+		//  m_y = FTOM(MTOF(plr->mo->y - m_h/2));
+		//  m_x = plr->mo->x - m_w/2;
+		//  m_y = plr->mo->y - m_h/2;
 	}
 }
 
@@ -980,7 +990,10 @@ BOOL AM_clipMline (mline_t *ml, fline_t *fl)
 //
 // Classic Bresenham w/ whatever optimizations needed for speed
 //
-void AM_drawFline (fline_t *fl, int color)
+void
+AM_drawFline
+( fline_t*	fl,
+  int		color )
 {
 	register int x;
 	register int y;
@@ -991,6 +1004,20 @@ void AM_drawFline (fline_t *fl, int color)
 	register int ax;
 	register int ay;
 	register int d;
+
+#if 0
+    static fuck = 0;
+
+    // For debugging only
+    if (  fl->a.x < 0 || fl->a.x >= f_w
+	   || fl->a.y < 0 || fl->a.y >= f_h
+	   || fl->b.x < 0 || fl->b.x >= f_w
+	   || fl->b.y < 0 || fl->b.y >= f_h)
+    {
+	Printf("fuck %d \r", fuck++);
+	return;
+    }
+#endif
 
 #define PUTDOTP(xx,yy,cc) fb[(yy)*f_p+(xx)]=(cc)
 #define PUTDOTD(xx,yy,cc) *((int *)(fb+(yy)*f_p+((xx)<<2)))=(cc)
@@ -1153,7 +1180,7 @@ void AM_drawWalls(void)
 		}
 
 		if (cheating || (lines[i].flags & ML_MAPPED)) {
-			if ((lines[i].flags & ML_DONTDRAW) && !cheating)
+			if ((lines[i].flags & LINE_NEVERSEE) && !cheating)
 				continue;
 			if (!lines[i].backsector) {
 				AM_drawMline(&l, WallColor);
@@ -1179,7 +1206,7 @@ void AM_drawWalls(void)
 				}
 			}
 		} else if (plr->powers[pw_allmap]) {
-			if (!(lines[i].flags & ML_DONTDRAW))
+			if (!(lines[i].flags & LINE_NEVERSEE))
 				AM_drawMline(&l, NotSeenColor);
 		}
     }
@@ -1286,11 +1313,11 @@ void AM_drawPlayers(void)
 		return;
 	}
 
-	for (i = 0; i < MAXPLAYERS; i++) {
+	for (i=0;i<MAXPLAYERS;i++) {
 		their_color++;
 		p = &players[i];
 
-		if ((deathmatch->value && !demoplayback) && p != plr)
+		if ( (deathmatch->value && !singledemo) && p != plr)
 			continue;
 
 		if (!playeringame[i])
@@ -1391,7 +1418,14 @@ void AM_Drawer (void)
 	if (!automapactive)
 		return;
 
+	// [RH] Moved here to make sure it happens inside D_Display().
+	if (am_needtodrawstatusbar) {
+		ST_Drawer (false, true);
+		am_needtodrawstatusbar = false;
+	}
+
 	fb = screens[0].buffer;
+
 	if (!viewactive) {
 		// [RH] Set f_? here now to handle automap overlaying
 		// and view size adjustments.
@@ -1436,40 +1470,37 @@ void AM_Drawer (void)
 			y = ST_Y - height * 2 + 1;
 
 			if (am_showmonsters->value) {
-				sprintf (line, TEXTCOLOR_RED "MONSTERS:"
-							   TEXTCOLOR_NORMAL " %d / %d",
-							   level.killed_monsters, level.total_monsters);
-				V_DrawTextClean (CR_GREY,0, y, line);
+				sprintf (line, "\xcd\xcf\xce\xd3\xd4\xc5\xd2\xd3\xba"	// MONSTERS:
+							   " %d / %d", level.killed_monsters, level.total_monsters);
+				V_DrawTextClean (0, y, line);
 			}
 
 			if (am_showsecrets->value) {
-				sprintf (line, TEXTCOLOR_RED "SECRETS:"
-							   TEXTCOLOR_NORMAL " %d / %d",
-							   level.found_secrets, level.total_secrets);
-				V_DrawTextClean (CR_GREY, screens[0].width - V_StringWidth (line) * CleanXfac, y, line);
+				sprintf (line, "\xd3\xc5\xc3\xd2\xc5\xd4\xd3\xba"	// SECRETS:
+							   " %d / %d", level.found_secrets, level.total_secrets);
+				V_DrawTextClean (screens[0].width - V_StringWidth (line) * CleanXfac, y, line);
 			}
 
 			y += height;
 		}
 
-		line[0] = '\x8a';
-		line[1] = CR_RED + 'A';
 		i = 0;
 		while (i < 8 && level.mapname[i]) {
-			line[2 + i++] = level.mapname[i];
+			line[i++] = (byte)(level.mapname[i] ^ (byte)0x80);
 		}
-		i += 2;
-		line[i++] = ':';
+		line[i++] = (byte)(':' | (byte)0x80);
 		line[i++] = ' ';
-		line[i++] = '\x8a';
-		line[i++] = '-';
 		strcpy (&line[i], level.level_name);
-		V_DrawTextClean (CR_GREY, 0, y, line);
+		V_DrawTextClean (0, y, line);
 
 		if (am_showtime->value) {
 			sprintf (line, " %02d:%02d:%02d", time/3600, (time%3600)/60, time%60);	// Time
-			V_DrawTextClean (CR_RED, screens[0].width - V_StringWidth (line) * CleanXfac, y, line);
+			for (i = 0; line[i]; i++)
+				line[i] ^= 0x80;
+			V_DrawTextClean (screens[0].width - V_StringWidth (line) * CleanXfac, y, line);
 		}
 
 	}
+
+	V_MarkRect(f_x, f_y, f_w, f_h);
 }

@@ -25,7 +25,6 @@
 
 #include "z_zone.h"
 #include "p_local.h"
-#include "p_effect.h"
 #include "p_acs.h"
 #include "c_consol.h"
 
@@ -151,7 +150,6 @@ void P_Ticker (void)
 		return;
 	}
 
-	P_ThinkParticles ();	// [RH] make the particles think
 
 	for (i = 0; i<MAXPLAYERS; i++)
 		if (playeringame[i])
@@ -172,8 +170,6 @@ void P_Ticker (void)
 			players[i].oldvelocity[1] = players[i].mo->momy;
 			players[i].oldvelocity[2] = players[i].mo->momz;
 		}
-
-	P_RunEffects ();	// [RH] Run particle effects
 
 	// for par times
 	level.time++;

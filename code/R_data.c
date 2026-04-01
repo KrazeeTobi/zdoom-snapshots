@@ -54,6 +54,43 @@
 // a patch or sprite is composed of zero or more columns.
 // 
 
+
+
+//
+// Texture definition.
+// Each texture is composed of one or more patches,
+// with patches being lumps stored in the WAD.
+// The lumps are referenced by number, and patched
+// into the rectangular texture space using origin
+// and possibly other attributes.
+//
+typedef struct
+{
+	short		originx;
+	short		originy;
+	short		patch;
+	short		stepdir;
+	short		colormap;
+} mappatch_t;
+
+
+//
+// Texture definition.
+// A DOOM wall texture is a list of patches
+// which are to be combined in a predefined order.
+//
+typedef struct
+{
+	char		name[8];
+	BOOL	 	masked; 
+	short		width;
+	short		height;
+	byte		pad[4];		// OBSOLETE (was short **columndirectory)
+	short		patchcount;
+	mappatch_t	patches[1];
+} maptexture_t;
+
+
 // A single patch from a texture definition,
 //	basically a rectangular area within
 //	the texture rectangle.
@@ -313,8 +350,7 @@ static void R_GenerateLookup(int texnum, int *const errors)
 		{
 			if (!count[x].patches)				// killough 4/9/98
 			{
-				Printf (PRINT_HIGH,
-						"\nR_GenerateLookup: Column %d is without a patch in texture %.8s",
+				Printf("\nR_GenerateLookup: Column %d is without a patch in texture %.8s",
 						x, texture->name);
 						++*errors;
 			}
@@ -460,10 +496,13 @@ void R_InitTextures (void)
 
 	totalwidth = 0;
 
-	// [RH] Removd the complex printing shit
+	// [RH] Removed the complex printing shit
 
 	for (i = 0; i < numtextures; i++, directory++)
 	{
+		if (!(i&127))
+			Printf (".");
+
 		if (i == numtextures1)
 		{
 			// Start looking in second texture file.
@@ -499,7 +538,7 @@ void R_InitTextures (void)
 			patch->patch = patchlookup[SHORT(mpatch->patch)];
 			if (patch->patch == -1)
 			{
-				Printf (PRINT_HIGH, "R_InitTextures: Missing patch in texture %s\n", texture->name);
+				Printf ("R_InitTextures: Missing patch in texture %s\n", texture->name);
 				errors++;
 			}
 		}
@@ -705,9 +744,15 @@ unsigned int R_BlendForColormap (int map)
 void R_InitData (void)
 {
 	R_InitTextures ();
+//	Printf ("\nInitTextures");
 	R_InitFlats ();
+//	Printf ("\nInitFlats");
 	R_InitSpriteLumps ();
+//	Printf (".");
+//	Printf ("\nInitSprites");
 	R_InitColormaps ();
+//	Printf (".");
+//	Printf ("\nInitColormaps");
 }
 
 
@@ -784,7 +829,7 @@ int R_TextureNumForName (const char *name)
 		namet[8] = 0;
 		//I_Error ("R_TextureNumForName: %s not found", namet);
 		// [RH] Return empty texture if it wasn't found.
-		Printf (PRINT_HIGH, "Texture %s not found\n", namet);
+		Printf ("Texture %s not found\n", namet);
 		return 0;
 	}
 

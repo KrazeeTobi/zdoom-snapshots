@@ -34,8 +34,6 @@ const DIDATAFORMAT c_dfDIMouse = {
 // Using this instead of using a pre-initialized array
 // chops ~4k off the size of the executable. Big deal,
 // but I felt like doing it anyway.
-void InitKeyboardObjectData (void);
-
 void InitKeyboardObjectData (void)
 {
 	int i;

@@ -1170,6 +1170,7 @@ typedef enum
 	S_BRIDGE3,
 	S_BRIDGE4,
 	S_BRIDGE5,
+	S_SWITCHTEMP,
 	NUMSTATES
 } statenum_t;
 
@@ -1359,10 +1360,9 @@ typedef enum {
 	MT_PULL,		// Boom's pull thing
 	MT_PATHNODE,
 	MT_AMBIENT,		// Ambient sounds
+	MT_SWITCHTEMP,	// Temporary mobj for switch sounds
 	MT_TELEPORTMAN2,// Teleport destination that pays attention to its height
 	MT_CAMERA,		// Camera used for "cutscenes"
-	MT_SPARK,		// Throws out sparks when activated
-	MT_FOUNTAIN,	// Just a container for a particle fountain
 	NUMMOBJTYPES
 
 } mobjtype_t;
@@ -1391,7 +1391,6 @@ typedef struct
 	int damage;
 	char *activesound;	// [RH] not int
 	int flags;
-	int flags2;
 	int raisestate;
 
 } mobjinfo_t;

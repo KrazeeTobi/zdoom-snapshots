@@ -21,13 +21,20 @@
 //
 //-----------------------------------------------------------------------------
 
+
+
 #include "m_alloc.h"
+
 #include "i_system.h"
 #include "z_zone.h"
 #include "m_random.h"
+
 #include "doomdef.h"
 #include "p_local.h"
-#include "s_sndseq.h"
+
+#include "s_sound.h"
+
+// State.
 #include "doomstat.h"
 #include "r_state.h"
 
@@ -38,18 +45,11 @@
 plat_t *activeplats;
 
 
-static void PlayPlatSound (sector_t *sec, const char *sound)
-{
-	if (sec->seqType >= 0)
-		SN_StartSequence ((mobj_t *)&sec->soundorg, sec->seqType, SEQ_PLATFORM);
-	else
-		SN_StartSequenceName ((mobj_t *)&sec->soundorg, sound);
-}
 
 //
 // Move a plat up and down
 //
-void T_PlatRaise (plat_t *plat)
+void T_PlatRaise(plat_t* plat)
 {
 	result_e res;
 		
@@ -61,20 +61,28 @@ void T_PlatRaise (plat_t *plat)
 						  plat->high,
 						  plat->crush,0,1);
 										
-		if (res == crushed && (plat->crush == -1))
+		if (plat->type == platUpByValueStay
+			|| plat->type == platRaiseAndStay)
+		{
+			if (!(level.time&7))
+				S_StartSound((mobj_t *)&plat->sector->soundorg, "plats/pt1_mid", 119);
+		}
+		
+								
+		if (res == crushed && (!plat->crush))
 		{
 			plat->count = plat->wait;
 			plat->status = down;
-			PlayPlatSound (plat->sector, "Platform");
+			S_StartSound((mobj_t *)&plat->sector->soundorg, "plats/pt1_strt", 100);
 		}
 		else
 		{
 			if (res == pastdest)
 			{
-				SN_StopSequence ((mobj_t *)&plat->sector->soundorg);
 				if (plat->type != platToggle) {
 					plat->count = plat->wait;
 					plat->status = waiting;
+					S_StartSound((mobj_t *)&plat->sector->soundorg, "plats/pt1_stop", 100);
 
 					switch(plat->type)
 					{
@@ -101,12 +109,12 @@ void T_PlatRaise (plat_t *plat)
 
 		if (res == pastdest)
 		{
-			SN_StopSequence ((mobj_t *)&plat->sector->soundorg);
-			// if not an instant toggle, start waiting
+			// if not an instant toggle, start waiting, make plat stop sound
 			if (plat->type != platToggle)	//jff 3/14/98 toggle up down
 			{								// is silent, instant, no waiting
 				plat->count = plat->wait;
 				plat->status = waiting;
+				S_StartSound((mobj_t *)&plat->sector->soundorg, "plats/pt1_stop", 100);
 
 				switch (plat->type) {
 					case platUpWaitDownStay:
@@ -124,15 +132,19 @@ void T_PlatRaise (plat_t *plat)
 
 		//jff 1/26/98 remove the plat if it bounced so it can be tried again
 		//only affects plats that raise and bounce
+		//killough 1/31/98: relax compatibility to demo_compatibility
 
 		// remove the plat if it's a pure raise type
-		switch (plat->type)
+		if (!olddemo)
 		{
-			case platUpByValueStay:
-			case platRaiseAndStay:
-				P_RemoveActivePlat (plat);
-			default:
-				break;
+			switch (plat->type)
+			{
+				case platUpByValueStay:
+				case platRaiseAndStay:
+					P_RemoveActivePlat(plat);
+				default:
+					break;
+			}
 		}
 
 		break;
@@ -144,11 +156,7 @@ void T_PlatRaise (plat_t *plat)
 				plat->status = up;
 			else
 				plat->status = down;
-
-			if (plat->type == platToggle)
-				SN_StartSequenceName ((mobj_t *)&plat->sector->soundorg, "Silence");
-			else
-				PlayPlatSound (plat->sector, "Platform");
+			S_StartSound((mobj_t *)&plat->sector->soundorg, "plats/pt1_strt", 100);
 		}
 		break;
 
@@ -174,7 +182,7 @@ BOOL EV_DoPlat (int tag, line_t *line, plattype_e type, int height,
 
 	// [RH] If tag is zero, use the sector on the back side
 	//		of the activating line (if any).
-	if (!tag) {
+	if (!tag && !olddemo) {
 		if (!line || !(sec = line->backsector))
 			return false;
 		secnum = sec - sectors;
@@ -234,20 +242,20 @@ manual_plat:
 			case platRaiseAndStay:
 				plat->high = P_FindNextHighestFloor (sec, sec->floorheight);
 				plat->status = up;
-				PlayPlatSound (sec, "Floor");
+				S_StartSound ((mobj_t *)&sec->soundorg, "plats/pt1_mid", 119);
 				break;
 
 			case platUpByValue:
 			case platUpByValueStay:
 				plat->high = sec->floorheight + height;
 				plat->status = up;
-				PlayPlatSound (sec, "Floor");
+				S_StartSound ((mobj_t *)&sec->soundorg, "plats/pt1_mid", 119);
 				break;
 			
 			case platDownByValue:
 				plat->low = sec->floorheight - height;
 				plat->status = down;
-				PlayPlatSound (sec, "Floor");
+				S_StartSound ((mobj_t *)&sec->soundorg, "plats/pt1_mid", 119);
 				break;
 
 			case platDownWaitUpStay:
@@ -258,7 +266,7 @@ manual_plat:
 
 				plat->high = sec->floorheight;
 				plat->status = down;
-				PlayPlatSound (sec, "Platform");
+				S_StartSound ((mobj_t *)&sec->soundorg, "plats/pt1_strt", 100);
 				break;
 			
 			case platUpWaitDownStay:
@@ -268,7 +276,7 @@ manual_plat:
 					plat->high = sec->floorheight;
 
 				plat->status = up;
-				PlayPlatSound (sec, "Platform");
+				S_StartSound ((mobj_t *)&sec->soundorg, "plats/pt1_strt", 100);
 				break;
 
 			case platPerpetualRaise:
@@ -284,7 +292,7 @@ manual_plat:
 
 				plat->status = P_Random (pr_doplat) & 1;
 
-				PlayPlatSound (sec, "Platform");
+				S_StartSound((mobj_t *)&sec->soundorg, "plats/pt1_strt", 100);
 				break;
 
 			case platToggle:	//jff 3/14/98 add new type to support instant toggle
@@ -294,14 +302,13 @@ manual_plat:
 				plat->low = sec->ceilingheight;
 				plat->high = sec->floorheight;
 				plat->status = down;
-				SN_StartSequenceName ((mobj_t *)&sec->soundorg, "Silence");
 				break;
 
 			case platDownToNearestFloor:
 				plat->low = P_FindNextLowestFloor (sec, sec->floorheight) + lip*FRACUNIT;
 				plat->status = down;
 				plat->high = sec->floorheight;
-				PlayPlatSound (sec, "Platform");
+				S_StartSound((mobj_t *)&sec->soundorg, "plats/pt1_strt", 100);
 				break;
 
 			case platDownToLowestCeiling:
@@ -312,7 +319,7 @@ manual_plat:
 					plat->low = sec->floorheight;
 
 				plat->status = down;
-				PlayPlatSound (sec, "Platform");
+				S_StartSound((mobj_t *)&sec->soundorg, "plats/pt1_strt", 100);
 				break;
 
 			default:
@@ -354,7 +361,6 @@ void EV_StopPlat (int tag)
 			scan->status = in_stasis;
 			scan->thinker.function.acv = (actionf_v)NULL;
 		}
-		scan = scan->next;
 	}
 }
 

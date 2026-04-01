@@ -43,16 +43,14 @@ extern BOOL setmodeneeded;
 extern int	NewWidth, NewHeight, NewID;
 
 
-cvar_t *I_ShowFPS;
-cvar_t *ticker;
+cvar_t *I_ShowFPS, *ticker;
 cvar_t *win_stretchx;
 cvar_t *win_stretchy;
 cvar_t *fullscreen;
 
 
-struct player_s;
-static void Cmd_Vid_DescribeModes (struct player_s*,int,char**);
-static void Cmd_Vid_DescribeCurrentMode (struct player_s*,int,char**);
+static void Cmd_Vid_DescribeModes ();
+static void Cmd_Vid_DescribeCurrentMode ();
 
 static char WindowedIFace[8];
 static char FullscreenIFace[8];
@@ -60,8 +58,8 @@ static char FullscreenIFace[8];
 BOOL Fullscreen;
 
 static struct CmdDispatcher VidCommands[] = {
-	{ "vid_currentmode",	Cmd_Vid_DescribeCurrentMode },
-	{ "vid_listmodes",		Cmd_Vid_DescribeModes },
+	{ "vid_describecurrentmode",	Cmd_Vid_DescribeCurrentMode },
+	{ "vid_describemodes",			Cmd_Vid_DescribeModes },
 	{ NULL, }
 };
 
@@ -116,13 +114,15 @@ static modelist_t *Modes = NULL;
 int DisplayID;
 // Number of bits-per-pixel of output device
 int DisplayBPP;
-
+// Number of bits-per-pixel desired (might not match DisplayBPP)
+static int WantedBPP;
 // Display size
 int DisplayWidth, DisplayHeight;
 
 }
 
 static int nummodes = 0;
+
 
 
 /* The PTC interface object */
@@ -205,7 +205,7 @@ static char *GetFormatName (const int id)
 
 extern "C" {
 
-void STACK_ARGS I_ShutdownGraphics (void)
+void I_ShutdownGraphics (void)
 {
 	{
 		modelist_t *mode = Modes, *tempmode;
@@ -249,6 +249,14 @@ void I_BeginUpdate (void)
 }
 
 //
+// I_UpdateNoBlit
+//
+void I_UpdateNoBlit (void)
+{
+	// what is this?
+}
+
+//
 // I_FinishUpdateNoBlit
 //
 void I_FinishUpdateNoBlit (void)
@@ -261,29 +269,21 @@ void I_FinishUpdateNoBlit (void)
 //
 void I_FinishUpdate (void)
 {
-	static int lasttic, lastms = 0, lastsec = 0;
-	static int framecount = 0, lastcount = 0;
+	static int	lasttic, lastms = 0;
 	int		tics, ms;
 	int		i;
-	int		howlong;
 
 	ms = timeGetTime ();
-	if ((howlong = ms - lastms) && I_ShowFPS->value) {
+	if ((ms - lastms) && I_ShowFPS->value) {
 		char fpsbuff[40];
 		int chars;
 
 		sprintf (fpsbuff, "%d ms (%d fps)",
-				 howlong,
-				 lastcount);
+				 ms - lastms,
+				 1000 / (ms - lastms));
 		chars = strlen (fpsbuff);
 		V_Clear (0, screens[0].height - 8, chars * 8, screens[0].height, &screens[0], 0);
 		V_PrintStr (0, screens[0].height - 8, (byte *)&fpsbuff[0], chars);
-		if (lastsec != ms / 1000) {
-			lastcount = framecount;
-			framecount = 0;
-			lastsec = ms / 1000;
-		}
-		framecount++;
 	}
 	lastms = ms;
 
@@ -349,6 +349,8 @@ void I_SetPalette (unsigned int *pal)
 
 	if (screens[0].is8bit)
 		((Surface *)(screens[0].impdata))->SetPalette (*DisPal);
+	if (screens[1].is8bit)
+		((Surface *)(screens[1].impdata))->SetPalette (*DisPal);
 
 	// Only set the display palette if it is indexed color
 	FORMAT format = ptc.GetFormat ();
@@ -366,7 +368,7 @@ static void ReinitPTC (char *iface)
 	SetPriorityClass (GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
 #endif
 	if (developer->value && vidactive)
-		Printf (PRINT_HIGH, "PTC reinitialized to use %s\n\n", iface);
+		Printf ("PTC reinitialized to use %s\n\n", iface);
 }
 
 void I_SetMode (int width, int height, int id)
@@ -420,7 +422,7 @@ void I_SetMode (int width, int height, int id)
 
 		DisplayBPP = mode.format.bits;
 		if (developer->value && vidactive)
-			Printf (PRINT_HIGH, "Mode set: %dx%d (%s)\n", mode.x, mode.y, IdStrings[DisplayID-1000]);
+			Printf ("Mode set: %dx%d (%s)\n", mode.x, mode.y, IdStrings[DisplayID-1000]);
 	}
 
 	// cheapo hack to make sure current display BPP is stored in screens[0]
@@ -530,14 +532,14 @@ BOOL I_NextMode (int *width, int *height)
 	return false;
 }
 
-void Cmd_Vid_DescribeModes (struct player_s *p, int c, char **v)
+void Cmd_Vid_DescribeModes ()
 {
 	modelist_t *mode = Modes;
 
 	while (mode)
 	{
 		// print accumulated mode info
-		Printf (PRINT_HIGH, "%4dx%-4d  %2dbit %10s\n",
+		Printf ("%4dx%-4d  %2dbit %10s\n",
 				mode->width,
 				mode->height,
 				mode->bpp,
@@ -548,9 +550,9 @@ void Cmd_Vid_DescribeModes (struct player_s *p, int c, char **v)
 	}
 }
 
-void Cmd_Vid_DescribeCurrentMode (struct player_s *p, int c, char **v)
+void Cmd_Vid_DescribeCurrentMode ()
 {
-	Printf (PRINT_HIGH, "%dx%d (%s)\n", screens[0].width, screens[0].height, IdStrings[DisplayID-1000]);
+	Printf ("%dx%d (%s)\n", screens[0].width, screens[0].height, IdStrings[DisplayID-1000]);
 }
 
 
@@ -590,11 +592,11 @@ BOOL I_AllocateScreen (screen_t *scrn, int width, int height, int Bpp)
 					surface->GetWidth (),
 					surface->GetHeight (),
 					surface->GetBitsPerPixel ());
-			Printf (PRINT_HIGH, "Orientation: %d\n", surface->GetOrientation ());
-			Printf (PRINT_HIGH, "Layout: %d\n", surface->GetLayout ());
-			Printf (PRINT_HIGH, "Advance: %d\n", surface->GetAdvance ());
-			Printf (PRINT_HIGH, "Pitch: %d\n", surface->GetPitch ());
-			Printf (PRINT_HIGH, "Format: %s\n\n", GetFormatName ((surface->GetFormat ()).id));
+			Printf ("Orientation: %d\n", surface->GetOrientation ());
+			Printf ("Layout: %d\n", surface->GetLayout ());
+			Printf ("Advance: %d\n", surface->GetAdvance ());
+			Printf ("Pitch: %d\n", surface->GetPitch ());
+			Printf ("Format: %s\n\n", GetFormatName ((surface->GetFormat ()).id));
 		}
 
 		return true;

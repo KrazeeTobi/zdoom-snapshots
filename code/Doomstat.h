@@ -154,9 +154,9 @@ extern level_locals_t level;
 // Disable save/end game?
 extern	BOOL			usergame;
 
+//?
 extern	BOOL			demoplayback;
 extern	BOOL			demorecording;
-extern	int				demover;
 
 // Quit after playing a demo from cmdline.
 extern	BOOL			singledemo; 	
@@ -164,6 +164,7 @@ extern	BOOL			singledemo;
 
 
 
+//?
 extern	gamestate_t 	gamestate;
 
 
@@ -221,19 +222,9 @@ extern	FILE*			debugfile;
 extern	BOOL	 		precache;
 
 
-//-------
-//REFRESH
-//-------
-
 // wipegamestate can be set to -1
 //	to force a wipe on the next draw
-extern gamestate_t wipegamestate;
-extern BOOL setsizeneeded;
-extern BOOL setmodeneeded;
-
-extern BOOL BorderNeedRefresh;
-extern BOOL BorderTopRefresh;
-
+extern	gamestate_t 	wipegamestate;
 
 extern	cvar_t 			*mouseSensitivity;
 //?
@@ -274,6 +265,9 @@ extern	cvar_t			*developer;
 
 // Use MMX routines? (Only if USEASM is defined)
 extern	BOOL			UseMMX;
+
+// True if ZDoom should try to behave like Doom 1.9
+extern	BOOL			olddemo;
 
 
 #ifdef USEASM
@@ -316,27 +310,6 @@ extern struct DehInfo deh;
 
 extern cvar_t *dmflagsvar;
 extern int	   dmflags;
-
-// [RH] Generic information about the current game
-
-struct gameinfo_s
-{
-	char *gameTitle;
-	BOOL pagesArePatches;
-	char *titlePage;
-	char *demoPage1;
-	char *demoPage2;
-	char *advisory;
-	float titleTime;
-	float demoPage1Time;
-	float demoPage2Time;
-	float advisoryTime;
-	char *titleSong;
-	char *skyFlatName;
-};
-typedef struct gameinfo_s gameinfo_t;
-
-extern gameinfo_t gameinfo;
 
 #endif
 //-----------------------------------------------------------------------------

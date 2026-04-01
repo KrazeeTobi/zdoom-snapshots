@@ -24,6 +24,7 @@
 // We are referring to sprite numbers.
 #include "info.h"
 
+#include "d_englsh.h"
 #include "d_items.h"
 
 

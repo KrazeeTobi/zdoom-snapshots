@@ -23,11 +23,14 @@
 
 
 #include "m_alloc.h"
+
 #include "z_zone.h"
 #include "doomdef.h"
 #include "p_local.h"
+
 #include "s_sound.h"
-#include "s_sndseq.h"
+
+// State.
 #include "doomstat.h"
 #include "r_state.h"
 
@@ -41,29 +44,11 @@
 //		with BOOM except I link the ceilings themselves together.
 ceiling_t *activeceilings;
 
-static void PlayCeilingSound (ceiling_t *ceiling)
-{
-	sector_t *sec = ceiling->sector;
-
-	if (sec->seqType >= 0)
-	{
-		SN_StartSequence ((mobj_t *)&sec->soundorg, sec->seqType, SEQ_PLATFORM);
-	}
-	else
-	{
-		if (ceiling->silent == 2)
-			SN_StartSequenceName ((mobj_t *)&sec->soundorg, "Silence");
-		else if (ceiling->silent == 1)
-			SN_StartSequenceName ((mobj_t *)&sec->soundorg, "CeilingSemiSilent");
-		else
-			SN_StartSequenceName ((mobj_t *)&sec->soundorg, "CeilingNormal");
-	}
-}
 
 //
 // T_MoveCeiling
 //
-void T_MoveCeiling (ceiling_t *ceiling)
+void T_MoveCeiling (ceiling_t* ceiling)
 {
 	result_e res;
 		
@@ -79,15 +64,19 @@ void T_MoveCeiling (ceiling_t *ceiling)
 						  ceiling->topheight,
 						  -1,1,ceiling->direction);
 		
+		// Make moving sound
+		if (!(level.time&7) && (ceiling->silent == 0))
+			S_StartSound ((mobj_t *)&ceiling->sector->soundorg, "plats/pt1_mid", 119);
+		
 		if (res == pastdest)
 		{
-			SN_StopSequence ((mobj_t *)&ceiling->sector->soundorg);
 			switch (ceiling->type)
 			{
 			  case ceilCrushAndRaise:
+				if (ceiling->silent == 1)
+					S_StartSound((mobj_t *)&ceiling->sector->soundorg, "plats/pt1_stop", 100);
 				ceiling->direction = -1;
 				ceiling->speed = ceiling->speed1;
-				PlayCeilingSound (ceiling);
 				break;
 				
 			  // movers with texture change, change the texture then get removed
@@ -112,16 +101,20 @@ void T_MoveCeiling (ceiling_t *ceiling)
 						  ceiling->bottomheight,
 						  ceiling->crush,1,ceiling->direction);
 		
+		// Make moving noise
+		if (!(level.time&7) && !ceiling->silent)
+			S_StartSound((mobj_t *)&ceiling->sector->soundorg, "plats/pt1_mid", 119);
+		
 		if (res == pastdest)
 		{
-			SN_StopSequence ((mobj_t *)&ceiling->sector->soundorg);
 			switch (ceiling->type)
 			{
 			  case ceilCrushAndRaise:
 			  case ceilCrushRaiseAndStay:
+				if (ceiling->silent == 1)
+					S_StartSound ((mobj_t *)&ceiling->sector->soundorg, "plats/pt1_stop", 100);
 				ceiling->speed = ceiling->speed2;
 				ceiling->direction = 1;
-				PlayCeilingSound (ceiling);
 				break;
 
 			  // in the case of ceiling mover/changer, change the texture
@@ -204,7 +197,7 @@ BOOL EV_DoCeiling (ceiling_e type, line_t *line,
 		sec = &sectors[secnum];
 manual_ceiling:
 		// if ceiling already moving, don't start a second function on it
-		if (P_SectorActive (ceiling_special, sec))	//jff 2/22/98
+		if (P_SectorActive (ceiling_special,sec))	//jff 2/22/98
 			continue;
 		
 		// new door thinker
@@ -390,8 +383,7 @@ manual_ceiling:
 			}
 		}
 
-		P_AddActiveCeiling (ceiling);
-		PlayCeilingSound (ceiling);
+		P_AddActiveCeiling(ceiling);
 
 		if (manual)
 			return rtn;

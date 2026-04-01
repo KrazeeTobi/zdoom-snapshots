@@ -57,7 +57,12 @@ BOOL STACK_ARGS CheckMMX (char *vendorid);
 
 static void Cmd_Dir (void *plyr, int argc, char **argv);
 
-extern HWND Window;
+extern HWND 			Window;
+extern HDC				WinDC;
+extern LONG 			OemWidth, OemHeight;
+extern LONG 			WinWidth, WinHeight;
+extern int				ConRows, ConCols, PhysRows;
+extern char 			*Lines, *Last;
 
 BOOL	UseMMX;
 BOOL	fastdemo;
@@ -191,20 +196,20 @@ void I_DetectOS (void)
 			break;
 	}
 
-	Printf (PRINT_HIGH, "OS: %s %u.%u (build %u)\n",
+	Printf ("Detected OS: %s %u.%u (build %u)\n",
 			osname,
 			info.dwMajorVersion, info.dwMinorVersion,
 			info.dwBuildNumber & (OSPlatform == os_Win95 ? 0xffff : 0xfffffff),
 			info.szCSDVersion);
 	if (info.szCSDVersion[0])
-		Printf (PRINT_HIGH, "  %s\n", info.szCSDVersion);
+		Printf ("  %s\n", info.szCSDVersion);
 
 	if (OSPlatform == os_Win32s) {
 		I_FatalError ("Sorry, Win32s is not currently supported.\n"
 					  "(And probably never will be.)\n"
 					  "Upgrade to a newer version of Windows.");
 	} else if (OSPlatform == os_unknown) {
-		Printf (PRINT_HIGH, "(Assuming Windows 95)\n");
+		Printf ("(Assuming Windows 95)\n");
 		OSPlatform = os_Win95;
 	}
 }
@@ -225,12 +230,12 @@ void I_Init (void)
 		UseMMX = 0;
 
 	if (vendorid[0])
-		Printf (PRINT_HIGH, "CPUID: %s  (", vendorid);
+		Printf ("CPU Vendor ID: %s\n", vendorid);
 
 	if (UseMMX)
-		Printf (PRINT_HIGH, "using MMX)\n");
+		Printf (" - MMX detected\n");
 	else
-		Printf (PRINT_HIGH, "not using MMX)\n");
+		Printf (" - MMX not detected\n");
 #endif
 
 	// [RH] Support for BOOM's -fastdemo
@@ -249,7 +254,7 @@ void I_Init (void)
 //
 static int has_exited;
 
-void STACK_ARGS I_Quit (void)
+void I_Quit (void)
 {
 	has_exited = 1;		/* Prevent infinitely recursive exits -- killough */
 
@@ -271,7 +276,7 @@ void STACK_ARGS I_Quit (void)
 extern FILE *Logfile;
 BOOL gameisdead;
 
-void STACK_ARGS I_FatalError (char *error, ...)
+void I_FatalError (char *error, ...)
 {
 	gameisdead = true;
 
@@ -297,7 +302,7 @@ void STACK_ARGS I_FatalError (char *error, ...)
 	}
 }
 
-void STACK_ARGS I_Error (char *error, ...)
+void I_Error (char *error, ...)
 {
 	va_list argptr;
 
@@ -386,7 +391,7 @@ static void Cmd_Dir (void *plyr, int argc, char **argv)
 	long file;
 
 	if (!getcwd (curdir, 256)) {
-		Printf (PRINT_HIGH, "Current path too long\n");
+		Printf ("Current path too long\n");
 		return;
 	}
 
@@ -405,7 +410,7 @@ static void Cmd_Dir (void *plyr, int argc, char **argv)
 			match = "*";
 
 		if (chdir (dir)) {
-			Printf (PRINT_HIGH, "%s not found\n", dir);
+			Printf ("%s not found\n", dir);
 			return;
 		}
 	} else {
@@ -416,11 +421,11 @@ static void Cmd_Dir (void *plyr, int argc, char **argv)
 	}
 
 	if ( (file = _findfirst (match, &c_file)) == -1)
-		Printf (PRINT_HIGH, "Nothing matching %s%s\n", dir, match);
+		Printf ("Nothing matching %s%s\n", dir, match);
 	else {
-		Printf (PRINT_HIGH, "Listing of %s%s:\n", dir, match);
+		Printf ("Listing of %s%s:\n", dir, match);
 		do {
-			Printf (PRINT_HIGH, "%s%s\n", c_file.name, c_file.attrib & _A_SUBDIR ? " <dir>" : "");
+			Printf ("%s%s\n", c_file.name, c_file.attrib & _A_SUBDIR ? " <dir>" : "");
 		} while (_findnext (file, &c_file) == 0);
 		_findclose (file);
 	}
