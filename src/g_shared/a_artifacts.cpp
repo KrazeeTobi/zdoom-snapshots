@@ -379,12 +379,11 @@ void APowerStrength::DoEffect ()
 PalEntry APowerStrength::GetBlend ()
 {
 	// slowly fade the berzerk out
-	int cnt = 12 - (EffectTics >> 6);
+	int cnt = 128 - ((EffectTics>>3) & (~0x1f));
 
 	if (cnt > 0)
 	{
-		cnt = (cnt + 7) >> 3;
-		return PalEntry (BlendColor.a*cnt*255/9,
+		return PalEntry (BlendColor.a*cnt/128,
 			BlendColor.r, BlendColor.g, BlendColor.b);
 	}
 	return 0;
@@ -469,7 +468,6 @@ void APowerGhost::InitEffect ()
 
 IMPLEMENT_STATELESS_ACTOR (APowerShadow, Any, -1, 0)
 	PROP_Powerup_EffectTics (55*TICRATE)
-	PROP_Inventory_FlagsSet (IF_HUBPOWER)
 END_DEFAULTS
 
 //===========================================================================
@@ -505,7 +503,7 @@ void APowerIronFeet::AbsorbDamage (int damage, int damageType, int &newdamage)
 		newdamage = 0;
 		if (Owner->player != NULL)
 		{
-			Owner->player->air_finished = level.time + level.airsupply;
+			Owner->player->air_finished = level.time + 10*TICRATE;
 		}
 	}
 	else if (Inventory != NULL)
@@ -519,7 +517,6 @@ void APowerIronFeet::AbsorbDamage (int damage, int damageType, int &newdamage)
 IMPLEMENT_STATELESS_ACTOR (APowerMask, Any, -1, 0)
 	PROP_Powerup_EffectTics (80*TICRATE)
 	PROP_Powerup_Color (0, 0, 0, 0)
-	PROP_Inventory_FlagsSet (IF_HUBPOWER)
 	PROP_Inventory_Icon ("I_MASK")
 END_DEFAULTS
 
@@ -964,11 +961,6 @@ IMPLEMENT_ACTOR (APowerTargeter, Any, -1, 0)
 	PROP_Powerup_EffectTics (160*TICRATE)
 	PROP_Inventory_FlagsSet (IF_HUBPOWER)
 END_DEFAULTS
-
-void APowerTargeter::Travelled ()
-{
-	InitEffect ();
-}
 
 void APowerTargeter::InitEffect ()
 {

@@ -41,8 +41,7 @@
 #define MAXWIDTH 2048
 #define MAXHEIGHT 1536
 
-const WORD NO_INDEX = 0xffffu;
-const DWORD NO_SIDE = 0xffffffffu;
+const WORD NO_INDEX = 0xffff;
 
 // Silhouette, needed for clipping Segs (mainly)
 // and sprites representing things.
@@ -395,7 +394,7 @@ struct side_s
 	ADecal*		BoundActors;	// [RH] Decals bound to the wall
 	short		toptexture, bottomtexture, midtexture;	// texture indices
 	WORD		linenum;
-	DWORD		LeftSide, RightSide;	// [RH] Group walls into loops
+	WORD		LeftSide, RightSide;	// [RH] Group walls into loops
 	WORD		TexelLength;
 	SBYTE		Light;
 	BYTE		Flags;
@@ -430,7 +429,7 @@ struct line_s
 							//		note that these are shorts in order to support
 							//		the tag parameter from DOOM.
 	short		firstid, nextid;
-	DWORD		sidenum[2];	// sidenum[1] will be 0xffffffff if one sided
+	WORD		sidenum[2];	// sidenum[1] will be 0xffff if one sided
 	fixed_t		bbox[4];	// bounding box, for the extent of the LineDef.
 	slopetype_t	slopetype;	// To aid move clipping.
 	sector_t	*frontsector, *backsector;

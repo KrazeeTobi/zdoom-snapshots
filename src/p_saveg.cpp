@@ -155,7 +155,7 @@ void P_SerializeWorld (FArchive &arc)
 
 		for (j = 0; j < 2; j++)
 		{
-			if (li->sidenum[j] == NO_SIDE)
+			if (li->sidenum[j] == NO_INDEX)
 				continue;
 
 			side_t *si = &sides[li->sidenum[j]];

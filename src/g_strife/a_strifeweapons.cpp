@@ -298,7 +298,6 @@ IMPLEMENT_ACTOR (AElectricBolt, Strife, -1, 0)
 	PROP_Flags (MF_NOBLOCKMAP|MF_NOGRAVITY|MF_DROPOFF|MF_MISSILE)
 	PROP_Flags2 (MF2_NOTELEPORT|MF2_PCROSS|MF2_IMPACT)
 	PROP_Flags4 (MF4_STRIFEDAMAGE)
-	PROP_MaxStepHeight (4)
 	PROP_StrifeType (102)
 	PROP_SeeSound ("misc/swish")
 	PROP_ActiveSound ("misc/swish")
@@ -331,7 +330,6 @@ IMPLEMENT_ACTOR (APoisonBolt, Strife, -1, 0)
 	PROP_Flags (MF_NOBLOCKMAP|MF_NOGRAVITY|MF_DROPOFF|MF_MISSILE)
 	PROP_Flags2 (MF2_NOTELEPORT|MF2_PCROSS|MF2_IMPACT)
 	PROP_Flags4 (MF4_STRIFEDAMAGE)
-	PROP_MaxStepHeight (4)
 	PROP_StrifeType (103)
 	PROP_SeeSound ("misc/swish")
 	PROP_ActiveSound ("misc/swish")
@@ -423,7 +421,6 @@ FState AStrifeCrossbow::States[] =
 
 IMPLEMENT_ACTOR (AStrifeCrossbow, Strife, 2001, 0)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (0)
 	PROP_StrifeType (194)
 	PROP_StrifeTeaserType (188)
@@ -625,7 +622,6 @@ FState AAssaultGun::States[] =
 
 IMPLEMENT_ACTOR (AAssaultGun, Strife, 2002, 0)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (0)
 	PROP_StrifeType (188)
 	PROP_StrifeTeaserType (182)
@@ -799,7 +795,6 @@ FState AMiniMissileLauncher::States[] =
 
 IMPLEMENT_ACTOR (AMiniMissileLauncher, Strife, 2003, 0)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (0)
 	PROP_StrifeType (192)
 	PROP_StrifeTeaserType (186)
@@ -879,7 +874,7 @@ FState AMiniMissile::States[] =
 {
 	S_BRIGHT (MICR, 'A', 6, A_RocketInFlight,	&States[0]),
 
-	S_BRIGHT (SMIS, 'A', 5, A_ExplodeAndAlert,	&States[2]),
+	S_BRIGHT (SMIS, 'A', 5, A_Explode,			&States[2]),
 	S_BRIGHT (SMIS, 'B', 5, NULL,				&States[3]),
 	S_BRIGHT (SMIS, 'C', 4, NULL,				&States[4]),
 	S_BRIGHT (SMIS, 'D', 2, NULL,				&States[5]),
@@ -898,7 +893,6 @@ IMPLEMENT_ACTOR (AMiniMissile, Strife, -1, 0)
 	PROP_Flags (MF_NOBLOCKMAP|MF_NOGRAVITY|MF_DROPOFF|MF_MISSILE)
 	PROP_Flags2 (MF2_NOTELEPORT|MF2_PCROSS|MF2_IMPACT)
 	PROP_Flags4 (MF4_STRIFEDAMAGE)
-	PROP_MaxStepHeight (4)
 	PROP_StrifeType (99)
 	PROP_SeeSound ("weapons/minimissile")
 	PROP_DeathSound ("weapons/minimissilehit")
@@ -986,7 +980,6 @@ FState AFlameThrower::States[] =
 
 IMPLEMENT_ACTOR (AFlameThrower, Strife, 2005, 0)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (0)
 	PROP_StrifeType (190)
 	PROP_StrifeTeaserType (184)
@@ -1016,11 +1009,6 @@ END_DEFAULTS
 class AFlameThrowerParts : AInventory
 {
 	DECLARE_ACTOR (AFlameThrowerParts, AInventory)
-public:
-	const char *PickupMessage ()
-	{
-		return "You picked up the flame thrower parts.";
-	}
 };
 
 FState AFlameThrowerParts::States[] =
@@ -1029,9 +1017,7 @@ FState AFlameThrowerParts::States[] =
 };
 
 IMPLEMENT_ACTOR (AFlameThrowerParts, Strife, -1, 0)
-	PROP_SpawnState (0)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_StrifeType (191)
 	PROP_StrifeTeaserType (185)
 	PROP_StrifeTeaserType2 (189)
@@ -1072,7 +1058,6 @@ IMPLEMENT_ACTOR (AFlameMissile, Strife, -1, 0)
 	PROP_Flags (MF_NOBLOCKMAP|MF_DROPOFF|MF_MISSILE)
 	PROP_Flags2 (MF2_NOTELEPORT|MF2_PCROSS|MF2_IMPACT)
 	PROP_Flags4 (MF4_STRIFEDAMAGE)
-	PROP_MaxStepHeight (4)
 	PROP_RenderStyle (STYLE_Add)
 	PROP_Alpha (OPAQUE)
 	PROP_SeeSound ("weapons/flamethrower")
@@ -1189,7 +1174,6 @@ FState AMauler::States[] =
 
 IMPLEMENT_ACTOR (AMauler, Strife, 2004, 0)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (0)
 	PROP_StrifeType (193)
 	PROP_StrifeTeaserType (187)
@@ -1293,7 +1277,6 @@ IMPLEMENT_ACTOR (AMaulerTorpedo, Strife, -1, 0)
 	PROP_Flags (MF_NOBLOCKMAP|MF_NOGRAVITY|MF_DROPOFF|MF_MISSILE)
 	PROP_Flags2 (MF2_NOTELEPORT|MF2_PCROSS|MF2_IMPACT)
 	PROP_Flags4 (MF4_STRIFEDAMAGE)
-	PROP_MaxStepHeight (4)
 	PROP_RenderStyle (STYLE_Add)
 	PROP_SeeSound ("weapons/mauler2fire")
 	PROP_DeathSound ("weapons/mauler2hit")
@@ -1324,7 +1307,6 @@ IMPLEMENT_ACTOR (AMaulerTorpedoWave, Strife, -1, 0)
 	PROP_Flags (MF_NOBLOCKMAP|MF_NOGRAVITY|MF_DROPOFF|MF_MISSILE)
 	PROP_Flags2 (MF2_NOTELEPORT|MF2_PCROSS|MF2_IMPACT)
 	PROP_Flags4 (MF4_STRIFEDAMAGE)
-	PROP_MaxStepHeight (4)
 	PROP_RenderStyle (STYLE_Add)
 END_DEFAULTS
 
@@ -1422,7 +1404,7 @@ void A_FireMauler2 (AActor *self)
 //
 //============================================================================
 
-AActor *P_SpawnSubMissile (AActor *source, TypeInfo *type, AActor *target);
+AActor *P_SpawnSubMissile (AActor *source, TypeInfo *type);
 
 void A_MaulerTorpedoWave (AActor *self)
 {
@@ -1439,12 +1421,16 @@ void A_MaulerTorpedoWave (AActor *self)
 	for (int i = 0; i < 80; ++i)
 	{
 		self->angle += ANGLE_45/10;
-		AActor *wave = P_SpawnSubMissile (self, RUNTIME_CLASS(AMaulerTorpedoWave), self->target);
+		AActor *wave = P_SpawnSubMissile (self, RUNTIME_CLASS(AMaulerTorpedoWave));
+		if (wave != NULL)
+		{
+			wave->target = self->target;
+		}
 	}
 	self->z = savedz;
 }
 
-AActor *P_SpawnSubMissile (AActor *source, TypeInfo *type, AActor *target)
+AActor *P_SpawnSubMissile (AActor *source, TypeInfo *type)
 {
 	AActor *other = Spawn (type, source->x, source->y, source->z);
 
@@ -1453,7 +1439,7 @@ AActor *P_SpawnSubMissile (AActor *source, TypeInfo *type, AActor *target)
 		return NULL;
 	}
 
-	other->target = target;
+	other->target = source;
 	other->angle = source->angle;
 
 	other->momx = FixedMul (other->Speed, finecosine[source->angle >> ANGLETOFINESHIFT]);
@@ -1480,23 +1466,23 @@ public:
 
 FState AHEGrenade::States[] =
 {
-	S_NORMAL (GRAP, 'A', 3, A_Countdown,			&States[1]),
-	S_NORMAL (GRAP, 'B', 3, A_Countdown,			&States[0]),
+	S_NORMAL (GRAP, 'A', 3, A_Countdown,	&States[1]),
+	S_NORMAL (GRAP, 'B', 3, A_Countdown,	&States[0]),
 
-	S_BRIGHT (BNG4, 'A', 2, A_ExplodeAndAlert,		&States[3]),
-	S_BRIGHT (BNG4, 'B', 3, NULL,					&States[4]),
-	S_BRIGHT (BNG4, 'C', 3, NULL,					&States[5]),
-	S_BRIGHT (BNG4, 'D', 3, NULL,					&States[6]),
-	S_BRIGHT (BNG4, 'E', 3, NULL,					&States[7]),
-	S_BRIGHT (BNG4, 'F', 3, NULL,					&States[8]),
-	S_BRIGHT (BNG4, 'G', 3, NULL,					&States[9]),
-	S_BRIGHT (BNG4, 'H', 3, NULL,					&States[10]),
-	S_BRIGHT (BNG4, 'I', 3, NULL,					&States[11]),
-	S_BRIGHT (BNG4, 'J', 3, NULL,					&States[12]),
-	S_BRIGHT (BNG4, 'K', 3, NULL,					&States[13]),
-	S_BRIGHT (BNG4, 'L', 3, NULL,					&States[14]),
-	S_BRIGHT (BNG4, 'M', 3, NULL,					&States[15]),
-	S_BRIGHT (BNG4, 'N', 3, NULL,					NULL)
+	S_BRIGHT (BNG4, 'A', 2, A_Explode,		&States[3]),
+	S_BRIGHT (BNG4, 'B', 3, NULL,			&States[4]),
+	S_BRIGHT (BNG4, 'C', 3, NULL,			&States[5]),
+	S_BRIGHT (BNG4, 'D', 3, NULL,			&States[6]),
+	S_BRIGHT (BNG4, 'E', 3, NULL,			&States[7]),
+	S_BRIGHT (BNG4, 'F', 3, NULL,			&States[8]),
+	S_BRIGHT (BNG4, 'G', 3, NULL,			&States[9]),
+	S_BRIGHT (BNG4, 'H', 3, NULL,			&States[10]),
+	S_BRIGHT (BNG4, 'I', 3, NULL,			&States[11]),
+	S_BRIGHT (BNG4, 'J', 3, NULL,			&States[12]),
+	S_BRIGHT (BNG4, 'K', 3, NULL,			&States[13]),
+	S_BRIGHT (BNG4, 'L', 3, NULL,			&States[14]),
+	S_BRIGHT (BNG4, 'M', 3, NULL,			&States[15]),
+	S_BRIGHT (BNG4, 'N', 3, NULL,			NULL)
 };
 
 IMPLEMENT_ACTOR (AHEGrenade, Strife, -1, 0)
@@ -1509,10 +1495,9 @@ IMPLEMENT_ACTOR (AHEGrenade, Strife, -1, 0)
 	PROP_Damage (1)
 	PROP_ReactionTime (30)
 	PROP_Flags (MF_NOBLOCKMAP|MF_DROPOFF|MF_MISSILE)
-	PROP_Flags2 (MF2_FLOORCLIP|MF2_NOTELEPORT|MF2_PCROSS|MF2_IMPACT|MF2_DOOMBOUNCE)
+	PROP_Flags2 (MF2_NOTELEPORT|MF2_PCROSS|MF2_IMPACT|MF2_DOOMBOUNCE)
 	PROP_Flags3 (MF3_CANBOUNCEWATER)
 	PROP_Flags4 (MF4_STRIFEDAMAGE)
-	PROP_MaxStepHeight (4)
 	PROP_StrifeType (106)
 	PROP_SeeSound ("weapons/hegrenadeshoot")
 	PROP_DeathSound ("weapons/hegrenadebang")
@@ -1557,10 +1542,9 @@ IMPLEMENT_ACTOR (APhosphorousGrenade, Strife, -1, 0)
 	PROP_Damage (1)
 	PROP_ReactionTime (40)
 	PROP_Flags (MF_NOBLOCKMAP|MF_DROPOFF|MF_MISSILE)
-	PROP_Flags2 (MF2_FLOORCLIP|MF2_NOTELEPORT|MF2_PCROSS|MF2_IMPACT|MF2_DOOMBOUNCE)
+	PROP_Flags2 (MF2_NOTELEPORT|MF2_PCROSS|MF2_IMPACT|MF2_DOOMBOUNCE)
 	PROP_Flags3 (MF3_CANBOUNCEWATER)
 	PROP_Flags4 (MF4_STRIFEDAMAGE)
-	PROP_MaxStepHeight (4)
 	PROP_StrifeType (107)
 	PROP_SeeSound ("weapons/phgrenadeshoot")
 	PROP_DeathSound ("weapons/phgrenadebang")
@@ -1605,7 +1589,7 @@ IMPLEMENT_ACTOR (APhosphorousFire, Strife, -1, 0)
 	PROP_ReactionTime (120)
 	PROP_DamageType (MOD_FIRE)
 	PROP_Flags (MF_NOBLOCKMAP)
-	PROP_Flags2 (MF2_FLOORCLIP|MF2_NOTELEPORT)
+	PROP_Flags2 (MF2_NOTELEPORT)
 	PROP_RenderStyle (STYLE_Add)
 END_DEFAULTS
 
@@ -1745,7 +1729,6 @@ FState AStrifeGrenadeLauncher::States[] =
 
 IMPLEMENT_ACTOR (AStrifeGrenadeLauncher, Strife, 154, 0)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (S_HEPICKUP)
 	PROP_StrifeType (195)
 	PROP_StrifeTeaserType (189)
@@ -1828,7 +1811,7 @@ void A_FireGrenade (AActor *self)
 		(player->psprites[ps_weapon].state - weapon->GetAtkState()));
 
 	self->z += 32*FRACUNIT;
-	grenade = P_SpawnSubMissile (self, grenadetype, self);
+	grenade = P_SpawnSubMissile (self, grenadetype);
 	self->z -= 32*FRACUNIT;
 	if (grenade == NULL)
 		return;
@@ -1951,8 +1934,7 @@ IMPLEMENT_ACTOR (ASigil, Strife, -1, 0)
 	PROP_Sigil_NumPieces (1)
 	PROP_SpawnState (0)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
-	PROP_Weapon_FlagsSet (WIF_CHEATNOTWEAPON)
+	PROP_Inventory_FlagsSet (IF_CHEATNOTWEAPON)
 	PROP_Tag ("SIGIL")
 	PROP_Inventory_Icon ("I_SGL1")
 END_DEFAULTS
@@ -2321,7 +2303,7 @@ void A_FireSigil3 (AActor *actor)
 	for (i = 0; i < 20; ++i)
 	{
 		actor->angle += ANGLE_180/20;
-		spot = P_SpawnSubMissile (actor, RUNTIME_CLASS(ASpectralLightningBall1), actor);
+		spot = P_SpawnSubMissile (actor, RUNTIME_CLASS(ASpectralLightningBall1));
 		if (spot != NULL)
 		{
 			spot->health = -1;

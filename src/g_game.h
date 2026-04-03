@@ -62,9 +62,6 @@ void G_ScreenShot (char *filename);
 
 string G_BuildSaveName (const char *prefix, int slot);
 
-struct PNGHandle;
-bool G_CheckSaveGameWads (PNGHandle *png, bool printwarn);
-
 enum EFinishLevelType
 {
 	FINISH_SameHub,

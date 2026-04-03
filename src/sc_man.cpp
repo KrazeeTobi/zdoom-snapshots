@@ -27,13 +27,9 @@
 #define ASCII_COMMENT (';')
 #define CPP_COMMENT ('/')
 #define C_COMMENT ('*')
-#define ASCII_QUOTE ('"')
+#define ASCII_QUOTE (34)
 #define LUMP_SCRIPT 1
 #define FILE_ZONE_SCRIPT 2
-
-#define NORMAL_STOPCHARS			"{}|="
-#define CMODE_STOPCHARS				"`~!@#$%^&*(){}[]/=\?+|;:<>,."
-#define CMODE_STOPCHARS_NODECIMAL	"`~!@#$%^&*(){}[]/=\?+|;:<>,"
 
 // TYPES -------------------------------------------------------------------
 
@@ -326,7 +322,7 @@ BOOL SC_GetString (void)
 	if (*ScriptPtr == ASCII_QUOTE)
 	{ // Quoted string
 		ScriptPtr++;
-		while (*ScriptPtr != ASCII_QUOTE || *(ScriptPtr - 1) == '\\')
+		while (*ScriptPtr != ASCII_QUOTE)
 		{
 			*text++ = *ScriptPtr++;
 			if (ScriptPtr == ScriptEndPtr
@@ -343,32 +339,23 @@ BOOL SC_GetString (void)
 
 		if (CMode)
 		{
-			stopchars = CMODE_STOPCHARS;
+			stopchars = "`~!@#$%^&*(){}[]/=\?+|;:<>,";
 
 			// '-' can be its own token, or it can be part of a negative number
 			if (*ScriptPtr == '-')
 			{
 				*text++ = '-';
 				ScriptPtr++;
-				if (ScriptPtr < ScriptEndPtr && *ScriptPtr >= '0' && *ScriptPtr <= '9')
+				if (ScriptPtr < ScriptEndPtr || *ScriptPtr >= '0' && *ScriptPtr <= '9')
 				{
-					stopchars = CMODE_STOPCHARS_NODECIMAL;
 					goto grabtoken;
 				}
 				goto gottoken;
 			}
-			else if (*ScriptPtr >= '0' && *ScriptPtr <= '9')
-			{
-				stopchars = CMODE_STOPCHARS_NODECIMAL;
-			}
-			else if (*ScriptPtr == '.' && ScriptPtr[1] >= '0' && ScriptPtr[1] <= '9')
-			{
-				stopchars = CMODE_STOPCHARS_NODECIMAL;
-			}
 		}
 		else
 		{
-			stopchars = NORMAL_STOPCHARS;
+			stopchars = "{}|=";
 		}
 		if (strchr (stopchars, *ScriptPtr))
 		{
@@ -492,43 +479,6 @@ void SC_MustGetNumber (void)
 	if (SC_GetNumber() == false)
 	{
 		SC_ScriptError ("Missing integer (unexpected end of file).");
-	}
-}
-
-//==========================================================================
-//
-// SC_CheckNumber
-// similar to SC_GetNumber but ungets the token if it isn't a number 
-// and does not print an error
-//
-//==========================================================================
-
-BOOL SC_CheckNumber (void)
-{
-	char *stopper;
-
-	//CheckOpen ();
-	if (SC_GetString())
-	{
-		if (strcmp (sc_String, "MAXINT") == 0)
-		{
-			sc_Number = INT_MAX;
-		}
-		else
-		{
-			sc_Number = strtol (sc_String, &stopper, 0);
-			if (*stopper != 0)
-			{
-				SC_UnGet();
-				return false;
-			}
-		}
-		sc_Float = (float)sc_Number;
-		return true;
-	}
-	else
-	{
-		return false;
 	}
 }
 
@@ -686,22 +636,19 @@ BOOL SC_Compare (const char *text)
 
 void STACK_ARGS SC_ScriptError (const char *message, ...)
 {
-	string composed;
-
+	char composed[2048];
 	if (message == NULL)
 	{
-		composed = "Bad syntax.";
-	}
-	else
-	{
-		va_list arglist;
-		va_start (arglist, message);
-		composed.VFormat (message, arglist);
-		va_end (arglist);
+		message = "Bad syntax.";
 	}
 
+	va_list arglist;
+	va_start (arglist, message);
+	vsprintf (composed, message, arglist);
+	va_end (arglist);
+
 	I_Error ("Script error, \"%s\" line %d:\n%s\n", ScriptName,
-		sc_Line, composed.GetChars());
+		sc_Line, composed);
 }
 
 //==========================================================================

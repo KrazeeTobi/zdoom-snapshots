@@ -43,7 +43,6 @@ extern HWND Window;
 #define TRUE 1
 #endif
 
-#include "templates.h"
 #include "fmodsound.h"
 #include "c_cvars.h"
 #include "i_system.h"
@@ -53,7 +52,6 @@ extern HWND Window;
 #include "w_wad.h"
 #include "sample_flac.h"
 #include "i_music.h"
-#include "i_musicinterns.h"
 
 // killough 2/21/98: optionally use varying pitched sounds
 #define PITCH(f,x) (snd_pitched ? ((f)*(x))/128 : (f))
@@ -141,7 +139,7 @@ public:
 		Channel = FSOUND_Stream_PlayEx (FSOUND_FREE, Stream, NULL, true);
 		if (Channel != -1)
 		{
-			FSOUND_SetVolumeAbsolute (Channel, clamp<int>((int)(volume * relative_volume * 255), 0, 255));
+			FSOUND_SetVolumeAbsolute (Channel, int(volume * 255.f));
 			FSOUND_SetPan (Channel, FSOUND_STEREOPAN);
 			FSOUND_SetPaused (Channel, false);
 			return true;
@@ -172,7 +170,7 @@ public:
 	{
 		if (Channel != -1)
 		{
-			FSOUND_SetVolumeAbsolute (Channel, clamp<int>((int)(volume * relative_volume * 255), 0, 255));
+			FSOUND_SetVolumeAbsolute (Channel, int(volume * 255));
 		}
 	}
 
@@ -217,7 +215,7 @@ public:
 
 	void SetVolume (float volume)
 	{
-		FMUSIC_SetMasterVolume (Module, clamp<int>((int)(volume * relative_volume * 256), 0, 256));
+		FMUSIC_SetMasterVolume (Module, int(volume * 256.f));
 	}
 
 	bool SetPaused (bool paused)

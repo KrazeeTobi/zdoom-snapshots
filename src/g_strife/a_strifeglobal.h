@@ -51,7 +51,6 @@ class ACoin : public AInventory
 public:
 	const char *PickupMessage ();
 	bool HandlePickup (AInventory *item);
-	AInventory *CreateTossable ();
 	AInventory *CreateCopy (AActor *other);
 };
 
@@ -65,7 +64,6 @@ class AOracle : public AActor
 	DECLARE_ACTOR (AOracle, AActor)
 public:
 	void NoBlockingSet ();
-	int TakeSpecialDamage (AActor *inflictor, AActor *source, int damage, int damagetype);
 };
 
 class ADummyStrifeItem : public AInventory

@@ -48,7 +48,6 @@ FDecalLib DecalLibrary;
 
 static int ReadScale ();
 static TArray<BYTE> DecalTranslations;
-extern TArray<char*> DecalNames;
 
 // A decal group holds multiple decals and returns one randomly
 // when GetDecal() is called.
@@ -326,7 +325,7 @@ void FDecalLib::DelTree (FDecalBase *root)
 
 void FDecalLib::ReadAllDecals ()
 {
-	int i, lump, lastlump = 0;
+	int lump, lastlump = 0;
 
 	while ((lump = Wads.FindLump ("DECALDEF", &lastlump)) != -1)
 	{
@@ -334,24 +333,6 @@ void FDecalLib::ReadAllDecals ()
 		ReadDecals ();
 		SC_Close ();
 	}
-	// Supporting code to allow specifying decals directly in the DECORATE lump
-	for (i = 0; i < TypeInfo::m_RuntimeActors.Size(); i++)
-	{
-		AActor *def = (AActor*)GetDefaultByType (TypeInfo::m_RuntimeActors[i]);
-
-		intptr_t v = (intptr_t)def->DecalGenerator;
-		if (v > 0 && v <= DecalNames.Size())
-		{
-			def->DecalGenerator = ScanTreeForName (DecalNames[v-1], Root);
-		}
-	}
-	// Free the array which is no longer needed!
-	for (i = 0; i < DecalNames.Size(); i++)
-	{
-		delete[] DecalNames[i];
-	}
-	DecalNames.Clear();
-	DecalNames.ShrinkToFit();
 }
 
 void FDecalLib::ReadDecals ()
@@ -1125,11 +1106,11 @@ void DDecalFader::Tick ()
 	}
 	else
 	{
-		if (level.maptime < TimeToStartDecay || bglobal.freeze)
+		if (level.time < TimeToStartDecay || bglobal.freeze)
 		{
 			return;
 		}
-		else if (level.maptime >= TimeToEndDecay)
+		else if (level.time >= TimeToEndDecay)
 		{
 			TheDecal->Destroy ();		// remove the decal
 			Destroy ();					// remove myself
@@ -1139,7 +1120,7 @@ void DDecalFader::Tick ()
 			StartTrans = TheDecal->alpha;
 		}
 
-		int distanceToEnd = TimeToEndDecay - level.maptime;
+		int distanceToEnd = TimeToEndDecay - level.time;
 		int fadeDistance = TimeToEndDecay - TimeToStartDecay;
 		TheDecal->alpha = Scale (StartTrans, distanceToEnd, fadeDistance);
 
@@ -1154,7 +1135,7 @@ DThinker *FDecalFaderAnim::CreateThinker (AActor *actor) const
 {
 	DDecalFader *fader = new DDecalFader (actor);
 
-	fader->TimeToStartDecay = level.maptime + DecayStart;
+	fader->TimeToStartDecay = level.time + DecayStart;
 	fader->TimeToEndDecay = fader->TimeToStartDecay + DecayTime;
 	fader->StartTrans = -1;
 	return fader;
@@ -1180,7 +1161,7 @@ DThinker *FDecalStretcherAnim::CreateThinker (AActor *actor) const
 {
 	DDecalStretcher *thinker = new DDecalStretcher (actor);
 
-	thinker->TimeToStart = level.maptime + StretchStart;
+	thinker->TimeToStart = level.time + StretchStart;
 	thinker->TimeToStop = thinker->TimeToStart + StretchTime;
 	if (GoalX >= 0)
 	{
@@ -1211,11 +1192,11 @@ void DDecalStretcher::Tick ()
 		Destroy ();
 		return;
 	}
-	if (level.maptime < TimeToStart || bglobal.freeze)
+	if (level.time < TimeToStart || bglobal.freeze)
 	{
 		return;
 	}
-	if (level.maptime >= TimeToStop)
+	if (level.time >= TimeToStop)
 	{
 		if (bStretchX)
 		{
@@ -1235,7 +1216,7 @@ void DDecalStretcher::Tick ()
 		StartY = TheDecal->yscale;
 	}
 
-	int distance = level.maptime - TimeToStart;
+	int distance = level.time - TimeToStart;
 	int maxDistance = TimeToStop - TimeToStart;
 	if (bStretchX)
 	{
@@ -1265,7 +1246,7 @@ DThinker *FDecalSliderAnim::CreateThinker (AActor *actor) const
 {
 	DDecalSlider *thinker = new DDecalSlider (actor);
 
-	thinker->TimeToStart = level.maptime + SlideStart;
+	thinker->TimeToStart = level.time + SlideStart;
 	thinker->TimeToStop = thinker->TimeToStart + SlideTime;
 	thinker->DistX = DistX;
 	thinker->DistY = DistY;
@@ -1280,7 +1261,7 @@ void DDecalSlider::Tick ()
 		Destroy ();
 		return;
 	}
-	if (level.maptime < TimeToStart || bglobal.freeze)
+	if (level.time < TimeToStart || bglobal.freeze)
 	{
 		return;
 	}
@@ -1290,7 +1271,7 @@ void DDecalSlider::Tick ()
 		StartX = TheDecal->x;
 		StartY = TheDecal->z;
 	}
-	if (level.maptime >= TimeToStop)
+	if (level.time >= TimeToStop)
 	{
 		TheDecal->x = StartX + DistX;
 		TheDecal->z = StartY + DistY;
@@ -1298,7 +1279,7 @@ void DDecalSlider::Tick ()
 		return;
 	}
 
-	int distance = level.maptime - TimeToStart;
+	int distance = level.time - TimeToStart;
 	int maxDistance = TimeToStop - TimeToStart;
 	TheDecal->x = StartX + Scale (DistX, distance, maxDistance);
 	TheDecal->z = StartY + Scale (DistY, distance, maxDistance);
@@ -1346,11 +1327,11 @@ void DDecalColorer::Tick ()
 	}
 	else
 	{
-		if (level.maptime < TimeToStartDecay || bglobal.freeze)
+		if (level.time < TimeToStartDecay || bglobal.freeze)
 		{
 			return;
 		}
-		else if (level.maptime >= TimeToEndDecay)
+		else if (level.time >= TimeToEndDecay)
 		{
 			TheDecal->SetShade (GoalColor);
 			Destroy ();					// remove myself
@@ -1364,12 +1345,12 @@ void DDecalColorer::Tick ()
 				return;
 			}
 		}
-		if (level.maptime & 0)
+		if (level.time & 0)
 		{ // Changing the shade can be expensive, so don't do it too often.
 			return;
 		}
 
-		int distance = level.maptime - TimeToStartDecay;
+		int distance = level.time - TimeToStartDecay;
 		int maxDistance = TimeToEndDecay - TimeToStartDecay;
 		int r = StartColor.r + Scale (GoalColor.r - StartColor.r, distance, maxDistance);
 		int g = StartColor.g + Scale (GoalColor.g - StartColor.g, distance, maxDistance);
@@ -1382,7 +1363,7 @@ DThinker *FDecalColorerAnim::CreateThinker (AActor *actor) const
 {
 	DDecalColorer *Colorer = new DDecalColorer (actor);
 
-	Colorer->TimeToStartDecay = level.maptime + DecayStart;
+	Colorer->TimeToStartDecay = level.time + DecayStart;
 	Colorer->TimeToEndDecay = Colorer->TimeToStartDecay + DecayTime;
 	Colorer->StartColor = 0xff000000;
 	Colorer->GoalColor = GoalColor;

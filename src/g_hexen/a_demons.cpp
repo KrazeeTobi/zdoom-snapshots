@@ -565,12 +565,10 @@ void A_DemonAttack2_1 (AActor *actor)
 {
 	AActor *mo;
 
-	// Improve the aiming of this code!
-	actor->z += 30*FRACUNIT;
 	mo = P_SpawnMissile (actor, actor->target, RUNTIME_CLASS(ADemon1FX1));
-	actor->z -= 30*FRACUNIT;
 	if (mo)
 	{
+		mo->z += 30*FRACUNIT;
 		S_Sound (actor, CHAN_BODY, "DemonMissileFire", 1, ATTN_NORM);
 	}
 }
@@ -585,12 +583,10 @@ void A_DemonAttack2_2 (AActor *actor)
 {
 	AActor *mo;
 
-	// Improve the aiming of this code!
-	actor->z += 30*FRACUNIT;
 	mo = P_SpawnMissile (actor, actor->target, RUNTIME_CLASS(ADemon2FX1));
-	actor->z -= 30*FRACUNIT;
 	if (mo)
 	{
+		mo->z += 30*FRACUNIT;
 		S_Sound (actor, CHAN_BODY, "DemonMissileFire", 1, ATTN_NORM);
 	}
 }

@@ -51,8 +51,6 @@ class APlayerPawn : public AActor
 {
 	DECLARE_STATELESS_ACTOR (APlayerPawn, AActor)
 public:
-	virtual void Serialize (FArchive &arc);
-
 	virtual void AddInventory (AInventory *item);
 	virtual void RemoveInventory (AInventory *item);
 	virtual bool UseInventory (AInventory *item);
@@ -83,8 +81,6 @@ public:
 
 	void BeginPlay ();
 	void Die (AActor *source, AActor *inflictor);
-
-	fixed_t		JumpZ;				// [GRB] Variable JumpZ
 };
 
 class APlayerChunk : public APlayerPawn

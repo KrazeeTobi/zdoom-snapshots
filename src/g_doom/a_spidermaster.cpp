@@ -99,7 +99,6 @@ void A_SpidRefire (AActor *self)
 		return;
 
 	if (!self->target
-		|| P_HitFriend (self)
 		|| self->target->health <= 0
 		|| !P_CheckSight (self, self->target, 0) )
 	{

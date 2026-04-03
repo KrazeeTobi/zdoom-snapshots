@@ -23,7 +23,6 @@ FState AHEGrenadeRounds::States[] =
 IMPLEMENT_ACTOR (AHEGrenadeRounds, Strife, 152, 0)
 	PROP_SpawnState (0)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_StrifeType (177)
 	PROP_StrifeTeaserType (170)
 	PROP_StrifeTeaserType2 (174)
@@ -50,13 +49,12 @@ FState APhosphorusGrenadeRounds::States[] =
 IMPLEMENT_ACTOR (APhosphorusGrenadeRounds, Strife, 153, 0)
 	PROP_SpawnState (0)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_StrifeType (178)
 	PROP_StrifeTeaserType (171)
 	PROP_StrifeTeaserType2 (175)
 	PROP_Inventory_Amount (8)
 	PROP_Inventory_MaxAmount (16)
-	PROP_Ammo_BackpackAmount (4)
+	PROP_Ammo_BackpackAmount (2)
 	PROP_Ammo_BackpackMaxAmount (32)
 	PROP_Inventory_Icon ("I_GRN2")
 	PROP_Tag ("Phoshorus-Grenade_Rounds")	// "Fire-Grenade_Rounds" in the Teaser
@@ -78,7 +76,6 @@ FState AClipOfBullets::States[] =
 
 IMPLEMENT_ACTOR (AClipOfBullets, Strife, 2007, 11)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (0)
 	PROP_StrifeType (179)
 	PROP_StrifeTeaserType (173)
@@ -105,7 +102,6 @@ FState ABoxOfBullets::States[] =
 
 IMPLEMENT_ACTOR (ABoxOfBullets, Strife, 2048, 139)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (0)
 	PROP_StrifeType (180)
 	PROP_StrifeTeaserType (174)
@@ -128,7 +124,6 @@ FState AMiniMissiles::States[] =
 
 IMPLEMENT_ACTOR (AMiniMissiles, Strife, 2010, 140)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (0)
 	PROP_StrifeType (181)
 	PROP_StrifeTeaserType (175)
@@ -155,7 +150,6 @@ FState ACrateOfMissiles::States[] =
 
 IMPLEMENT_ACTOR (ACrateOfMissiles, Strife, 2046, 141)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (0)
 	PROP_StrifeType (182)
 	PROP_StrifeTeaserType (176)
@@ -179,7 +173,6 @@ FState AEnergyPod::States[] =
 
 IMPLEMENT_ACTOR (AEnergyPod, Strife, 2047, 75)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (0)
 	PROP_StrifeType (183)
 	PROP_StrifeTeaserType (177)
@@ -207,7 +200,6 @@ FState AEnergyPack::States[] =
 
 IMPLEMENT_ACTOR (AEnergyPack, Strife, 17, 142)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (0)
 	PROP_StrifeType (184)
 	PROP_StrifeTeaserType (178)
@@ -231,7 +223,6 @@ FState APoisonBolts::States[] =
 IMPLEMENT_ACTOR (APoisonBolts, Strife, 115, 0)
 	PROP_SpawnState (0)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_StrifeType (185)
 	PROP_StrifeTeaserType (179)
 	PROP_StrifeTeaserType2 (183)
@@ -258,7 +249,6 @@ FState AElectricBolts::States[] =
 IMPLEMENT_ACTOR (AElectricBolts, Strife, 114, 0)
 	PROP_SpawnState (0)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_StrifeType (186)
 	PROP_StrifeTeaserType (180)
 	PROP_StrifeTeaserType2 (184)
@@ -294,7 +284,6 @@ FState AAmmoSatchel::States[] =
 
 IMPLEMENT_ACTOR (AAmmoSatchel, Strife, 183, 144)
 	PROP_Flags (MF_SPECIAL)
-	PROP_Flags2 (MF2_FLOORCLIP)
 	PROP_SpawnState (0)
 	PROP_StrifeType (187)
 	PROP_StrifeTeaserType (181)

@@ -64,9 +64,6 @@ planefunction_t 		ceilingfunc;
 // Here comes the obnoxious "visplane".
 #define MAXVISPLANES 128    /* must be a power of 2 */
 
-// Avoid infinite recursion with stacked sectors by limiting them.
-#define MAX_SKYBOX_PLANES 100
-
 // [RH] Allocate one extra for sky box planes.
 static visplane_t		*visplanes[MAXVISPLANES+1];	// killough
 static visplane_t		*freetail;					// killough
@@ -80,16 +77,6 @@ visplane_t 				*ceilingplane;
 
 #define visplane_hash(picnum,lightlevel,height) \
   ((unsigned)((picnum)*3+(lightlevel)+((height).d)*7) & (MAXVISPLANES-1))
-
-// These are copies of the main parameters used when drawing stacked sectors.
-// When you change the main parameters, you should copy them here too *unless*
-// you are changing them to draw a stacked sector. Otherwise, stacked sectors
-// won't draw in skyboxes properly.
-int stacked_extralight;
-float stacked_visibility;
-fixed_t stacked_viewx, stacked_viewy, stacked_viewz;
-angle_t stacked_angle;
-
 
 //
 // opening
@@ -523,7 +510,7 @@ visplane_t *R_FindPlane (const secplane_t &height, int picnum, int lightlevel,
 		isskybox = skybox != NULL && !skybox->bInSkybox &&
 			(skybox->bAlways || picnum == skyflatnum);
 	}
-	else if (skybox != NULL && skybox->bAlways && !skybox->bInSkybox)
+	else if (skybox != NULL && skybox->bAlways)
 	{
 		plane = height;
 		isskybox = true;
@@ -543,23 +530,7 @@ visplane_t *R_FindPlane (const secplane_t &height, int picnum, int lightlevel,
 		{
 			if (skybox == check->skybox && plane == check->height)
 			{
-				if (skybox->Mate != NULL)
-				{ // This skybox is really a stacked sector, so we need to
-				  // check even more.
-					if (check->extralight == stacked_extralight &&
-						check->visibility == stacked_visibility &&
-						check->viewx == stacked_viewx &&
-						check->viewy == stacked_viewy &&
-						check->viewz == stacked_viewz &&
-						check->viewangle == stacked_angle)
-					{
-						return check;
-					}
-				}
-				else
-				{
-					return check;
-				}
+				return check;
 			}
 		}
 		else
@@ -592,12 +563,6 @@ visplane_t *R_FindPlane (const secplane_t &height, int picnum, int lightlevel,
 	check->skybox = skybox;
 	check->minx = viewwidth;			// Was SCREENWIDTH -- killough 11/98
 	check->maxx = -1;
-	check->extralight = stacked_extralight;
-	check->visibility = stacked_visibility;
-	check->viewx = stacked_viewx;
-	check->viewy = stacked_viewy;
-	check->viewz = stacked_viewz;
-	check->viewangle = stacked_angle;
 
 	clearbufshort (check->top, viewwidth, 0x7fff);
 
@@ -672,12 +637,6 @@ visplane_t *R_CheckPlane (visplane_t *pl, int start, int stop)
 		new_pl->angle = pl->angle;
 		new_pl->colormap = pl->colormap;
 		new_pl->skybox = pl->skybox;
-		new_pl->extralight = pl->extralight;
-		new_pl->visibility = pl->visibility;
-		new_pl->viewx = pl->viewx;
-		new_pl->viewy = pl->viewy;
-		new_pl->viewz = pl->viewz;
-		new_pl->viewangle = pl->viewangle;
 		pl = new_pl;
 		pl->minx = start;
 		pl->maxx = stop;
@@ -1020,8 +979,6 @@ void R_DrawSkyBoxes ()
 	static TArray<fixed_t> viewxStack, viewyStack, viewzStack;
 	static TArray<VisplaneAndAlpha> visplaneStack;
 
-	numskyboxes = 0;
-
 	if (visplanes[MAXVISPLANES] == NULL)
 		return;
 
@@ -1042,6 +999,8 @@ void R_DrawSkyBoxes ()
 	int i;
 	visplane_t *pl;
 
+	numskyboxes = 0;
+
 	for (pl = visplanes[MAXVISPLANES]; pl != NULL; pl = visplanes[MAXVISPLANES])
 	{
 		// Pop the visplane off the list now so that if this skybox adds more
@@ -1050,7 +1009,7 @@ void R_DrawSkyBoxes ()
 		visplanes[MAXVISPLANES] = pl->next;
 		pl->next = NULL;
 
-		if (pl->maxx < pl->minx || !r_skyboxes || numskyboxes == MAX_SKYBOX_PLANES)
+		if (pl->maxx < pl->minx || !r_skyboxes)
 		{
 			R_DrawSinglePlane (pl, OPAQUE, false);
 			*freehead = pl;
@@ -1061,9 +1020,8 @@ void R_DrawSkyBoxes ()
 		numskyboxes++;
 
 		ASkyViewpoint *sky = pl->skybox;
-		ASkyViewpoint *mate = sky->Mate;
 
-		if (mate == NULL)
+		if (sky->Mate == NULL)
 		{
 			// Don't let gun flashes brighten the sky box
 			extralight = 0;
@@ -1072,20 +1030,18 @@ void R_DrawSkyBoxes ()
 			viewy = sky->y;
 			viewz = sky->z;
 			viewangle = savedangle + sky->angle;
-			R_CopyStackedViewParameters();
 		}
 		else
 		{
-			extralight = pl->extralight;
-			R_SetVisibility (pl->visibility);
-			viewx = pl->viewx - sky->Mate->x + sky->x;
-			viewy = pl->viewy - sky->Mate->y + sky->y;
-			viewz = pl->viewz;
-			viewangle = pl->viewangle;
+			extralight = savedextralight;
+			R_SetVisibility (savedvisibility);
+			viewx = savedx - sky->Mate->x + sky->x;
+			viewy = savedy - sky->Mate->y + sky->y;
+			viewz = savedz;
+			viewangle = savedangle;
 		}
 
 		sky->bInSkybox = true;
-		if (mate != NULL) mate->bInSkybox = true;
 		camera = sky;
 		viewsector = sky->Sector;
 		R_SetViewAngle ();
@@ -1145,7 +1101,6 @@ void R_DrawSkyBoxes ()
 		R_DrawPlanes ();
 
 		sky->bInSkybox = false;
-		if (mate != NULL) mate->bInSkybox = false;
 	}
 
 	// Draw all the masked textures in a second pass, in the reverse order they

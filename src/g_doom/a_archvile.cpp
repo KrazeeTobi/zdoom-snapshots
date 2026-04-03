@@ -250,7 +250,7 @@ void A_VileChase (AActor *self)
 			{
 				// Call PIT_VileCheck to check
 				// whether object is a corpse
-				// that can be raised.
+				// that canbe raised.
 				if (!P_BlockThingsIterator (bx, by, PIT_VileCheck, vilebt))
 				{
 					// got one!
@@ -259,16 +259,7 @@ void A_VileChase (AActor *self)
 					A_FaceTarget (self);
 					self->target = temp;
 										
-					// Make the state the monster enters customizable - but leave the
-					// default for Dehacked compatibility!
-					if (self->HealState != NULL)
-					{
-						self->SetState (self->HealState);
-					}
-					else
-					{
-						self->SetState (&AArchvile::States[S_VILE_HEAL]);
-					}
+					self->SetState (&AArchvile::States[S_VILE_HEAL]);
 					S_Sound (corpsehit, CHAN_BODY, "vile/raise", 1, ATTN_IDLE);
 					info = corpsehit->GetDefault ();
 					
@@ -282,8 +273,6 @@ void A_VileChase (AActor *self)
 					*/
 					corpsehit->flags = info->flags;
 					corpsehit->flags2 = info->flags2;
-					corpsehit->flags3 = info->flags3;
-					corpsehit->flags4 = info->flags4;
 					corpsehit->health = info->health;
 					corpsehit->target = NULL;
 					corpsehit->lastenemy = NULL;

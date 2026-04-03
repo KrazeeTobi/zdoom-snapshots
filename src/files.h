@@ -40,21 +40,21 @@ public:
 	FileReader &operator>> (WORD &v)
 	{
 		Read (&v, 2);
-		v = LittleShort(v);
+		v = SHORT(v);
 		return *this;
 	}
 
 	FileReader &operator>> (SWORD &v)
 	{
 		Read (&v, 2);
-		v = LittleShort(v);
+		v = SHORT(v);
 		return *this;
 	}
 
 	FileReader &operator>> (DWORD &v)
 	{
 		Read (&v, 4);
-		v = LittleLong(v);
+		v = LONG(v);
 		return *this;
 	}
 
@@ -96,28 +96,28 @@ public:
 	FileReaderZ &operator>> (WORD &v)
 	{
 		Read (&v, 2);
-		v = LittleShort(v);
+		v = SHORT(v);
 		return *this;
 	}
 
 	FileReaderZ &operator>> (SWORD &v)
 	{
 		Read (&v, 2);
-		v = LittleShort(v);
+		v = SHORT(v);
 		return *this;
 	}
 
 	FileReaderZ &operator>> (DWORD &v)
 	{
 		Read (&v, 4);
-		v = LittleLong(v);
+		v = LONG(v);
 		return *this;
 	}
 
 	FileReaderZ &operator>> (fixed_t &v)
 	{
 		Read (&v, 4);
-		v = LittleLong(v);
+		v = LONG(v);
 		return *this;
 	}
 

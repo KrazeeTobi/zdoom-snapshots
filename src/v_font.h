@@ -140,6 +140,4 @@ void RecordTextureColors (FTexture *pic, byte *colorsused);
 
 extern FFont *SmallFont, *SmallFont2, *BigFont, *ConFont;
 
-void V_InitCustomFonts ();
-
 #endif //__V_FONT_H__

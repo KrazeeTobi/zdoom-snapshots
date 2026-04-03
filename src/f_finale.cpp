@@ -25,7 +25,6 @@
 
 #include <ctype.h>
 #include <math.h>
-#include <malloc.h>
 
 #include "i_system.h"
 #include "m_swap.h"
@@ -67,7 +66,7 @@ static int FinaleSequence;
 static SBYTE FadeDir;
 static bool FinaleHasPic;
 
-static string FinaleText;
+static char *FinaleText;
 static size_t FinaleTextLen;
 static char *FinaleFlat;
 
@@ -118,16 +117,17 @@ void F_StartFinale (char *music, int musicorder, int cdtrack, unsigned int cdid,
 	else
 	{
 		const char *from = (text != NULL) ? text : "Empty message";
-		FinaleText = from;
-		FinaleTextLen = FinaleText.Len() + 1;
+		FinaleTextLen = strlen (from) + 1;
+		FinaleText = new char[FinaleTextLen];
+		memcpy (FinaleText, from, FinaleTextLen);
 	}
 	if (lookupText)
 	{
-		const char *str = GStrings[FinaleText.GetChars()];
+		const char *str = GStrings[FinaleText];
 		if (str != NULL)
 		{
-			FinaleText = str;
-			FinaleTextLen = FinaleText.Len() + 1;
+			ReplaceString (&FinaleText, str);
+			FinaleTextLen = strlen (FinaleText) + 1;
 		}
 	}
 
@@ -171,8 +171,12 @@ void F_StartFinale (char *music, int musicorder, int cdtrack, unsigned int cdid,
 
 void F_EndFinale ()
 {
-	FinaleText = NULL;
-	FinaleTextLen = 0;
+	if (FinaleText != NULL)
+	{
+		delete[] FinaleText;
+		FinaleText = NULL;
+		FinaleTextLen = 0;
+	}
 }
 
 BOOL F_Responder (event_t *event)
@@ -398,7 +402,7 @@ void F_TextWrite (void)
 	{
 		cy = (gameinfo.gametype & (GAME_Doom|GAME_Strife) ? 10 : 5) - 100;
 	}
-	ch = FinaleText.GetChars();
+	ch = FinaleText;
 		
 	count = (FinaleCount - 10)/TEXTSPEED;
 	range = screen->Font->GetColorTranslation (CR_UNTRANSLATED);
@@ -929,7 +933,7 @@ void F_BunnyScroll (void)
 		DTA_Masked, false,
 		TAG_DONE);
 
-	screen->FillBorder (NULL);
+	screen->FillBorder (TexMan(FinaleFlat));
 
 	if (bunny)
 	{
@@ -975,8 +979,7 @@ void F_StartSlideshow ()
 	automapactive = false;
 
 	S_StopAllChannels ();
-	S_ChangeMusic ("D_DARK", 0, true);
-	V_SetBlend (0,0,0,0);
+	S_ChangeMusic ("D_SLIDE", 0, true);
 
 	// The slideshow is determined solely by the map you're on.
 	if (!multiplayer && level.flags & LEVEL_DEATHSLIDESHOW)
@@ -1014,8 +1017,6 @@ void F_AdvanceSlideshow ()
 	switch (FinalePart)
 	{
 	case -99:
-		if (level.cdtrack == 0 || !S_ChangeCDMusic (level.cdtrack, level.cdid))
-			S_ChangeMusic (level.music, level.musicorder);
 		gamestate = GS_LEVEL;
 		wipegamestate = GS_LEVEL;
 		P_ResumeConversation ();
@@ -1219,7 +1220,6 @@ void F_Drawer (void)
 			break;
 		case END_Pic:
 			picname = EndSequences[FinaleSequence].PicName;
-			TexMan.AddPatch (picname);		// make sure it exists!
 			break;
 		case END_Bunny:
 		case END_BuyStrife:
@@ -1310,17 +1310,14 @@ static void GetFinaleText (const char *msgLumpName)
 	msgLump = Wads.CheckNumForName(msgLumpName);
 	if (msgLump != -1)
 	{
-		char *textbuf;
 		FinaleTextLen = Wads.LumpLength(msgLump);
-		textbuf = (char *)alloca (FinaleTextLen + 1);
-		Wads.ReadLump (msgLump, textbuf);
-		textbuf[FinaleTextLen] = '\0';
-		FinaleText = textbuf;
+		FinaleText = new char[FinaleTextLen];
+		Wads.ReadLump (msgLump, FinaleText);
 	}
 	else
 	{
-		FinaleText = "Unknown message ";
-		FinaleText += msgLumpName;
-		FinaleTextLen = FinaleText.Len();
+		FinaleTextLen = strlen (msgLumpName) + sizeof("Unknown message ") + 1;
+		FinaleText = new char[FinaleTextLen];
+		sprintf (const_cast<char *>(FinaleText), "Unknown message %s", msgLumpName);
 	}
 }

@@ -1028,9 +1028,6 @@ FUNC(LS_Thing_Remove)
 	while (actor)
 	{
 		AActor *temp = iterator.Next ();
-		// be friendly to the level statistics! ;)
-		if (actor->flags&MF_COUNTKILL && actor->health > 0) level.total_monsters--;
-		if (actor->flags&MF_COUNTITEM) level.total_items--;
 		actor->Destroy ();
 		actor = temp;
 	}
@@ -1724,7 +1721,7 @@ static void SetWallScroller (int id, int sidechoice, fixed_t dx, fixed_t dy)
 			}
 			if (i == numcollected)
 			{
-				if (lines[linenum].sidenum[sidechoice] != NO_SIDE)
+				if (lines[linenum].sidenum[sidechoice] != NO_INDEX)
 				{
 					new DScroller (DScroller::sc_side, dx, dy, -1, lines[linenum].sidenum[sidechoice], 0);
 				}
@@ -2273,7 +2270,7 @@ FUNC(LS_TranslucentLine)
 		if (arg2 == 0)
 		{
 			sides[lines[linenum].sidenum[0]].Flags &= ~WALLF_ADDTRANS;
-			if (lines[linenum].sidenum[1] != NO_SIDE)
+			if (lines[linenum].sidenum[1] != NO_INDEX)
 			{
 				sides[lines[linenum].sidenum[1]].Flags &= ~WALLF_ADDTRANS;
 			}
@@ -2281,7 +2278,7 @@ FUNC(LS_TranslucentLine)
 		else if (arg2 == 1)
 		{
 			sides[lines[linenum].sidenum[0]].Flags |= WALLF_ADDTRANS;
-			if (lines[linenum].sidenum[1] != NO_SIDE)
+			if (lines[linenum].sidenum[1] != NO_INDEX)
 			{
 				sides[lines[linenum].sidenum[1]].Flags |= WALLF_ADDTRANS;
 			}
@@ -2466,7 +2463,7 @@ FUNC(LS_GlassBreak)
 	ln->flags &= ~(ML_BLOCKING|ML_BLOCKEVERYTHING);
 	switched = P_ChangeSwitchTexture (&sides[ln->sidenum[0]], false, 0, &quest1);
 	ln->special = 0;
-	if (ln->sidenum[1] != NO_SIDE)
+	if (ln->sidenum[1] != NO_INDEX)
 	{
 		switched |= P_ChangeSwitchTexture (&sides[ln->sidenum[1]], false, 0, &quest2);
 	}

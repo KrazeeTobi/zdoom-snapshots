@@ -233,16 +233,6 @@ protected:
 	void MakeTexture (DWORD time);
 };
 
-// [GRB] Eternity-like warping
-class FWarp2Texture : public FWarpTexture
-{
-public:
-	FWarp2Texture (FTexture *source);
-
-protected:
-	void MakeTexture (DWORD time);
-};
-
 // A texture that can be drawn to.
 class DSimpleCanvas;
 class FCanvasTexture : public FTexture

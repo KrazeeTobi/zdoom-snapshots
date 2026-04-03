@@ -41,8 +41,5 @@ class AStrifeKey : public AKey
 };
 
 bool P_CheckKeys (AActor *owner, int keynum, bool remote);
-void P_InitKeyMessages ();
-int P_GetMapColorForLock (int lock);
-int P_GetMapColorForKey (AInventory *key);
 
 #endif

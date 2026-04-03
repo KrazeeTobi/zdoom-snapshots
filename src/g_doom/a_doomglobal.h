@@ -39,6 +39,13 @@ public:
 	const char *GetObituary ();
 };
 
+class APainElemental : public AActor
+{
+	DECLARE_ACTOR (APainElemental, AActor)
+public:
+	void Tick ();
+};
+
 class ALostSoul : public AActor
 {
 	DECLARE_ACTOR (ALostSoul, AActor)

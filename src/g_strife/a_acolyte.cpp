@@ -129,7 +129,6 @@ IMPLEMENT_STATELESS_ACTOR (AAcolyteTan, Strife, 3002, 0)
 	PROP_StrifeTeaserType (52)
 	PROP_StrifeTeaserType2 (53)
 	PROP_Flags4 (MF4_MISSILEMORE|MF4_MISSILEEVENMORE|MF4_SEESDAGGERS|MF4_NOSPLASHALERT)
-	PROP_Tag ("ACOLYTE")
 END_DEFAULTS
 
 //============================================================================
@@ -158,7 +157,6 @@ IMPLEMENT_STATELESS_ACTOR (AAcolyteRed, Strife, 142, 0)
 	PROP_StrifeTeaserType (53)
 	PROP_StrifeTeaserType2 (54)
 	PROP_Flags4 (MF4_MISSILEMORE|MF4_MISSILEEVENMORE|MF4_SEESDAGGERS|MF4_NOSPLASHALERT)
-	PROP_Tag ("ACOLYTE")
 END_DEFAULTS
 
 // Acolyte 3 ----------------------------------------------------------------
@@ -174,7 +172,6 @@ IMPLEMENT_STATELESS_ACTOR (AAcolyteRust, Strife, 143, 0)
 	PROP_StrifeTeaserType (54)
 	PROP_StrifeTeaserType2 (55)
 	PROP_Flags4 (MF4_MISSILEMORE|MF4_MISSILEEVENMORE|MF4_SEESDAGGERS|MF4_NOSPLASHALERT)
-	PROP_Tag ("ACOLYTE")
 END_DEFAULTS
 
 // Acolyte 4 ----------------------------------------------------------------
@@ -190,7 +187,6 @@ IMPLEMENT_STATELESS_ACTOR (AAcolyteGray, Strife, 146, 0)
 	PROP_StrifeTeaserType (55)
 	PROP_StrifeTeaserType2 (56)
 	PROP_Flags4 (MF4_MISSILEMORE|MF4_MISSILEEVENMORE|MF4_SEESDAGGERS|MF4_NOSPLASHALERT)
-	PROP_Tag ("ACOLYTE")
 END_DEFAULTS
 
 // Acolyte 5 ----------------------------------------------------------------
@@ -206,7 +202,6 @@ IMPLEMENT_STATELESS_ACTOR (AAcolyteDGreen, Strife, 147, 0)
 	PROP_StrifeTeaserType (56)
 	PROP_StrifeTeaserType2 (57)
 	PROP_Flags4 (MF4_MISSILEMORE|MF4_MISSILEEVENMORE|MF4_SEESDAGGERS|MF4_NOSPLASHALERT)
-	PROP_Tag ("ACOLYTE")
 END_DEFAULTS
 
 // Acolyte 6 ----------------------------------------------------------------
@@ -222,7 +217,6 @@ IMPLEMENT_STATELESS_ACTOR (AAcolyteGold, Strife, 148, 0)
 	PROP_StrifeTeaserType (57)
 	PROP_StrifeTeaserType2 (58)
 	PROP_Flags4 (MF4_MISSILEMORE|MF4_MISSILEEVENMORE|MF4_SEESDAGGERS|MF4_NOSPLASHALERT)
-	PROP_Tag ("ACOLYTE")
 END_DEFAULTS
 
 // Acolyte 7 ----------------------------------------------------------------
@@ -236,7 +230,6 @@ IMPLEMENT_STATELESS_ACTOR (AAcolyteLGreen, Strife, 232, 0)
 	PROP_Translation (TRANSLATION_Standard, 5)
 	PROP_SpawnHealth (60)
 	PROP_StrifeType (59)
-	PROP_Tag ("ACOLYTE")
 END_DEFAULTS
 
 // Acolyte 8 ----------------------------------------------------------------
@@ -250,7 +243,6 @@ IMPLEMENT_STATELESS_ACTOR (AAcolyteBlue, Strife, 231, 0)
 	PROP_Translation (TRANSLATION_Standard, 6)
 	PROP_SpawnHealth (60)
 	PROP_StrifeType (60)
-	PROP_Tag ("ACOLYTE")
 END_DEFAULTS
 
 // Shadow Acolyte -----------------------------------------------------------
@@ -269,7 +261,6 @@ IMPLEMENT_STATELESS_ACTOR (AAcolyteShadow, Strife, 58, 0)
 	PROP_StrifeTeaserType (58)
 	PROP_StrifeTeaserType2 (59)
 	PROP_Flags4 (MF4_MISSILEMORE|MF4_SEESDAGGERS|MF4_NOSPLASHALERT)
-	PROP_Tag ("ACOLYTE")
 END_DEFAULTS
 
 //============================================================================
@@ -308,8 +299,6 @@ IMPLEMENT_ACTOR (AAcolyteToBe, Strife, 201, 0)
 	PROP_SpawnState (S_BECOMING_STND)
 	PROP_PainState (S_BECOMING_PAIN)
 	PROP_DeathState (S_BECOMING_DIEJUMP)
-
-	PROP_FlagsClear (MF_COUNTKILL)
 
 	PROP_SpawnHealth (61)
 	PROP_PainChance (255)
@@ -352,9 +341,6 @@ void A_HideDecepticon (AActor *self)
 void A_AcolyteDie (AActor *self)
 {
 	int i;
-
-	// [RH] Disable translucency here.
-	self->RenderStyle = STYLE_Normal;
 
 	// Only the Blue Acolyte does extra stuff on death.
 	if (!self->IsKindOf (RUNTIME_CLASS(AAcolyteBlue)))
@@ -410,7 +396,9 @@ void A_AcolyteBits (AActor *self)
 {
 	if (self->SpawnFlags & MTF_SHADOW)
 	{
-		A_BeShadowyFoe (self);
+		self->RenderStyle = STYLE_Translucent;
+		self->alpha = HR_SHADOW;
+		self->flags |= MF_SHADOW;
 	}
 	if (self->SpawnFlags & MTF_ALTSHADOW)
 	{

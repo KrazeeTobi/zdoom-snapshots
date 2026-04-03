@@ -302,33 +302,34 @@ string GetUserFile (string file, bool nodir)
 	if (home == NULL || *home == '\0')
 		I_FatalError ("Please set your HOME environment variable");
 
-	string path = home;
-	if (path[path.Len()-1] != '/')
-		path += nodir ? "/" : "/.zdoom";
+	char *path = new char[strlen (home) + 9 + strlen (file)];
+	strcpy (path, home);
+	if (home[strlen (home)-1] != '/')
+		strcat (path, nodir ? "/" : "/.zdoom");
 	else if (!nodir)
-		path += ".zdoom";
+		strcat (path, ".zdoom");
 
 	if (!nodir)
 	{
 		struct stat info;
 		if (stat (path, &info) == -1)
 		{
-			if (mkdir (path.GetChars(), S_IRUSR | S_IWUSR | S_IXUSR) == -1)
+			if (mkdir (path, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
 			{
 				I_FatalError ("Failed to create %s directory:\n%s",
-					path.GetChars(), strerror (errno));
+							  path, strerror (errno));
 			}
 		}
 		else
 		{
 			if (!S_ISDIR(info.st_mode))
 			{
-				I_FatalError ("%s must be a directory", path.GetChars());
+				I_FatalError ("%s must be a directory", path);
 			}
 		}
 	}
-	path += '/';
-	path += file;
+	strcat (path, "/");
+	strcat (path, file);
 	return path;
 }
 #endif
@@ -415,10 +416,10 @@ void WritePCXfile (FILE *file, const DCanvas *canvas, const PalEntry *palette)
 	pcx.bits_per_pixel = 8;				// 256 color
 	pcx.xmin = 0;
 	pcx.ymin = 0;
-	pcx.xmax = LittleShort(width-1);
-	pcx.ymax = LittleShort(height-1);
-	pcx.hdpi = LittleShort(75);
-	pcx.vdpi = LittleShort(75);
+	pcx.xmax = SHORT(width-1);
+	pcx.ymax = SHORT(height-1);
+	pcx.hdpi = SHORT(75);
+	pcx.vdpi = SHORT(75);
 	memset (pcx.palette, 0, sizeof(pcx.palette));
 	pcx.reserved = 0;
 	pcx.color_planes = 1;				// chunky image
@@ -516,19 +517,15 @@ void WritePNGfile (FILE *file, const DCanvas *canvas, const PalEntry *palette)
 //
 // M_ScreenShot
 //
-static BOOL FindFreeName (string &fullname, const char *extension)
+static BOOL FindFreeName (char *fullname, char *lbmname, const char *extension)
 {
-	string lbmname;
 	int i;
 
 	for (i = 0; i <= 9999; i++)
 	{
-		lbmname.Format ("%sDOOM%04d.%s", fullname.GetChars(), i, extension);
-		if (!FileExists (lbmname.GetChars()))
-		{
-			fullname = lbmname;
+		sprintf (lbmname, "DOOM%04d.%s", i, extension);
+		if (!FileExists (fullname))
 			return true;		// file doesn't exist
-		}
 	}
 	return false;
 }
@@ -536,44 +533,48 @@ static BOOL FindFreeName (string &fullname, const char *extension)
 void M_ScreenShot (char *filename)
 {
 	FILE *file;
-	string autoname;
+	char *autoname;
 	bool writepcx = (stricmp (screenshot_type, "pcx") == 0);	// PNG is the default
 
 	// find a file name to save it to
 	if (filename == NULL)
 	{
+		size_t dirlen;
+
 #ifndef unix
 		if (Args.CheckParm ("-cdrom"))
 		{
-			autoname = "C:\\ZDOOMDAT\\";
+			autoname = (char *)alloca (12 + 16);
+			strcpy (autoname, "C:\\ZDOOMDAT\\");
+			dirlen = 12;
 		}
 		else
 #endif
 		{
-			int dirlen = (int)strlen (screenshot_dir);
-			if (dirlen == 0)
+			dirlen = strlen (screenshot_dir);
+			autoname = (char *)alloca (dirlen + 16);
+			if (dirlen > 0)
 			{
-				autoname = progdir;
-			}
-			else if (dirlen > 0)
-			{
-				autoname = screenshot_dir;
+				strcpy (autoname, screenshot_dir);
 				if (autoname[dirlen-1] != '/' && autoname[dirlen-1] != '\\')
 				{
-					autoname += '/';
+					autoname[dirlen++] = '/';
 				}
 			}
 		}
-		if (!FindFreeName (autoname, writepcx ? "pcx" : "png"))
+		if (!FindFreeName (autoname, autoname + dirlen, writepcx ? "pcx" : "png"))
 		{
 			Printf ("M_ScreenShot: Delete some screenshots\n");
 			return;
 		}
+		filename = autoname;
 	}
 	else
 	{
-		autoname = filename;
+		autoname = (char *)alloca (strlen (filename) + 5);
+		strcpy (autoname, filename);
 		DefaultExtension (autoname, writepcx ? ".pcx" : ".png");
+		filename = autoname;
 	}
 
 	// save the screenshot
@@ -583,10 +584,10 @@ void M_ScreenShot (char *filename)
 	PalEntry palette[256];
 	screen->GetFlashedPalette (palette);
 
-	file = fopen (autoname.GetChars(), "wb");
+	file = fopen (filename, "wb");
 	if (file == NULL)
 	{
-		Printf ("Could not open %s\n", autoname.GetChars());
+		Printf ("Could not open %s\n", filename);
 		screen->Unlock ();
 		return;
 	}
@@ -604,7 +605,7 @@ void M_ScreenShot (char *filename)
 
 	if (!screenshot_quiet)
 	{
-		Printf ("Captured %s\n", autoname.GetChars());
+		Printf ("Captured %s\n", filename);
 	}
 }
 

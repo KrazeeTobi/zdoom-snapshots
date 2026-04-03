@@ -316,7 +316,7 @@ void DThinker::Tick ()
 {
 }
 
-FThinkerIterator::FThinkerIterator (const TypeInfo *type, int statnum)
+FThinkerIterator::FThinkerIterator (TypeInfo *type, int statnum)
 {
 	if ((unsigned)statnum > MAX_STATNUM)
 	{
@@ -333,7 +333,7 @@ FThinkerIterator::FThinkerIterator (const TypeInfo *type, int statnum)
 	m_SearchingFresh = false;
 }
 
-FThinkerIterator::FThinkerIterator (const TypeInfo *type, int statnum, DThinker *prev)
+FThinkerIterator::FThinkerIterator (TypeInfo *type, int statnum, DThinker *prev)
 {
 	if ((unsigned)statnum > MAX_STATNUM)
 	{

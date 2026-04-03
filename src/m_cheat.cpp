@@ -103,21 +103,18 @@ void cht_DoCheat (player_t *player, int cheat)
 		break;
 
 	case CHT_FLY:
-		if (player->mo != NULL)
+		player->cheats ^= CF_FLY;
+		if (player->cheats & CF_FLY)
 		{
-			player->cheats ^= CF_FLY;
-			if (player->cheats & CF_FLY)
-			{
-				player->mo->flags |= MF_NOGRAVITY;
-				player->mo->flags2 |= MF2_FLY;
-				msg = "You feel lighter";
-			}
-			else
-			{
-				player->mo->flags &= ~MF_NOGRAVITY;
-				player->mo->flags2 &= ~MF2_FLY;
-				msg = "Gravity weighs you down";
-			}
+			player->mo->flags |= MF_NOGRAVITY;
+			player->mo->flags2 |= MF2_FLY;
+			msg = "You feel lighter";
+		}
+		else
+		{
+			player->mo->flags &= ~MF_NOGRAVITY;
+			player->mo->flags2 &= ~MF2_FLY;
+			msg = "Gravity weighs you down";
 		}
 		break;
 
@@ -175,17 +172,7 @@ void cht_DoCheat (player_t *player, int cheat)
 		break;
 
 	case CHT_POWER:
-		item = player->mo->FindInventory (RUNTIME_CLASS(APowerWeaponLevel2));
-		if (item != NULL)
-		{
-			item->Destroy ();
-			msg = GStrings("TXT_CHEATPOWEROFF");
-		}
-		else
-		{
-			player->mo->GiveInventoryType (RUNTIME_CLASS(APowerWeaponLevel2));
-			msg = GStrings("TXT_CHEATPOWERON");
-		}
+		player->mo->GiveInventoryType (RUNTIME_CLASS(APowerWeaponLevel2));
 		break;
 
 	case CHT_IDKFA:
@@ -226,10 +213,6 @@ void cht_DoCheat (player_t *player, int cheat)
 			if (item == NULL)
 			{
 				player->mo->GiveInventoryType (BeholdPowers[i]);
-				if (cheat == CHT_BEHOLDS)
-				{
-					P_GiveBody (player->mo, -100);
-				}
 			}
 			else
 			{
@@ -257,20 +240,6 @@ void cht_DoCheat (player_t *player, int cheat)
 	case CHT_KEYS:
 		cht_Give (player, "keys");
 		msg = GStrings("TXT_CHEATKEYS");
-		break;
-
-	// [GRB]
-	case CHT_RESSURECT:
-		if (player->playerstate != PST_LIVE)
-		{
-			player->playerstate = PST_LIVE;
-			player->health = player->mo->health = player->mo->GetDefault()->health;
-			player->mo->flags = player->mo->GetDefault()->flags;
-			player->mo->height = player->mo->GetDefault()->height;
-			player->mo->SetState (player->mo->SpawnState);
-			player->mo->Translation = TRANSLATION(TRANSLATION_Players, BYTE(player-players));
-			player->mo->GiveDefaultInventory();
-		}
 		break;
 
 	case CHT_TAKEWEAPS:
@@ -337,16 +306,13 @@ void cht_DoCheat (player_t *player, int cheat)
 			int oldpieces = ASigil::GiveSigilPiece (player->mo);
 			item = player->mo->FindInventory (RUNTIME_CLASS(ASigil));
 
-			if (item != NULL)
+			if (oldpieces == 5)
 			{
-				if (oldpieces == 5)
-				{
-					item->Destroy ();
-				}
-				else
-				{
-					player->PendingWeapon = static_cast<AWeapon *> (item);
-				}
+				item->Destroy ();
+			}
+			else
+			{
+				player->PendingWeapon = static_cast<AWeapon *> (item);
 			}
 		}
 		break;
@@ -490,7 +456,7 @@ void cht_Give (player_t *player, char *name, int amount)
 		{
 			ABasicArmorPickup *armor = Spawn<ABasicArmorPickup> (0,0,0);
 			armor->SaveAmount = 100*deh.BlueAC;
-			armor->SavePercent = gameinfo.gametype != GAME_Heretic ? FRACUNIT/2 : FRACUNIT*3/4;
+			armor->SavePercent = FRACUNIT/2;
 			if (!armor->TryPickup (player->mo))
 			{
 				armor->Destroy ();
@@ -544,8 +510,8 @@ void cht_Give (player_t *player, char *name, int amount)
 			if (type != RUNTIME_CLASS(AWeapon) &&
 				type->IsDescendantOf (RUNTIME_CLASS(AWeapon)))
 			{
-				AWeapon *def = (AWeapon*)GetDefaultByType (type);
-				if (!(def->WeaponFlags & WIF_CHEATNOTWEAPON))
+				AInventory *def = (AInventory*)GetDefaultByType (type);
+				if (!(def->ItemFlags & IF_CHEATNOTWEAPON))
 				{
 					GiveSpawner (player, type, 1);
 				}
@@ -596,22 +562,8 @@ void cht_Give (player_t *player, char *name, int amount)
 			return;
 	}
 
-	if (giveall || stricmp (name, "backpack") == 0)
-	{
-		// Select the correct type of backpack based on the game
-		if (gameinfo.gametype == GAME_Heretic)
-		{
-			name = "BagOfHolding";
-		}
-		else if (gameinfo.gametype == GAME_Strife)
-		{
-			name = "AmmoSatchel";
-		}
-		else if (gameinfo.gametype == GAME_Hexen && giveall)
-		{ // Hexen doesn't have a backpack, foo!
-			return;
-		}
-	}
+	if (giveall)
+		return;
 
 	type = TypeInfo::IFindType (name);
 	if (type == NULL || !type->IsDescendantOf (RUNTIME_CLASS(AInventory)))
@@ -630,9 +582,13 @@ void cht_Suicide (player_t *plyr)
 {
 	if (plyr->mo != NULL)
 	{
+		int minhealth;
+
+		// The end of game hell hack actually prevents your death
+		minhealth = (plyr->mo->Sector->special & 255) == dDamage_End ? 1 : 0;
 		plyr->mo->flags |= MF_SHOOTABLE;
-		plyr->mo->flags2 &= ~MF2_INVULNERABLE;
-		P_DamageMobj (plyr->mo, plyr->mo, plyr->mo, 1000000, MOD_SUICIDE);
+		while (plyr->health > minhealth )
+			P_DamageMobj (plyr->mo, plyr->mo, plyr->mo, 1000000, MOD_SUICIDE);
 		plyr->mo->flags &= ~MF_SHOOTABLE;
 	}
 }

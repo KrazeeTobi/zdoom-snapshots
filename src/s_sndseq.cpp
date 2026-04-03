@@ -601,18 +601,7 @@ DSeqSectorNode::DSeqSectorNode (sector_t *sec, int sequence)
 static bool TwiddleSeqNum (int &sequence, seqtype_t type)
 {
 	if (type < SEQ_NUMSEQTYPES)
-	{
-		// [GrafZahl] Needs some range checking:
-		// Sector_ChangeSound doesn't do it so this makes invalid sequences play nothing.
-		if (sequence >= 0 && sequence < 64)
-		{
-			sequence = SeqTrans[sequence + type * 64];
-		}
-		else
-		{
-			return false;
-		}
-	}
+		sequence = SeqTrans[sequence + type * 64];
 
 	if (sequence == -1 || Sequences[sequence] == NULL)
 		return false;

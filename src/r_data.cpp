@@ -30,7 +30,7 @@
 #ifdef ALPHA
 #define SAFESHORT(s)	((short)(((byte *)&(s))[0] + ((byte *)&(s))[1] * 256))
 #else
-#define SAFESHORT(s)	LittleShort(s)
+#define SAFESHORT(s)	SHORT(s)
 #endif
 
 #include <stddef.h>
@@ -291,13 +291,8 @@ int FTextureManager::CreateTexture (int lumpnum, int usetype)
 			}
 
 			type = t_png;
-			out = new FPNGTexture (lumpnum, BigLong((int)width), BigLong((int)height),
+			out = new FPNGTexture (lumpnum, BELONG((int)width), BELONG((int)height),
 				bitdepth, colortype, interlace);
-		}
-		else if (usetype == FTexture::TEX_Flat)
-		{
-			// allow PNGs as flats but not Doom patches.
-			return -1;
 		}
 		else if ((gameinfo.flags & GI_PAGESARERAW) && data.GetLength() == 64000)
 		{
@@ -310,8 +305,8 @@ int FTextureManager::CreateTexture (int lumpnum, int usetype)
 			data.Seek (-4, SEEK_CUR);
 			data.Read (foo, data.GetLength());
 
-			height = LittleShort(foo->height);
-			width = LittleShort(foo->width);
+			height = SHORT(foo->height);
+			width = SHORT(foo->width);
 
 			if (height > 0 && height < 510 && width > 0 && width < 15997)
 			{
@@ -324,7 +319,7 @@ int FTextureManager::CreateTexture (int lumpnum, int usetype)
 
 				for (x = 0; x < width; ++x)
 				{
-					DWORD ofs = LittleLong(foo->columnofs[x]);
+					DWORD ofs = LONG(foo->columnofs[x]);
 					if (ofs == (DWORD)width * 4 + 8)
 					{
 						gapAtStart = false;
@@ -367,8 +362,8 @@ int FTextureManager::CreateTexture (int lumpnum, int usetype)
 	{
 	default:
 		{	// Check patch sizes for sanity
-			WORD width = LittleShort(*(WORD *)&first4bytes);
-			WORD height = LittleShort(*((WORD *)&first4bytes + 1));
+			WORD width = SHORT(*(WORD *)&first4bytes);
+			WORD height = SHORT(*((WORD *)&first4bytes + 1));
 
 			if (width <= 2048 && height <= 2048)
 			{
@@ -437,11 +432,7 @@ void FTextureManager::AddFlats ()
 
 	for (i = firstflat; i <= lastflat; ++i)
 	{
-		// Support PNGs as flats!
-		if (CreateTexture (i, FTexture::TEX_Flat) == -1)
-		{
-			AddTexture (new FFlatTexture (i));
-		}
+		AddTexture (new FFlatTexture (i));
 	}
 }
 
@@ -459,9 +450,9 @@ void FTextureManager::AddSprites ()
 
 void FTextureManager::AddTiles (void *tiles)
 {
-//	int numtiles = LittleLong(((DWORD *)tiles)[1]);	// This value is not reliable
-	int tilestart = LittleLong(((DWORD *)tiles)[2]);
-	int tileend = LittleLong(((DWORD *)tiles)[3]);
+//	int numtiles = LONG(((DWORD *)tiles)[1]);	// This value is not reliable
+	int tilestart = LONG(((DWORD *)tiles)[2]);
+	int tileend = LONG(((DWORD *)tiles)[3]);
 	const WORD *tilesizx = &((const WORD *)tiles)[8];
 	const WORD *tilesizy = &tilesizx[tileend - tilestart + 1];
 	const DWORD *picanm = (const DWORD *)&tilesizy[tileend - tilestart + 1];
@@ -470,9 +461,9 @@ void FTextureManager::AddTiles (void *tiles)
 	for (int i = tilestart; i <= tileend; ++i)
 	{
 		int pic = i - tilestart;
-		int width = LittleShort(tilesizx[pic]);
-		int height = LittleShort(tilesizy[pic]);
-		DWORD anm = LittleLong(picanm[pic]);
+		int width = SHORT(tilesizx[pic]);
+		int height = SHORT(tilesizy[pic]);
+		DWORD anm = LONG(picanm[pic]);
 		int xoffs = (SBYTE)((anm >> 8) & 255) + width/2;
 		int yoffs = (SBYTE)((anm >> 16) & 255) + height/2;
 		int size = width*height;
@@ -668,7 +659,7 @@ void FTextureManager::AddTexturesLump (const void *lumpdata, int lumpsize, int p
 	DWORD offset = 0;   // Shut up, GCC!
 
 	maptex = (const DWORD *)lumpdata;
-	numtextures = LittleLong(*maptex);
+	numtextures = LONG(*maptex);
 	maxoff = lumpsize;
 
 	if (maxoff < DWORD(numtextures+1)*4)
@@ -679,7 +670,7 @@ void FTextureManager::AddTexturesLump (const void *lumpdata, int lumpsize, int p
 	// Scan the texture lump to decide if it contains Doom or Strife textures
 	for (i = 0, directory = maptex+1; i < numtextures; ++i)
 	{
-		offset = LittleLong(directory[i]);
+		offset = LONG(directory[i]);
 		if (offset > maxoff)
 		{
 			I_FatalError ("Bad texture directory");
@@ -707,13 +698,13 @@ void FTextureManager::AddTexturesLump (const void *lumpdata, int lumpsize, int p
 		{
 			// The very first texture is just a dummy. Copy its dimensions to texture 0.
 			// It still needs to be created in case someone uses it by name.
-			offset = LittleLong(directory[1]);
+			offset = LONG(directory[0]);
 			const maptexture_t *tex = (const maptexture_t *)((const BYTE *)maptex + offset);
 			FDummyTexture *tex0 = static_cast<FDummyTexture *>(Textures[0].Texture);
 			tex0->SetSize (SAFESHORT(tex->width), SAFESHORT(tex->height));
 		}
 
-		offset = LittleLong(directory[i]);
+		offset = LONG(directory[i]);
 		if (offset > maxoff)
 		{
 			I_FatalError ("Bad texture directory");
@@ -1162,23 +1153,23 @@ void FPatchTexture::MakeTexture ()
 	maxcol = (const column_t *)((const BYTE *)patch + Wads.LumpLength (SourceLump) - 3);
 
 	// Check for badly-sized patches
-	if (LittleShort(patch->width) <= 0 || LittleShort(patch->height) <= 0)
+	if (SHORT(patch->width) <= 0 || SHORT(patch->height) <= 0)
 	{
 		lump = Wads.ReadLump ("-BADPATC");
 		patch = (const patch_t *)lump.GetMem();
 		Printf (PRINT_BOLD, "Patch %s has a non-positive size.\n", Name);
 	}
-	else if (LittleShort(patch->width) > 2048 || LittleShort(patch->height) > 2048)
+	else if (SHORT(patch->width) > 2048 || SHORT(patch->height) > 2048)
 	{
 		lump = Wads.ReadLump ("-BADPATC");
 		patch = (const patch_t *)lump.GetMem();
 		Printf (PRINT_BOLD, "Patch %s is too big.\n", Name);
 	}
 
-	Width = LittleShort(patch->width);
-	Height = LittleShort(patch->height);
-	LeftOffset = LittleShort(patch->leftoffset);
-	TopOffset = LittleShort(patch->topoffset);
+	Width = SHORT(patch->width);
+	Height = SHORT(patch->height);
+	LeftOffset = SHORT(patch->leftoffset);
+	TopOffset = SHORT(patch->topoffset);
 	CalcBitSize ();
 
 	// Add a little extra space at the end if the texture's height is not
@@ -1205,7 +1196,7 @@ void FPatchTexture::MakeTexture ()
 	for (x = 0; x < Width; ++x)
 	{
 		BYTE *outtop = Pixels + x*Height;
-		const column_t *column = (const column_t *)((const BYTE *)patch + LittleLong(patch->columnofs[x]));
+		const column_t *column = (const column_t *)((const BYTE *)patch + LONG(patch->columnofs[x]));
 		int top = -1;
 
 		while (column < maxcol && column->topdelta != 0xFF)
@@ -1250,7 +1241,7 @@ void FPatchTexture::MakeTexture ()
 
 	for (x = 0; x < Width; ++x)
 	{
-		const column_t *column = (const column_t *)((const BYTE *)patch + LittleLong(patch->columnofs[x]));
+		const column_t *column = (const column_t *)((const BYTE *)patch + LONG(patch->columnofs[x]));
 		int top = -1;
 
 		Spans[x] = spanstuffer;
@@ -1344,7 +1335,7 @@ void FPatchTexture::HackHack (int newheight)
 		FMemLump lump = Wads.ReadLump (SourceLump);
 		const patch_t *patch = (const patch_t *)lump.GetMem();
 
-		Width = LittleShort(patch->width);
+		Width = SHORT(patch->width);
 		Height = newheight;
 		LeftOffset = 0;
 		TopOffset = 0;
@@ -1354,7 +1345,7 @@ void FPatchTexture::HackHack (int newheight)
 		// Draw the image to the buffer
 		for (x = 0, out = Pixels; x < Width; ++x)
 		{
-			const BYTE *in = (const BYTE *)patch + LittleLong(patch->columnofs[x]) + 3;
+			const BYTE *in = (const BYTE *)patch + LONG(patch->columnofs[x]) + 3;
 
 			for (int y = newheight; y > 0; --y)
 			{
@@ -1643,10 +1634,10 @@ void FIMGZTexture::MakeTexture ()
 	const ImageHeader *imgz = (const ImageHeader *)lump.GetMem();
 	const BYTE *data = (const BYTE *)&imgz[1];
 
-	Width = LittleShort(imgz->Width);
-	Height = LittleShort(imgz->Height);
-	LeftOffset = LittleShort(imgz->LeftOffset);
-	TopOffset = LittleShort(imgz->TopOffset);
+	Width = SHORT(imgz->Width);
+	Height = SHORT(imgz->Height);
+	LeftOffset = SHORT(imgz->LeftOffset);
+	TopOffset = SHORT(imgz->TopOffset);
 
 	BYTE *dest_p;
 	int dest_adv = Height;
@@ -1757,7 +1748,7 @@ FPNGTexture::FPNGTexture (int lumpnum, int width, int height,
 	lump >> len >> id;
 	while (id != MAKE_ID('I','D','A','T') && id != MAKE_ID('I','E','N','D'))
 	{
-		len = BigLong((unsigned int)len);
+		len = BELONG((unsigned int)len);
 		switch (id)
 		{
 		default:
@@ -1770,8 +1761,8 @@ FPNGTexture::FPNGTexture (int lumpnum, int width, int height,
 				DWORD hotx, hoty;
 
 				lump >> hotx >> hoty;
-				LeftOffset = BigLong((int)hotx);
-				TopOffset = BigLong((int)hoty);
+				LeftOffset = BELONG((int)hotx);
+				TopOffset = BELONG((int)hoty);
 			}
 			break;
 
@@ -1913,7 +1904,7 @@ void FPNGTexture::MakeTexture ()
 		DWORD len, id;
 		lump.Seek (StartOfIDAT, SEEK_SET);
 		lump >> len >> id;
-		M_ReadIDAT (&lump, Pixels, Width, Height, Width, BitDepth, ColorType, Interlace, BigLong((unsigned int)len));
+		M_ReadIDAT (&lump, Pixels, Width, Height, Width, BitDepth, ColorType, Interlace, BELONG((unsigned int)len));
 
 		if (Width == Height)
 		{
@@ -2069,17 +2060,17 @@ FMultiPatchTexture::FMultiPatchTexture (const void *texdef, FPatchLookup *patchl
 
 	for (i = 0; i < NumParts; ++i)
 	{
-		if (unsigned(LittleShort(mpatch.d->patch)) >= unsigned(maxpatchnum))
+		if (unsigned(SHORT(mpatch.d->patch)) >= unsigned(maxpatchnum))
 		{
 			I_FatalError ("Bad PNAMES and/or texture directory:\n\nPNAMES has %d entries, but\n%s wants to use entry %d.",
-				maxpatchnum, Name, LittleShort(mpatch.d->patch)+1);
+				maxpatchnum, Name, SHORT(mpatch.d->patch)+1);
 		}
-		Parts[i].OriginX = LittleShort(mpatch.d->originx);
-		Parts[i].OriginY = LittleShort(mpatch.d->originy);
-		Parts[i].Texture = patchlookup[LittleShort(mpatch.d->patch)].Texture;
+		Parts[i].OriginX = SHORT(mpatch.d->originx);
+		Parts[i].OriginY = SHORT(mpatch.d->originy);
+		Parts[i].Texture = patchlookup[SHORT(mpatch.d->patch)].Texture;
 		if (Parts[i].Texture == NULL)
 		{
-			Printf ("Unknown patch %s in texture %s\n", patchlookup[LittleShort(mpatch.d->patch)].Name, Name);
+			Printf ("Unknown patch %s in texture %s\n", patchlookup[SHORT(mpatch.d->patch)].Name, Name);
 			NumParts--;
 			i--;
 		}
@@ -2289,13 +2280,13 @@ void FMultiPatchTexture::CheckForHacks ()
 				FMemLump lump = Wads.ReadLump (tex->SourceLump);
 				const patch_t *realpatch = (patch_t *)lump.GetMem();
 				const DWORD *cofs = realpatch->columnofs;
-				int x, x2 = LittleShort(realpatch->width);
+				int x, x2 = SHORT(realpatch->width);
 
-				if (LittleShort(realpatch->height) == 256)
+				if (SHORT(realpatch->height) == 256)
 				{
 					for (x = 0; x < x2; ++x)
 					{
-						const column_t *col = (column_t*)((byte*)realpatch+LittleLong(cofs[x]));
+						const column_t *col = (column_t*)((byte*)realpatch+LONG(cofs[x]));
 						if (col->topdelta != 0 || col->length != 0)
 						{
 							break;	// It's not bad!
@@ -2450,57 +2441,6 @@ void FWarpTexture::MakeTexture (DWORD time)
 	}
 }
 
-// [GRB] Eternity-like warping
-FWarp2Texture::FWarp2Texture (FTexture *source)
-: FWarpTexture (source)
-{
-}
-
-void FWarp2Texture::MakeTexture (DWORD time)
-{
-	const BYTE *otherpix = SourcePic->GetPixels ();
-
-	if (Pixels == NULL)
-	{
-		Pixels = new BYTE[Width * Height];
-	}
-	if (Spans != NULL)
-	{
-		FreeSpans (Spans);
-		Spans = NULL;
-	}
-
-	GenTime = time;
-
-	int xsize = Width;
-	int ysize = Height;
-	int xmask = WidthMask;
-	int ymask = Height - 1;
-	int ybits = HeightBits;
-	int x, y;
-
-	if ((1 << ybits) > Height)
-	{
-		ybits--;
-	}
-
-	DWORD timebase = time * 40 / 28;
-	for (x = xsize-1; x >= 0; x--)
-	{
-		for (y = ysize-1; y >= 0; y--)
-		{
-			int xt = (x + 128
-				+ ((finesine[(y*128 + timebase*5 + 900) & FINEMASK]*2)>>FRACBITS)
-				+ ((finesine[(x*256 + timebase*4 + 300) & FINEMASK]*2)>>FRACBITS)) & xmask;
-			int yt = (y + 128
-				+ ((finesine[(y*128 + timebase*3 + 700) & FINEMASK]*2)>>FRACBITS)
-				+ ((finesine[(x*256 + timebase*4 + 1200) & FINEMASK]*2)>>FRACBITS)) & ymask;
-			const BYTE *source = otherpix + (xt << ybits) + yt;
-			BYTE *dest = Pixels + (x << ybits) + y;
-			*dest = *source;
-		}
-	}
-}
 
 FCanvasTexture::FCanvasTexture (const char *name, int width, int height)
 {
@@ -2640,7 +2580,7 @@ void R_InitTextures (void)
 	// For each PNAMES lump, load the TEXTURE1 and/or TEXTURE2 lumps from the same wad.
 	while ((lump = Wads.FindLump ("PNAMES", &lastlump)) != -1)
 	{
-		pfile = Wads.GetLumpFile (lump);
+		int pfile = Wads.GetLumpFile (lump);
 
 		TexMan.AddPatches (lump);
 		texlump1 = Wads.CheckNumForName ("TEXTURE1", ns_global, pfile);
@@ -2719,7 +2659,7 @@ void R_InitBuildTiles ()
 			BYTE *art = new BYTE[file.GetLength()];
 			file.Read (art, file.GetLength());
 
-			if (LittleLong(*(DWORD *)art) != 1)
+			if (LONG(*(DWORD *)art) != 1)
 			{
 				delete[] art;
 				break;

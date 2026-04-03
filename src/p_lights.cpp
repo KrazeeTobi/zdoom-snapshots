@@ -32,7 +32,6 @@
 
 // State.
 #include "r_state.h"
-#include "statnums.h"
 
 static FRandom pr_flicker ("Flicker");
 static FRandom pr_lightflash ("LightFlash");
@@ -48,7 +47,6 @@ DLighting::DLighting ()
 DLighting::DLighting (sector_t *sector)
 	: DSectorEffect (sector)
 {
-	ChangeStatNum (STAT_LIGHT);
 }
 
 //
@@ -712,7 +710,7 @@ void EV_StopLightEffect (int tag)
 	{
 		if (effect->GetSector()->tag == tag)
 		{
-			effect->Destroy();
+			delete effect;
 		}
 	}
 }

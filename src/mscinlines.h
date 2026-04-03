@@ -314,22 +314,95 @@ __forceinline SDWORD DivScale32 (SDWORD a, SDWORD b)
 	__asm idiv b
 }
 
-__forceinline void clearbuf (void *buff, unsigned int count, SDWORD clear)
+__forceinline void clearbuf (void *buff, int count, SDWORD clear)
 {
 	SDWORD *b2 = (SDWORD *)buff;
-	for (unsigned int i = 0; i != count; ++i)
-	{
-		b2[i] = clear;
-	}
+	while (count--)
+		*b2++ = clear;
 }
 
 __forceinline void clearbufshort (void *buff, unsigned int count, WORD clear)
 {
+	if (!count)
+		return;
 	SWORD *b2 = (SWORD *)buff;
-	for (unsigned int i = 0; i != count; ++i)
+	if ((size_t)b2 & 2)
 	{
-		b2[i] = clear;
+		*b2++ = clear;
+		if (--count == 0)
+			return;
 	}
+	do
+	{
+		*b2++ = clear;
+	} while (--count);
+}
+
+__forceinline void qinterpolatedown16 (SDWORD *out, DWORD count, SDWORD val, SDWORD delta)
+{
+	SDWORD odd = count;
+	if ((count >>= 1) != 0)
+	{
+		do
+		{
+			SDWORD temp = val + delta;
+			out[0] = val >> 16;
+			val = temp + delta;
+			out[1] = temp >> 16;
+			out += 2;
+		} while (--count);
+		if (!(odd & 1))
+			return;
+	}
+	*out = val >> 16;
+}
+
+__forceinline void qinterpolatedown16short (short *out, DWORD count, SDWORD val, SDWORD delta)
+{
+	if ((size_t)out & 2)
+	{ // align to dword boundary
+		*out++ = (short)(val >> 16);
+		count--;
+		val += delta;
+	}
+	DWORD c2 = count>>1;
+	if (c2)
+	{
+		DWORD *o2 = (DWORD *)out;
+		do
+		{
+			SDWORD temp = val + delta;
+			*o2++ = (temp & 0xffff0000) | ((DWORD)val >> 16);
+			val = temp + delta;
+		} while (--c2);
+		out = (short *)o2;
+	}
+	if (count & 1)
+	{
+		*out = (short)(val >> 16);
+	}
+}
+
+
+	//returns num/den, dmval = num%den
+__forceinline SDWORD DivMod (DWORD num, SDWORD den, SDWORD *dmval)
+{
+	__asm mov eax,num
+	__asm xor edx,edx
+	__asm div den
+	__asm mov ecx,dmval
+	__asm mov [ecx],edx
+}
+
+	//returns num%den, dmval = num/den
+__forceinline SDWORD ModDiv (DWORD num, SDWORD den, SDWORD *dmval)
+{
+	__asm mov eax,num
+	__asm xor edx,edx
+	__asm div den
+	__asm mov ecx,dmval
+	__asm mov [ecx],eax
+	__asm mov eax,edx
 }
 
 __forceinline SDWORD ksgn (SDWORD a)

@@ -39,8 +39,6 @@
 #include "s_sound.h"
 #include "d_player.h"
 
-EXTERN_CVAR(String, secretmessage)
-
 class ASecretTrigger : public AActor
 {
 	DECLARE_STATELESS_ACTOR (ASecretTrigger, AActor)
@@ -65,7 +63,7 @@ void ASecretTrigger::Activate (AActor *activator)
 	{
 		if (args[0] <= 1)
 		{
-			C_MidPrint (secretmessage);
+			C_MidPrint ("A secret is revealed!");
 		}
 		if (args[0] == 0 || args[0] == 2)
 		{
@@ -73,7 +71,6 @@ void ASecretTrigger::Activate (AActor *activator)
 		}
 	}
 	level.found_secrets++;
-	if (activator->player) activator->player->secretcount++;
 	Destroy ();
 }
 

@@ -54,7 +54,6 @@
 #include "doomerrors.h"
 #include "gi.h"
 #include "p_conversation.h"
-#include "a_keys.h"
 
 extern void P_SpawnMapThing (mapthing2_t *mthing, int position);
 extern bool P_LoadBuildMap (BYTE *mapdata, size_t len, mapthing2_t **things, int *numthings);
@@ -114,13 +113,13 @@ struct sidei_t	// [RH] Only keep BOOM sidedef init stuff around for init
 		struct
 		{
 			short tag, special;
-			DWORD map;
+			WORD map;
 		} a;
 
 		// Used when grouping sidedefs into loops.
 		struct
 		{
-			DWORD first, next;
+			WORD first, next;
 			char lineside;
 		} b;
 	};
@@ -169,7 +168,7 @@ TArray<mapthing2_t> deathmatchstarts (16);
 mapthing2_t		playerstarts[MAXPLAYERS];
 
 static void P_AllocateSideDefs (int count);
-static void P_SetSideNum (DWORD *sidenum_p, WORD sidenum);
+static void P_SetSideNum (WORD *sidenum_p, WORD sidenum);
 
 // [RH] Figure out blends for deep water sectors
 static void SetTexture (short *texture, DWORD *blend, char *name8)
@@ -238,7 +237,7 @@ void P_FloodZone (sector_t *sec, int zonenum)
 		line_t *check = sec->lines[i];
 		sector_t *other;
 
-		if (check->sidenum[1] == NO_SIDE || (check->flags & ML_ZONEBOUNDARY))
+		if (check->sidenum[1] == NO_INDEX || (check->flags & ML_ZONEBOUNDARY))
 			continue;
 
 		if (check->frontsector == sec)
@@ -323,7 +322,7 @@ void P_LoadZSegs (FileReaderZ &data)
 		segs[i].sidedef = &sides[ldef->sidenum[side]];
 		segs[i].PartnerSeg = NULL;
 		segs[i].frontsector = sides[ldef->sidenum[side]].sector;
-		if (ldef->flags & ML_TWOSIDED && ldef->sidenum[side^1] != NO_SIDE)
+		if (ldef->flags & ML_TWOSIDED && ldef->sidenum[side^1] != NO_INDEX)
 		{
 			segs[i].backsector = sides[ldef->sidenum[side^1]].sector;
 		}
@@ -378,7 +377,7 @@ void P_LoadGLZSegs (FileReaderZ &data)
 				seg->linedef = ldef = &lines[line];
 				seg->sidedef = &sides[ldef->sidenum[side]];
 				seg->frontsector = sides[ldef->sidenum[side]].sector;
-				if (ldef->flags & ML_TWOSIDED && ldef->sidenum[side^1] != NO_SIDE)
+				if (ldef->flags & ML_TWOSIDED && ldef->sidenum[side^1] != NO_INDEX)
 				{
 					seg->backsector = sides[ldef->sidenum[side^1]].sector;
 				}
@@ -582,11 +581,11 @@ void P_LoadSegs (int lump)
 			int side, linedef;
 			line_t *ldef;
 
-			li->v1 = &vertexes[LittleShort(ml->v1)];
-			li->v2 = &vertexes[LittleShort(ml->v2)];
+			li->v1 = &vertexes[SHORT(ml->v1)];
+			li->v2 = &vertexes[SHORT(ml->v2)];
 			li->PartnerSeg = NULL;
 
-			segangle = (WORD)LittleShort(ml->angle);
+			segangle = (WORD)SHORT(ml->angle);
 
 // phares 10/4/98: In the case of a lineseg that was created by splitting
 // another line, it appears that the line angle is inherited from the
@@ -652,14 +651,14 @@ void P_LoadSegs (int lump)
 				}
 			}
 
-			linedef = LittleShort(ml->linedef);
+			linedef = SHORT(ml->linedef);
 			if ((unsigned)linedef >= (unsigned)numlines)
 			{
 				throw i * 4 + 1;
 			}
 			ldef = &lines[linedef];
 			li->linedef = ldef;
-			side = LittleShort(ml->side);
+			side = SHORT(ml->side);
 			if ((unsigned)ldef->sidenum[side] >= (unsigned)numsides)
 			{
 				throw i * 4 + 2;
@@ -668,7 +667,7 @@ void P_LoadSegs (int lump)
 			li->frontsector = sides[ldef->sidenum[side]].sector;
 
 			// killough 5/3/98: ignore 2s flag if second sidedef missing:
-			if (ldef->flags & ML_TWOSIDED && ldef->sidenum[side^1] != NO_SIDE)
+			if (ldef->flags & ML_TWOSIDED && ldef->sidenum[side^1] != NO_INDEX)
 			{
 				li->backsector = sides[ldef->sidenum[side^1]].sector;
 			}
@@ -805,11 +804,11 @@ void P_LoadSectors (int lump)
 	ss = sectors;
 	for (i = 0; i < numsectors; i++, ss++, ms++)
 	{
-		ss->floortexz = LittleShort(ms->floorheight)<<FRACBITS;
+		ss->floortexz = SHORT(ms->floorheight)<<FRACBITS;
 		ss->floorplane.d = -ss->floortexz;
 		ss->floorplane.c = FRACUNIT;
 		ss->floorplane.ic = FRACUNIT;
-		ss->ceilingtexz = LittleShort(ms->ceilingheight)<<FRACBITS;
+		ss->ceilingtexz = SHORT(ms->ceilingheight)<<FRACBITS;
 		ss->ceilingplane.d = ss->ceilingtexz;
 		ss->ceilingplane.c = -FRACUNIT;
 		ss->ceilingplane.ic = -FRACUNIT;
@@ -817,12 +816,12 @@ void P_LoadSectors (int lump)
 		ss->floorpic = TexMan.GetTexture (fname, FTexture::TEX_Flat, FTextureManager::TEXMAN_Overridable);
 		strncpy (fname, ms->ceilingpic, 8);
 		ss->ceilingpic = TexMan.GetTexture (fname, FTexture::TEX_Flat, FTextureManager::TEXMAN_Overridable);
-		ss->lightlevel = clamp (LittleShort(ms->lightlevel), (short)0, (short)255);
+		ss->lightlevel = clamp (SHORT(ms->lightlevel), (short)0, (short)255);
 		if (HasBehavior)
-			ss->special = LittleShort(ms->special);
+			ss->special = SHORT(ms->special);
 		else	// [RH] Translate to new sector special
-			ss->special = P_TranslateSectorSpecial (LittleShort(ms->special));
-		ss->tag = LittleShort(ms->tag);
+			ss->special = P_TranslateSectorSpecial (SHORT(ms->special));
+		ss->tag = SHORT(ms->tag);
 		ss->thinglist = NULL;
 		ss->touching_thinglist = NULL;		// phares 3/14/98
 		ss->seqType = defSeqType;
@@ -896,13 +895,13 @@ void P_LoadNodes (int lump)
 	
 	for (i = 0; i < numnodes; i++, no++, mn++)
 	{
-		no->x = LittleShort(mn->x)<<FRACBITS;
-		no->y = LittleShort(mn->y)<<FRACBITS;
-		no->dx = LittleShort(mn->dx)<<FRACBITS;
-		no->dy = LittleShort(mn->dy)<<FRACBITS;
+		no->x = SHORT(mn->x)<<FRACBITS;
+		no->y = SHORT(mn->y)<<FRACBITS;
+		no->dx = SHORT(mn->dx)<<FRACBITS;
+		no->dy = SHORT(mn->dy)<<FRACBITS;
 		for (j = 0; j < 2; j++)
 		{
-			WORD child = LittleShort(mn->children[j]);
+			WORD child = SHORT(mn->children[j]);
 			if (child & NF_SUBSECTOR)
 			{
 				child &= ~NF_SUBSECTOR;
@@ -940,7 +939,7 @@ void P_LoadNodes (int lump)
 			}
 			for (k = 0; k < 4; k++)
 			{
-				no->bbox[j][k] = LittleShort(mn->bbox[j][k])<<FRACBITS;
+				no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
 			}
 		}
 	}
@@ -968,7 +967,7 @@ void P_LoadThings (int lump, int position)
 		//		everything and let it decide what to do with them.
 
 		// [RH] Need to translate the spawn flags to Hexen format.
-		short flags = LittleShort(mt->options);
+		short flags = SHORT(mt->options);
 
 		memset (&mt2, 0, sizeof(mt2));
 		mt2.flags = (short)((flags & 0xf) | 0x7e0);
@@ -993,10 +992,10 @@ void P_LoadThings (int lump, int position)
 		}
 		if (flags & BTF_NOTSINGLE)			mt2.flags &= ~MTF_SINGLE;
 
-		mt2.x = LittleShort(mt->x);
-		mt2.y = LittleShort(mt->y);
-		mt2.angle = LittleShort(mt->angle);
-		mt2.type = LittleShort(mt->type);
+		mt2.x = SHORT(mt->x);
+		mt2.y = SHORT(mt->y);
+		mt2.angle = SHORT(mt->angle);
+		mt2.type = SHORT(mt->type);
 
 		P_SpawnMapThing (&mt2, position);
 	}
@@ -1050,11 +1049,6 @@ static void P_SlopeLineToPoint (int lineid, fixed_t x, fixed_t y, fixed_t z, BOO
 		v2[2] = FIXED2FLOAT (z) - p[2];
 
 		CrossProduct (v1, v2, cross);
-		if (VectorLength (cross) == 0)
-		{
-			Printf ("Slope thing at (%d,%d) lies directly on its target line.\n", x>>16, y>>16);
-			return;
-		}
 		VectorNormalize (cross);
 
 		// Fix backward normals
@@ -1220,13 +1214,13 @@ void P_LoadThings2 (int lump, int position)
 #ifdef WORDS_BIGENDIAN
 	for (mt = firstmt; mt < lastmt; ++mt)
 	{
-		mt->thingid = LittleShort(mt->thingid);
-		mt->x = LittleShort(mt->x);
-		mt->y = LittleShort(mt->y);
-		mt->z = LittleShort(mt->z);
-		mt->angle = LittleShort(mt->angle);
-		mt->type = LittleShort(mt->type);
-		mt->flags = LittleShort(mt->flags);
+		mt->thingid = SHORT(mt->thingid);
+		mt->x = SHORT(mt->x);
+		mt->y = SHORT(mt->y);
+		mt->z = SHORT(mt->z);
+		mt->angle = SHORT(mt->angle);
+		mt->type = SHORT(mt->type);
+		mt->flags = SHORT(mt->flags);
 	}
 #endif
 
@@ -1287,35 +1281,30 @@ void P_AdjustLine (line_t *ld)
 	}
 
 	// [RH] Set line id (as appropriate) here
-	// for Doom format maps this must be done in P_TranslateLinedef because
-	// the tag doesn't always go into the first arg!
-	if (HasBehavior)	
+	if (ld->special == Line_SetIdentification)
 	{
-		if (ld->special == Line_SetIdentification)
+		ld->id = ld->args[0];
+		if (ld->args[1] == 1)
 		{
-			ld->id = ld->args[0];
-			if (ld->args[1] == 1)
-			{
-				ld->flags |= ML_ZONEBOUNDARY;
-			}
+			ld->flags |= ML_ZONEBOUNDARY;
 		}
-		else if (
-			ld->special == Teleport_Line ||
-			ld->special == TranslucentLine ||
-			ld->special == Scroll_Texture_Model)
-		{
-			ld->id = ld->args[0];
-		}
+	}
+	else if (!HasBehavior ||
+		ld->special == Teleport_Line ||
+		ld->special == TranslucentLine ||
+		ld->special == Scroll_Texture_Model)
+	{
+		ld->id = ld->args[0];
 	}
 }
 
 void P_SaveLineSpecial (line_t *ld)
 {
-	if (*ld->sidenum == NO_SIDE)
+	if (*ld->sidenum == 65535)
 		return;
 
 	// killough 4/4/98: support special sidedef interpretation below
-	if ((ld->sidenum[0] != NO_SIDE) &&
+	if ((ld->sidenum[0] != NO_INDEX) &&
 		// [RH] Save Static_Init only if it's interested in the textures
 		(ld->special != Static_Init || ld->args[1] == Init_Color))
 	{
@@ -1337,8 +1326,8 @@ void P_FinishLoadingLineDefs ()
 
 	for (i = numlines, linenum = 0; i--; ld++, linenum++)
 	{
-		ld->frontsector = ld->sidenum[0]!=NO_SIDE ? sides[ld->sidenum[0]].sector : 0;
-		ld->backsector  = ld->sidenum[1]!=NO_SIDE ? sides[ld->sidenum[1]].sector : 0;
+		ld->frontsector = ld->sidenum[0]!=NO_INDEX ? sides[ld->sidenum[0]].sector : 0;
+		ld->backsector  = ld->sidenum[1]!=NO_INDEX ? sides[ld->sidenum[1]].sector : 0;
 		float dx = FIXED2FLOAT(ld->v2->x - ld->v1->x);
 		float dy = FIXED2FLOAT(ld->v2->y - ld->v1->y);
 		SBYTE light;
@@ -1353,13 +1342,13 @@ void P_FinishLoadingLineDefs ()
 		light = dy == 0 ? level.WallHorizLight :
 				dx == 0 ? level.WallVertLight : 0;
 
-		if (ld->sidenum[0] != NO_SIDE)
+		if (ld->sidenum[0] != NO_INDEX)
 		{
 			sides[ld->sidenum[0]].linenum = linenum;
 			sides[ld->sidenum[0]].TexelLength = len;
 			sides[ld->sidenum[0]].Light = light;
 		}
-		if (ld->sidenum[1] != NO_SIDE)
+		if (ld->sidenum[1] != NO_INDEX)
 		{
 			sides[ld->sidenum[1]].linenum = linenum;
 			sides[ld->sidenum[1]].TexelLength = len;
@@ -1378,7 +1367,7 @@ void P_FinishLoadingLineDefs ()
 				if (ld->args[2] == 1)
 				{
 					sides[ld->sidenum[0]].Flags |= WALLF_ADDTRANS;
-					if (ld->sidenum[1] != NO_SIDE)
+					if (ld->sidenum[1] != NO_INDEX)
 					{
 						sides[ld->sidenum[1]].Flags |= WALLF_ADDTRANS;
 					}
@@ -1394,7 +1383,7 @@ void P_FinishLoadingLineDefs ()
 						if (lines[j].args[2] == 1)
 						{
 							sides[lines[j].sidenum[0]].Flags |= WALLF_ADDTRANS;
-							if (lines[j].sidenum[1] != NO_SIDE)
+							if (lines[j].sidenum[1] != NO_INDEX)
 							{
 								sides[lines[j].sidenum[1]].Flags |= WALLF_ADDTRANS;
 							}
@@ -1427,32 +1416,29 @@ void P_LoadLineDefs (int lump)
 	for (skipped = sidecount = i = 0; i < numlines; )
 	{
 		maplinedef_t *mld = ((maplinedef_t *)data.GetMem()) + i;
-		int v1 = LittleShort(mld->v1);
-		int v2 = LittleShort(mld->v2);
 
-		if (v1 >= numvertexes || v2 >= numvertexes)
-		{
-			I_Error ("Line %d has invalid vertices: %d and/or %d.\nThe map only contains %d vertices.", i+skipped, v1, v2, numvertexes);
-		}
-		else if (v1 == v2 ||
-			(vertexes[LittleShort(mld->v1)].x == vertexes[LittleShort(mld->v2)].x &&
-			 vertexes[LittleShort(mld->v1)].y == vertexes[LittleShort(mld->v2)].y))
+		if (mld->v1 == mld->v2 ||
+			(vertexes[SHORT(mld->v1)].x == vertexes[SHORT(mld->v2)].x &&
+			 vertexes[SHORT(mld->v1)].y == vertexes[SHORT(mld->v2)].y))
 		{
 			Printf ("Removing 0-length line %d\n", i+skipped);
 			memmove (mld, mld+1, sizeof(*mld)*(numlines-i-1));
-			ForceNodeBuild = true;
 			skipped++;
 			numlines--;
 		}
 		else
 		{
-			if (LittleShort(mld->sidenum[0]) != NO_INDEX)
+			if (SHORT(mld->sidenum[0]) != NO_INDEX)
 				sidecount++;
-			if (LittleShort(mld->sidenum[1]) != NO_INDEX)
+			if (SHORT(mld->sidenum[1]) != NO_INDEX)
 				sidecount++;
 			linemap[i] = i+skipped;
 			i++;
 		}
+	}
+	if (skipped > 0)
+	{
+		ForceNodeBuild = true;
 	}
 
 	P_AllocateSideDefs (sidecount);
@@ -1467,12 +1453,12 @@ void P_LoadLineDefs (int lump)
 		//		compatible with the new format.
 		P_TranslateLineDef (ld, mld);
 
-		ld->v1 = &vertexes[LittleShort(mld->v1)];
-		ld->v2 = &vertexes[LittleShort(mld->v2)];
-		//ld->id = -1;		ID has been assigned in P_TranslateLineDef
+		ld->v1 = &vertexes[SHORT(mld->v1)];
+		ld->v2 = &vertexes[SHORT(mld->v2)];
+		ld->id = -1;
 
-		P_SetSideNum (&ld->sidenum[0], LittleShort(mld->sidenum[0]));
-		P_SetSideNum (&ld->sidenum[1], LittleShort(mld->sidenum[1]));
+		P_SetSideNum (&ld->sidenum[0], SHORT(mld->sidenum[0]));
+		P_SetSideNum (&ld->sidenum[1], SHORT(mld->sidenum[1]));
 
 		P_AdjustLine (ld);
 		P_SaveLineSpecial (ld);
@@ -1499,8 +1485,8 @@ void P_LoadLineDefs2 (int lump)
 		maplinedef2_t *mld = ((maplinedef2_t *)data.GetMem()) + i;
 
 		if (mld->v1 == mld->v2 ||
-			(vertexes[LittleShort(mld->v1)].x == vertexes[LittleShort(mld->v2)].x &&
-			 vertexes[LittleShort(mld->v1)].y == vertexes[LittleShort(mld->v2)].y))
+			(vertexes[SHORT(mld->v1)].x == vertexes[SHORT(mld->v2)].x &&
+			 vertexes[SHORT(mld->v1)].y == vertexes[SHORT(mld->v2)].y))
 		{
 			Printf ("Removing 0-length line %d\n", i+skipped);
 			memmove (mld, mld+1, sizeof(*mld)*(numlines-i-1));
@@ -1509,9 +1495,9 @@ void P_LoadLineDefs2 (int lump)
 		}
 		else
 		{
-			if (LittleShort(mld->sidenum[0]) != NO_INDEX)
+			if (SHORT(mld->sidenum[0]) != NO_INDEX)
 				sidecount++;
-			if (LittleShort(mld->sidenum[1]) != NO_INDEX)
+			if (SHORT(mld->sidenum[1]) != NO_INDEX)
 				sidecount++;
 			linemap[i] = i+skipped;
 			i++;
@@ -1533,16 +1519,16 @@ void P_LoadLineDefs2 (int lump)
 		for (j = 0; j < 5; j++)
 			ld->args[j] = mld->args[j];
 
-		ld->flags = LittleShort(mld->flags);
+		ld->flags = SHORT(mld->flags);
 		ld->special = mld->special;
 
-		ld->v1 = &vertexes[LittleShort(mld->v1)];
-		ld->v2 = &vertexes[LittleShort(mld->v2)];
+		ld->v1 = &vertexes[SHORT(mld->v1)];
+		ld->v2 = &vertexes[SHORT(mld->v2)];
 		ld->alpha = 255;	// [RH] Opaque by default
 		ld->id = -1;
 
-		P_SetSideNum (&ld->sidenum[0], LittleShort(mld->sidenum[0]));
-		P_SetSideNum (&ld->sidenum[1], LittleShort(mld->sidenum[1]));
+		P_SetSideNum (&ld->sidenum[0], SHORT(mld->sidenum[0]));
+		P_SetSideNum (&ld->sidenum[1], SHORT(mld->sidenum[1]));
 
 		P_AdjustLine (ld);
 		P_SaveLineSpecial (ld);
@@ -1570,7 +1556,7 @@ static void P_AllocateSideDefs (int count)
 	for (i = 0; i < count; i++)
 	{
 		sidetemp[i].a.special = sidetemp[i].a.tag = 0;
-		sidetemp[i].a.map = NO_SIDE;
+		sidetemp[i].a.map = NO_INDEX;
 	}
 	if (count < numsides)
 	{
@@ -1580,11 +1566,12 @@ static void P_AllocateSideDefs (int count)
 	sidecount = 0;
 }
 
-static void P_SetSideNum (DWORD *sidenum_p, WORD sidenum)
+static void P_SetSideNum (WORD *sidenum_p, WORD sidenum)
 {
+	sidenum = SHORT(sidenum);
 	if (sidenum == NO_INDEX)
 	{
-		*sidenum_p = NO_SIDE;
+		*sidenum_p = sidenum;
 	}
 	else if (sidecount < numsides)
 	{
@@ -1606,12 +1593,12 @@ static void P_LoopSidedefs ()
 
 	for (i = 0; i < numvertexes; ++i)
 	{
-		sidetemp[i].b.first = NO_SIDE;
-		sidetemp[i].b.next = NO_SIDE;
+		sidetemp[i].b.first = NO_INDEX;
+		sidetemp[i].b.next = NO_INDEX;
 	}
 	for (; i < numsides; ++i)
 	{
-		sidetemp[i].b.next = NO_SIDE;
+		sidetemp[i].b.next = NO_INDEX;
 	}
 
 	for (i = 0; i < numsides; ++i)
@@ -1627,8 +1614,8 @@ static void P_LoopSidedefs ()
 		sidetemp[vert].b.first = i;
 
 		// Set each side so that it is the only member of its loop
-		sides[i].LeftSide = NO_SIDE;
-		sides[i].RightSide = NO_SIDE;
+		sides[i].LeftSide = NO_INDEX;
+		sides[i].RightSide = NO_INDEX;
 	}
 
 	// For each side, find the side that is to its right and set the
@@ -1636,7 +1623,7 @@ static void P_LoopSidedefs ()
 	// one that forms the smallest angle is assumed to be the right one.
 	for (i = 0; i < numsides; ++i)
 	{
-		DWORD right;
+		WORD right;
 		line_t *line = &lines[sides[i].linenum];
 
 		// If the side's line only exists in a single sector,
@@ -1659,13 +1646,13 @@ static void P_LoopSidedefs ()
 
 			right = sidetemp[right].b.first;
 
-			if (right == NO_SIDE)
+			if (right == NO_INDEX)
 			{ // There is no right side!
 				Printf ("Line %d's right edge is unconnected\n", linemap[line-lines]);
 				continue;
 			}
 
-			if (sidetemp[right].b.next != NO_SIDE)
+			if (sidetemp[right].b.next != NO_INDEX)
 			{
 				int bestright = right;	// Shut up, GCC
 				angle_t bestang = ANGLE_MAX;
@@ -1679,14 +1666,14 @@ static void P_LoopSidedefs ()
 					ang1 += ANGLE_180;
 				}
 
-				while (right != NO_SIDE)
+				while (right != NO_INDEX)
 				{
-					if (sides[right].LeftSide == NO_SIDE)
+					if (sides[right].LeftSide == NO_INDEX)
 					{
 						rightline = &lines[sides[right].linenum];
 						if (rightline->frontsector != rightline->backsector)
 						{
-							ang2 = R_PointToAngle2 (0, 0, rightline->dx, rightline->dy);
+							ang2 = R_PointToAngle (rightline->dx, rightline->dy);
 							if (sidetemp[right].b.lineside)
 							{
 								ang2 += ANGLE_180;
@@ -1741,22 +1728,22 @@ void P_LoadSideDefs2 (int lump)
 			msd->rowoffset += 102;
 		}
 
-		sd->textureoffset = LittleShort(msd->textureoffset)<<FRACBITS;
-		sd->rowoffset = LittleShort(msd->rowoffset)<<FRACBITS;
+		sd->textureoffset = SHORT(msd->textureoffset)<<FRACBITS;
+		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 		sd->linenum = NO_INDEX;
 
 		// killough 4/4/98: allow sidedef texture names to be overloaded
 		// killough 4/11/98: refined to allow colormaps to work as wall
 		// textures if invalid as colormaps but valid as textures.
 
-		if ((unsigned)LittleShort(msd->sector)>=(unsigned)numsectors)
+		if ((unsigned)SHORT(msd->sector)>=(unsigned)numsectors)
 		{
 			Printf (PRINT_HIGH, "Sidedef %d has a bad sector\n", i);
 			sd->sector = sec = NULL;
 		}
 		else
 		{
-			sd->sector = sec = &sectors[LittleShort(msd->sector)];
+			sd->sector = sec = &sectors[SHORT(msd->sector)];
 		}
 		switch (sidetemp[i].a.special)
 		{
@@ -2271,14 +2258,14 @@ void P_LoadBlockMap (int lump)
 		// them. This potentially doubles the size of blockmaps allowed,
 		// because Doom originally considered the offsets as always signed.
 
-		blockmaplump[0] = LittleShort(wadblockmaplump[0]);
-		blockmaplump[1] = LittleShort(wadblockmaplump[1]);
-		blockmaplump[2] = (DWORD)(LittleShort(wadblockmaplump[2])) & 0xffff;
-		blockmaplump[3] = (DWORD)(LittleShort(wadblockmaplump[3])) & 0xffff;
+		blockmaplump[0] = SHORT(wadblockmaplump[0]);
+		blockmaplump[1] = SHORT(wadblockmaplump[1]);
+		blockmaplump[2] = (DWORD)(SHORT(wadblockmaplump[2])) & 0xffff;
+		blockmaplump[3] = (DWORD)(SHORT(wadblockmaplump[3])) & 0xffff;
 
 		for (i = 4; i < count; i++)
 		{
-			short t = LittleShort(wadblockmaplump[i]);          // killough 3/1/98
+			short t = SHORT(wadblockmaplump[i]);          // killough 3/1/98
 			blockmaplump[i] = t == -1 ? (DWORD)0xffffffff : (DWORD) t & 0xffff;
 		}
 	}
@@ -2748,26 +2735,26 @@ static void P_GetPolySpots (int lump, TArray<FNodeBuilder::FPolyStart> &spots, T
 
 		if (gameinfo.gametype == GAME_Hexen)
 		{
-			spot1 = LittleShort(PO_HEX_SPAWN_TYPE);
-			spot2 = LittleShort(PO_HEX_SPAWNCRUSH_TYPE);
-			anchor = LittleShort(PO_HEX_ANCHOR_TYPE);
+			spot1 = SHORT(PO_HEX_SPAWN_TYPE);
+			spot2 = SHORT(PO_HEX_SPAWNCRUSH_TYPE);
+			anchor = SHORT(PO_HEX_ANCHOR_TYPE);
 		}
 		else
 		{
-			spot1 = LittleShort(PO_SPAWN_TYPE);
-			spot2 = LittleShort(PO_SPAWNCRUSH_TYPE);
-			anchor = LittleShort(PO_ANCHOR_TYPE);
+			spot1 = SHORT(PO_SPAWN_TYPE);
+			spot2 = SHORT(PO_SPAWNCRUSH_TYPE);
+			anchor = SHORT(PO_ANCHOR_TYPE);
 		}
-		spot3 = LittleShort(PO_SPAWNHURT_TYPE);
+		spot3 = SHORT(PO_SPAWNHURT_TYPE);
 
 		for (int i = 0; i < num; ++i)
 		{
 			if (mt[i].type == spot1 || mt[i].type == spot2 || mt[i].type == spot3 || mt[i].type == anchor)
 			{
 				FNodeBuilder::FPolyStart newvert;
-				newvert.x = LittleShort(mt[i].x) << FRACBITS;
-				newvert.y = LittleShort(mt[i].y) << FRACBITS;
-				newvert.polynum = LittleShort(mt[i].angle);
+				newvert.x = SHORT(mt[i].x) << FRACBITS;
+				newvert.y = SHORT(mt[i].y) << FRACBITS;
+				newvert.polynum = SHORT(mt[i].angle);
 				if (mt[i].type == anchor)
 				{
 					anchors.Push (newvert);
@@ -3300,7 +3287,6 @@ void P_Init ()
 	P_InitPicAnims ();
 	P_InitSwitchList ();
 	P_InitTerrainTypes ();
-	P_InitKeyMessages ();
 	R_InitSprites ();
 }
 

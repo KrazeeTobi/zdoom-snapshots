@@ -363,7 +363,7 @@ void A_RestoreSpecialPosition (AActor *self)
 		self->z = (self->SpawnPoint[2] << FRACBITS) + self->floorz;
 		if (self->flags2 & MF2_FLOATBOB)
 		{
-			self->z += FloatBobOffsets[(self->FloatBobPhase + level.maptime) & 63];
+			self->z += FloatBobOffsets[(self->FloatBobPhase + level.time) & 63];
 		}
 	}
 }
@@ -522,19 +522,6 @@ void AInventory::BeginPlay ()
 	Super::BeginPlay ();
 	ChangeStatNum (STAT_INVENTORY);
 	flags |= MF_DROPPED;	// [RH] Items are dropped by default
-}
-
-//===========================================================================
-//
-// AInventory :: Travelled
-//
-// Called when an item in somebody's inventory is carried over to another
-// map, in case it needs to do special reinitialization.
-//
-//===========================================================================
-
-void AInventory::Travelled ()
-{
 }
 
 //===========================================================================
@@ -861,15 +848,12 @@ void AInventory::Touch (AActor *toucher)
 
 		// Special check so voodoo dolls picking up items cause the
 		// real player to make noise.
-		if (toucher->player != NULL)
-		{
+		if (toucher->player)
 			PlayPickupSound (toucher->player->mo);
-			toucher->player->bonuscount = BONUSADD;
-		}
 		else
-		{
 			PlayPickupSound (toucher);
-		}
+
+		toucher->player->bonuscount = BONUSADD;
 	}
 
 	// [RH] Execute an attached special (if any)
@@ -877,10 +861,7 @@ void AInventory::Touch (AActor *toucher)
 
 	if (flags & MF_COUNTITEM)
 	{
-		if (toucher->player != NULL)
-		{
-			toucher->player->itemcount++;
-		}
+		toucher->player->itemcount++;
 		level.found_items++;
 	}
 
@@ -1188,59 +1169,6 @@ void AInventory::AttachToOwner (AActor *other)
 
 void AInventory::DetachFromOwner ()
 {
-}
-
-IMPLEMENT_STATELESS_ACTOR (ACustomInventory, Any, -1, 0)
-END_DEFAULTS
-
-//===========================================================================
-//
-// ACustomInventory :: Serialize
-//
-//===========================================================================
-
-void ACustomInventory::Serialize (FArchive &arc)
-{
-	Super::Serialize (arc);
-	arc << UseState << PickupState << DropState;
-}
-
-//===========================================================================
-//
-// ACustomInventory :: SpecialDropAction
-//
-//===========================================================================
-
-bool ACustomInventory::SpecialDropAction (AActor *dropper)
-{
-	return CallStateChain (dropper, DropState);
-}
-
-//===========================================================================
-//
-// ACustomInventory :: Use
-//
-//===========================================================================
-
-bool ACustomInventory::Use (bool pickup)
-{
-	return CallStateChain (Owner, UseState);
-}
-
-//===========================================================================
-//
-// ACustomInventory :: TryPickup
-//
-//===========================================================================
-
-bool ACustomInventory::TryPickup (AActor *toucher)
-{
-	bool useok = CallStateChain (toucher, PickupState);
-	if ((useok || PickupState == NULL) && UseState != NULL)
-	{
-		useok = Super::TryPickup (toucher);
-	}
-	return useok;
 }
 
 IMPLEMENT_STATELESS_ACTOR (AArmor, Any, -1, 0)

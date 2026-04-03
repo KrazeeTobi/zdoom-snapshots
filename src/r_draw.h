@@ -204,8 +204,6 @@ enum
 	TRANSLATION_LevelScripted,
 	TRANSLATION_Decals,
 	TRANSLATION_PlayerCorpses,
-	TRANSLATION_Decorate,
-	TRANSLATION_Blood,
 
 	NUM_TRANSLATION_TABLES
 };
@@ -219,7 +217,6 @@ inline WORD TRANSLATION(BYTE a, BYTE b)
 }
 
 const int MAX_ACS_TRANSLATIONS = 255;
-const int MAX_DECORATE_TRANSLATIONS = 255;
 
 inline void R_CopyTranslation (WORD to, WORD from)
 {

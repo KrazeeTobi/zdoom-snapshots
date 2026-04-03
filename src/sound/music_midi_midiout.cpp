@@ -4,8 +4,6 @@
 #include "doomdef.h"
 #include "m_swap.h"
 
-EXTERN_CVAR (Float, snd_midivolume)
-
 struct MIDISong2::TrackInfo
 {
 	const BYTE *TrackBegin;
@@ -210,7 +208,6 @@ void MIDISong2::Play (bool looping)
 		}
 	}
 
-	snd_midivolume.Callback();	// set volume to current music's properties
 	PlayerThread = CreateThread (NULL, 0, PlayerProc, this, 0, &tid);
 	if (PlayerThread == NULL)
 	{

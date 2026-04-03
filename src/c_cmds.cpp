@@ -185,16 +185,6 @@ CCMD (anubis)
 	Net_WriteByte (CHT_ANUBIS);
 }
 
-// [GRB]
-CCMD (resurrect)
-{
-	if (CheckCheatmode ())
-		return;
-
-	Net_WriteByte (DEM_GENERICCHEAT);
-	Net_WriteByte (CHT_RESSURECT);
-}
-
 EXTERN_CVAR (Bool, chasedemo)
 
 CCMD (chase)

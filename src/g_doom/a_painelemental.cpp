@@ -10,13 +10,6 @@ void A_PainDie (AActor *);
 
 void A_SkullAttack (AActor *self);
 
-class APainElemental : public AActor
-{
-	DECLARE_ACTOR (APainElemental, AActor)
-public:
-	bool Massacre ();
-};
-
 FState APainElemental::States[] =
 {
 #define S_PAIN_STND 0
@@ -80,22 +73,21 @@ IMPLEMENT_ACTOR (APainElemental, Doom, 71, 115)
 	PROP_ActiveSound ("pain/active")
 END_DEFAULTS
 
-bool APainElemental::Massacre ()
+void APainElemental::Tick ()
 {
-	if (Super::Massacre ())
+	// [RH] Give the pain elemental vertical friction
+	if (flags & MF_FLOAT)
 	{
-		FState *deadstate;
-		A_NoBlocking (this);	// [RH] Use this instead of A_PainDie
-		deadstate = DeathState;
-		if (deadstate != NULL)
+		if (abs (momz) < FRACUNIT/4)
 		{
-			while (deadstate->GetNextState() != NULL)
-				deadstate = deadstate->GetNextState();
-			SetState (deadstate);
+			momz = 0;
 		}
-		return true;
+		else
+		{
+			momz = FixedMul (momz, 0xe800);
+		}
 	}
-	return false;
+	Super::Tick ();
 }
 
 //
@@ -110,24 +102,11 @@ void A_PainShootSkull (AActor *self, angle_t angle)
 	angle_t an;
 	int prestep;
 
-	const TypeInfo *spawntype = NULL;
-
-	int index=CheckIndex(1, NULL);
-	if (index>=0) 
-	{
-		spawntype = TypeInfo::FindType((const char *)StateParameters[index]);
-	}
-	if (spawntype == NULL) spawntype = RUNTIME_CLASS(ALostSoul);
-
 	// [RH] check to make sure it's not too close to the ceiling
 	if (self->z + self->height + 8*FRACUNIT > self->ceilingz)
 	{
-		if (self->flags & MF_FLOAT)
-		{
-			self->momz -= 2*FRACUNIT;
-			self->flags |= MF_INFLOAT;
-			self->flags4 |= MF4_VFRICTION;
-		}
+		self->momz -= 2*FRACUNIT;
+		self->flags |= MF_INFLOAT;
 		return;
 	}
 
@@ -137,10 +116,9 @@ void A_PainShootSkull (AActor *self, angle_t angle)
 		// count total number of skulls currently on the level
 		// if there are already 20 skulls on the level, don't spit another one
 		int count = 20;
-		FThinkerIterator iterator (spawntype);
-		DThinker *othink;
+		TThinkerIterator<ALostSoul> iterator;
 
-		while ( (othink = iterator.Next ()) )
+		while ( (other = iterator.Next ()) )
 		{
 			if (--count == 0)
 				return;
@@ -151,7 +129,7 @@ void A_PainShootSkull (AActor *self, angle_t angle)
 	an = angle >> ANGLETOFINESHIFT;
 	
 	prestep = 4*FRACUNIT +
-		3*(self->radius + GetDefaultByType(spawntype)->radius)/2;
+		3*(self->radius + GetDefault<ALostSoul>()->radius)/2;
 	
 	x = self->x + FixedMul (prestep, finecosine[an]);
 	y = self->y + FixedMul (prestep, finesine[an]);
@@ -166,7 +144,7 @@ void A_PainShootSkull (AActor *self, angle_t angle)
 		return;
 	}
 
-	other = Spawn (spawntype, x, y, z);
+	other = Spawn<ALostSoul> (x, y, z);
 
 
 	// Check to see if the new Lost Soul's z value is above the
@@ -212,10 +190,6 @@ void A_PainAttack (AActor *self)
 
 void A_PainDie (AActor *self)
 {
-	if (P_IsFriend (self, self->target))
-	{ // And I thought you were my friend!
-		self->flags &= ~MF_FRIENDLY;
-	}
 	A_NoBlocking (self);
 	A_PainShootSkull (self, self->angle + ANG90);
 	A_PainShootSkull (self, self->angle + ANG180);

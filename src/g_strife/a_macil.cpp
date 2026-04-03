@@ -17,7 +17,6 @@ class AMacil1 : public AStrifeHumanoid
 	DECLARE_ACTOR (AMacil1, AStrifeHumanoid)
 public:
 	void NoBlockingSet ();
-	int TakeSpecialDamage (AActor *inflictor, AActor *source, int damage, int damagetype);
 };
 
 FState AMacil1::States[] =
@@ -87,10 +86,9 @@ IMPLEMENT_ACTOR (AMacil1, Strife, 64, 0)
 	PROP_PainChance (250)
 	PROP_MissileState (S_MACIL_ATK)
 	PROP_DeathState (S_MACIL_CHASE)
-	PROP_Flags (MF_SOLID|MF_SHOOTABLE|MF_NOTDMATCH)
+	PROP_Flags (MF_SOLID|MF_SHOOTABLE|MF_COUNTKILL|MF_NOTDMATCH)
 	PROP_Flags2 (MF2_FLOORCLIP|MF2_PASSMOBJ|MF2_PUSHWALL|MF2_MCROSS)
-	PROP_Flags3 (MF3_ISMONSTER)
-	PROP_Flags4 (MF4_FIRERESIST|MF4_NOICEDEATH|MF4_NOSPLASHALERT)
+	PROP_Flags4 (MF4_FIRERESIST|MF4_NOICEDEATH)
 	PROP_MinMissileChance (150)
 	PROP_RadiusFixed (20)
 	PROP_HeightFixed (56)
@@ -112,20 +110,6 @@ void AMacil1::NoBlockingSet ()
 	P_DropItem (this, "BoxOfBullets", -1, 256);
 }
 
-//============================================================================
-//
-// AMacil1 :: TakeSpecialDamage
-//
-// Before you storm the castle, Macil is a god and unkillable. The effort
-// required to take the castle apparently drops him to mere godlike status.
-//
-//============================================================================
-
-int AMacil1::TakeSpecialDamage (AActor *inflictor, AActor *source, int damage, int damagetype)
-{
-	return -1;
-}
-
 // Macil (version 2) ---------------------------------------------------------
 
 class AMacil2 : public AMacil1
@@ -133,7 +117,6 @@ class AMacil2 : public AMacil1
 	DECLARE_STATELESS_ACTOR (AMacil2, AMacil1)
 public:
 	void NoBlockingSet ();
-	int TakeSpecialDamage (AActor *inflictor, AActor *source, int damage, int damagetype);
 };
 
 IMPLEMENT_STATELESS_ACTOR (AMacil2, Strife, 200, 0)
@@ -164,19 +147,4 @@ END_DEFAULTS
 
 void AMacil2::NoBlockingSet ()
 {
-}
-
-//============================================================================
-//
-// AMacil2 :: TakeSpecialDamage
-//
-// Macil is invulnerable to the first stage Sigil.
-//
-//============================================================================
-
-int AMacil2::TakeSpecialDamage (AActor *inflictor, AActor *source, int damage, int damagetype)
-{
-	if (inflictor->IsKindOf (RUNTIME_CLASS(ASpectralLightningV1)))
-		return -1;
-	return damage;
 }

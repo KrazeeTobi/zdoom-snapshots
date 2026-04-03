@@ -570,7 +570,7 @@ DActiveButton::DActiveButton (side_t *side, EWhere where, WORD switchnum,
 
 void DActiveButton::Serialize (FArchive &arc)
 {
-	SDWORD sidenum;
+	short sidenum;
 
 	Super::Serialize (arc);
 	if (arc.IsStoring ())
