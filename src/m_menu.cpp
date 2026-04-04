@@ -79,6 +79,7 @@ struct FSaveGameNode : public Node
 	char Title[SAVESTRINGSIZE];
 	string Filename;
 	bool bOldVersion;
+	bool bMissingWads;
 };
 
 // EXTERNAL FUNCTION PROTOTYPES --------------------------------------------
@@ -630,6 +631,7 @@ void M_ReadSaveStrings ()
 					char title[SAVESTRINGSIZE+1];
 					bool oldVer = true;
 					bool addIt = false;
+					bool missing = false;
 
 					// ZDoom 1.23 betas 21-33 have the savesig first.
 					// Earlier versions have the savesig second.
@@ -662,6 +664,7 @@ void M_ReadSaveStrings ()
 									{
 										addIt = true;
 										oldVer = false;
+										missing = !G_CheckSaveGameWads (png, false);
 									}
 									delete[] iwad;
 								}
@@ -705,6 +708,7 @@ void M_ReadSaveStrings ()
 						FSaveGameNode *node = new FSaveGameNode;
 						node->Filename = filepath;
 						node->bOldVersion = oldVer;
+						node->bMissingWads = missing;
 						memcpy (node->Title, title, SAVESTRINGSIZE);
 						M_InsertSaveNode (node);
 					}
@@ -774,6 +778,7 @@ void M_NotifyNewSave (const char *file, const char *title, bool okForQuicksave)
 		{
 			strcpy (node->Title, title);
 			node->bOldVersion = false;
+			node->bMissingWads = false;
 			break;
 		}
 	}
@@ -784,6 +789,7 @@ void M_NotifyNewSave (const char *file, const char *title, bool okForQuicksave)
 		strcpy (node->Title, title);
 		node->Filename = copystring (file);
 		node->bOldVersion = false;
+		node->bMissingWads = false;
 		M_InsertSaveNode (node);
 		SelSaveGame = node;
 	}
@@ -1027,6 +1033,11 @@ static void M_DrawSaveLoadCommon ()
 			 i < listboxRows && node->Succ != NULL;
 			 ++i, node = static_cast<FSaveGameNode *>(node->Succ))
 		{
+			int color;
+			if (node->bMissingWads)
+			{
+				color = CR_ORANGE;
+			}
 			if (node == SelSaveGame)
 			{
 				screen->Clear (listboxLeft, listboxTop+rowHeight*i,
