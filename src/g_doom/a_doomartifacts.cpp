@@ -141,7 +141,7 @@ class ABerserk : public APowerupGiver
 public:
 	virtual bool Use (bool pickup)
 	{
-		P_GiveBody (Owner, -100);
+		P_GiveBody (Owner, 100);
 		if (Super::Use (pickup))
 		{
 			const TypeInfo *fistType = TypeInfo::FindType ("Fist");
