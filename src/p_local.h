@@ -386,7 +386,7 @@ protected:
 	DPolyAction ();
 	int m_PolyObj;
 	int m_Speed;
-	unsigned int m_Dist;
+	int m_Dist;
 
 	void SetInterpolation ();
 
