@@ -1,5 +1,6 @@
 # ZDoom dev build recreation
-intended date: December 9th, 2005
+intended date: December 9th, 2005<br>
+The following build instructions are intended for Windows. Has been tested under MSVC in XP.
 
 ## Requirements
 * [NASM 0.98.39](https://sourceforge.net/projects/nasm/files/Win32%20binaries/0.98.39/nasm-0.98.39-win32.zip/download)
