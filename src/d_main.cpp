@@ -388,6 +388,7 @@ CVAR (Flag, compat_wallrun,		compatflags, COMPATF_WALLRUN);
 CVAR (Flag, compat_notossdrops,	compatflags, COMPATF_NOTOSSDROPS);
 CVAR (Flag, compat_useblocking, compatflags, COMPATF_USEBLOCKING);
 CVAR (Flag, compat_nodoorlight,	compatflags, COMPATF_NODOORLIGHT);
+CVAR (Flag, compat_ravenscroll, compatflags, COMPATF_RAVENSCROLL);
 
 //==========================================================================
 //
@@ -444,8 +445,8 @@ void D_Display (bool screenshot)
 	if (setsizeneeded && StatusBar != NULL)
 	{
 		R_ExecuteSetViewSize ();
-		setmodeneeded = false;
 	}
+	setmodeneeded = false;
 
 	if (screen->Lock (screenshot))
 	{

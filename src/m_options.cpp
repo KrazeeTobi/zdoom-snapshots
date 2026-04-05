@@ -859,6 +859,7 @@ static menuitem_t CompatibilityItems[] = {
 	{ bitflag,	"Spawn item drops on the floor",			{&compatflags}, {0}, {0}, {0}, {(value_t *)COMPATF_NOTOSSDROPS} },
 	{ bitflag,  "All special lines can block use lines",	{&compatflags}, {0}, {0}, {0}, {(value_t *)COMPATF_USEBLOCKING} },
 	{ bitflag,	"Disable BOOM door light effect",			{&compatflags}, {0}, {0}, {0}, {(value_t *)COMPATF_NODOORLIGHT} },
+	{ bitflag,  "Raven scroll types use original speed",    {&compatflags}, [0], [0], [0], [(value_t *)COMPATF_RAVENSCROLL} },
 };
 
 static menu_t CompatibilityMenu =
