@@ -1461,7 +1461,7 @@ void G_LoadGame (char* name)
 	}
 }
 
-static bool CheckSingleWad (char *name, bool &printRequires)
+static bool CheckSingleWad (char *name, bool &printRequires, bool printwarn)
 {
 	if (name == NULL)
 	{
@@ -1469,14 +1469,16 @@ static bool CheckSingleWad (char *name, bool &printRequires)
 	}
 	if (!Wads.CheckIfWadLoaded (name))
 	{
-		if (!printRequires)
+		if (printwarn)
 		{
-			printRequires = true;
-			Printf ("This savegame needs these wads:\n%s", name);
-		}
-		else
-		{
-			Printf (", %s", name);
+			if (!printRequires)
+			{
+				Printf ("This savegame needs these wads:\n%s", name);
+			}
+			else
+			{
+				Printf (", %s", name);
+			}
 		}
 		delete[] name;
 		return false;
@@ -1486,19 +1488,22 @@ static bool CheckSingleWad (char *name, bool &printRequires)
 }
 
 // Return false if not all the needed wads have been loaded.
-static bool G_CheckSaveGameWads (PNGHandle *png)
+bool G_CheckSaveGameWads (PNGHandle *png, bool printwarn)
 {
 	char *text;
 	bool printRequires = false;
 
 	text = M_GetPNGText (png, "Game WAD");
-	CheckSingleWad (text, printRequires);
+	CheckSingleWad (text, printRequires, printwarn);
 	text = M_GetPNGText (png, "Map WAD");
-	CheckSingleWad (text, printRequires);
+	CheckSingleWad (text, printRequires, printwarn);
 
 	if (printRequires)
 	{
-		Printf ("\n");
+		if (printwarn)
+		{
+			Printf ("\n");
+		}
 		return false;
 	}
 
@@ -1601,7 +1606,7 @@ void G_DoLoadGame ()
 		return;
 	}
 
-	if (!G_CheckSaveGameWads (png))
+	if (!G_CheckSaveGameWads (png, true))
 	{
 		fclose (stdfile);
 		return;
@@ -1626,7 +1631,7 @@ void G_DoLoadGame ()
 	}
 
 	// dearchive all the modifications
-	if (M_FindPNGChunk (png, MAKE_ID('p','t','I','c')) == 8)
+	if (M_FindPNGChunk (png, MAKE_ID('p','t','I','c') == 8))
 	{
 		DWORD time[2];
 		fread (&time, 8, 1, stdfile);
