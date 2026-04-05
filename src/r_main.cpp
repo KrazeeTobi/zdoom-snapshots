@@ -1469,6 +1469,7 @@ void R_RenderViewToCanvas (AActor *actor, DCanvas *canvas,
 	int x, int y, int width, int height)
 {
 	const int saveddetail = detailxshift | (detailyshift << 1);
+	const bool savedviewactive = viewactive;
 
 	detailxshift = detailyshift = 0;
 	realviewwidth = viewwidth = width;
@@ -1480,6 +1481,7 @@ void R_RenderViewToCanvas (AActor *actor, DCanvas *canvas,
 	R_SetWindow (12, width, height, height);
 	viewwindowx = x;
 	viewwindowy = y;
+	viewactive = true;
 
 	R_RenderActorView (actor);
 
@@ -1490,6 +1492,7 @@ void R_RenderViewToCanvas (AActor *actor, DCanvas *canvas,
 	screen->Lock (true);
 	R_SetupBuffer (false);
 	screen->Unlock ();
+	viewactive = savedviewactive;
 }
 
 FCanvasTextureInfo *FCanvasTextureInfo::List;
