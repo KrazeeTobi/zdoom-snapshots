@@ -57,7 +57,8 @@ Before compiling, go to Build > Configuration Manager, and change "Active Soluti
 <br>・Fixed: The Strife quest log should be initialized with the text "Find help".
 ### 20051118
 ・Fixed: You could create a chain reaction where merchants would continually enter their pain state because there was a delay between the time when they alerted and the time they alerted others.
-<br>・Fixed: If the Inquisitor died while flying, it would continue to play the flying sound.<br>・Fixed: The LEGO cheat didn't check if the Sigil was successfully added and would set the player to the NULL weapon if it <br>・sn't (which happens with the shareware).<br>・Fixed: Macil was alerted by water splashing.
+<br>・Fixed: If the Inquisitor died while flying, it would continue to play the flying sound.<br>・Fixed: The LEGO cheat didn't check if the Sigil was successfully added and would set the player to the NULL weapon if it isn't (which happens with the shareware).
+<br>・Fixed: Macil was alerted by water splashing.
 <br>・Reworded some of the compatibility options menu items so they fit on the screen when playing Strife.
 <br>・Fixed: The Oracle's Death checked the wrong quest item to determine if you had already killed Macil.
 ### 20051122
