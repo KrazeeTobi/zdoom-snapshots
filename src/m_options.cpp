@@ -1100,7 +1100,7 @@ void M_FreeValues (value_t **values, int num)
 static void ActivateConfirm (char *text, void (*func)())
 {
 	ConfirmItems[0].label = text;
-	Confirmitems[0].e.mfunc = func;
+	ConfirmItems[0].e.mfunc = func;
 	ConfirmMenu.lastOn = 3;
 	M_SwitchMenu (&ConfirmMenu);
 }
