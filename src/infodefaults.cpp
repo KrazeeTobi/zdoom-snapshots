@@ -311,7 +311,7 @@ void FActorInfo::ApplyDefaults (BYTE *defaults)
 #if _MSC_VER
 	const BYTE *parser = DefaultList;
 
-	const char *datastr;
+	const char *datastr = NULL;
 	int dataint = 0;
 	int defnum;
 	int deftype;
