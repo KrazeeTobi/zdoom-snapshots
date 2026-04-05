@@ -1382,7 +1382,7 @@ bool S_ChangeMusic (const char *musicname, int order, bool looping, bool force)
 	if (strnicmp (musicname, ",CD,", 4) == 0)
 	{
 		int track = strtoul (musicname+4, NULL, 0);
-		char *more = strchr (musicname+4, ',');
+		const char *more = strchr (musicname+4, ',');
 		unsigned int id = 0;
 
 		if (more != NULL)
