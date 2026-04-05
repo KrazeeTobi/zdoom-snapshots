@@ -1339,8 +1339,8 @@ static EIWADType ScanIWAD (const char *iwad)
 		fread (&header, sizeof(header), 1, f);
 		if (header.Magic == IWAD_ID || header.Magic == PWAD_ID)
 		{
-			header.NumLumps = LONG(header.NumLumps);
-			if (0 == fseek (f, LONG(header.InfoTableOfs), SEEK_SET))
+			header.NumLumps = LittleLong(header.NumLumps);
+			if (0 == fseek (f, LittleLong(header.InfoTableOfs), SEEK_SET))
 			{
 				for (i = 0; i < (size_t)header.NumLumps; i++)
 				{

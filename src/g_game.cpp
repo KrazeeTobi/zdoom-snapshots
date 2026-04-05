@@ -1635,8 +1635,8 @@ void G_DoLoadGame ()
 	{
 		DWORD time[2];
 		fread (&time, 8, 1, stdfile);
-		time[0] = BELONG((unsigned int)time[0]);
-		time[1] = BELONG((unsigned int)time[1]);
+		time[0] = BigLong((unsigned int)time[0]);
+		time[1] = BigLong((unsigned int)time[1]);
 		level.time = Scale (time[1], TICRATE, time[0]);
 	}
 	else
@@ -1942,7 +1942,7 @@ void G_DoSaveGame (bool okForQuicksave)
 
 	if (level.time != 0)
 	{
-		DWORD time[2] = { BELONG(TICRATE), BELONG(level.time) };
+		DWORD time[2] = { BigLong(TICRATE), BigLong(level.time) };
 		M_AppendPNGChunk (stdfile, MAKE_ID('p','t','I','c'), (BYTE *)&time, 8);
 	}
 

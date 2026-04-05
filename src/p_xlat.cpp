@@ -65,9 +65,9 @@ void P_TranslateLineDef (line_t *ld, maplinedef_t *mld)
 {
 	static FMemLump tlatebase;
 	const BYTE *tlate;
-	short special = SHORT(mld->special);
-	short tag = SHORT(mld->tag);
-	DWORD flags = SHORT(mld->flags);
+	short special = LittleShort(mld->special);
+	short tag = LittleShort(mld->tag);
+	DWORD flags = LittleShort(mld->flags);
 	BOOL passthrough;
 	int i;
 

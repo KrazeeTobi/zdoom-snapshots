@@ -114,7 +114,7 @@ SPCSong::SPCSong (FILE *iofile, int len)
 				}
 				else
 				{
-					if (pos + SHORT(tag.Value) <= size)
+					if (pos + LittleShort(tag.Value) <= size)
 					{
 						if (tag.Type == 4 && tag.ID == 0x36)
 						{
@@ -128,7 +128,7 @@ SPCSong::SPCSong (FILE *iofile, int len)
 							break;
 						}
 					}
-					file.Seek (SHORT(tag.Value), SEEK_CUR);
+					file.Seek (LittleShort(tag.Value), SEEK_CUR);
 				}
 			}
 		}

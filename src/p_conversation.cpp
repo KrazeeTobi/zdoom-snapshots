@@ -329,9 +329,9 @@ static FStrifeDialogueNode *ReadRetailNode (FWadLump *lump, DWORD &prevSpeakerTy
 	lump->Read (&speech, sizeof(speech));
 
 	// Byte swap all the ints in the original data
-	speech.SpeakerType = LONG(speech.SpeakerType);
-	speech.DropType = LONG(speech.DropType);
-	speech.Link = LONG(speech.Link);
+	speech.SpeakerType = LittleLong(speech.SpeakerType);
+	speech.DropType = LittleLong(speech.DropType);
+	speech.Link = LittleLong(speech.Link);
 
 	// Assign the first instance of a conversation as the default for its
 	// actor, so newly spawned actors will use this conversation by default.
@@ -399,8 +399,8 @@ static FStrifeDialogueNode *ReadTeaserNode (FWadLump *lump, DWORD &prevSpeakerTy
 	lump->Read (&speech, sizeof(speech));
 
 	// Byte swap all the ints in the original data
-	speech.SpeakerType = LONG(speech.SpeakerType);
-	speech.DropType = LONG(speech.DropType);
+	speech.SpeakerType = LittleLong(speech.SpeakerType);
+	speech.DropType = LittleLong(speech.DropType);
 
 	// Assign the first instance of a conversation as the default for its
 	// actor, so newly spawned actors will use this conversation by default.
@@ -470,13 +470,13 @@ static void ParseReplies (FStrifeDialogueReply **replyptr, Response *responses)
 	// Byte swap first.
 	for (j = 0; j < 5; ++j)
 	{
-		responses[j].GiveType = LONG(responses[j].GiveType);
-		responses[j].Link = LONG(responses[j].Link);
-		responses[j].Log = LONG(responses[j].Log);
+		responses[j].GiveType = LittleLong(responses[j].GiveType);
+		responses[j].Link = LittleLong(responses[j].Link);
+		responses[j].Log = LittleLong(responses[j].Log);
 		for (k = 0; k < 3; ++k)
 		{
-			responses[j].Item[k] = LONG(responses[j].Item[k]);
-			responses[j].Count[k] = LONG(responses[j].Count[k]);
+			responses[j].Item[k] = LittleLong(responses[j].Item[k]);
+			responses[j].Count[k] = LittleLong(responses[j].Count[k]);
 		}
 	}
 

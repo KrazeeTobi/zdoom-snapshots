@@ -416,10 +416,10 @@ void WritePCXfile (FILE *file, const DCanvas *canvas, const PalEntry *palette)
 	pcx.bits_per_pixel = 8;				// 256 color
 	pcx.xmin = 0;
 	pcx.ymin = 0;
-	pcx.xmax = SHORT(width-1);
-	pcx.ymax = SHORT(height-1);
-	pcx.hdpi = SHORT(75);
-	pcx.vdpi = SHORT(75);
+	pcx.xmax = LittleShort(width-1);
+	pcx.ymax = LittleShort(height-1);
+	pcx.hdpi = LittleShort(75);
+	pcx.vdpi = LittleShort(75);
 	memset (pcx.palette, 0, sizeof(pcx.palette));
 	pcx.reserved = 0;
 	pcx.color_planes = 1;				// chunky image

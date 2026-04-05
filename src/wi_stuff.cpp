@@ -785,10 +785,6 @@ void WI_drawTime (int x, int y, int t)
 	int minutes = t / 60;
 	t -= minutes * 60;
 	int seconds = t;
-	/*
-	int numspacing = SHORT(num[0]->width)*2;
-	int spacing = numspacing + SHORT(colon->width);
-	*/
 
 	x -= 34*2 + 26;
 	if (hours)
@@ -1093,7 +1089,7 @@ void WI_drawDeathmatchStats ()
 	lh = WI_SPACINGY;
 
 	// draw stat titles (top line)
-	V_DrawPatchClean(DM_TOTALSX-SHORT(total->width)/2,
+	V_DrawPatchClean(DM_TOTALSX-LittleShort(total->width)/2,
 				DM_MATRIXY-WI_SPACINGY+10,
 				&FB,
 				total);
@@ -1109,24 +1105,24 @@ void WI_drawDeathmatchStats ()
 	{
 		if (playeringame[i])
 		{
-			V_DrawPatchClean(x-SHORT(p[i]->width)/2,
+			V_DrawPatchClean(x-LittleShort(p[i]->width)/2,
 						DM_MATRIXY - WI_SPACINGY,
 						&FB,
 						p[i]);
 			
-			V_DrawPatchClean(DM_MATRIXX-SHORT(p[i]->width)/2,
+			V_DrawPatchClean(DM_MATRIXX-LittleShort(p[i]->width)/2,
 						y,
 						&FB,
 						p[i]);
 
 			if (i == me)
 			{
-				V_DrawPatchClean(x-SHORT(p[i]->width)/2,
+				V_DrawPatchClean(x-LittleShort(p[i]->width)/2,
 							DM_MATRIXY - WI_SPACINGY,
 							&FB,
 							bstar);
 
-				V_DrawPatchClean(DM_MATRIXX-SHORT(p[i]->width)/2,
+				V_DrawPatchClean(DM_MATRIXX-LittleShort(p[i]->width)/2,
 							y,
 							&FB,
 							star);
@@ -1138,7 +1134,7 @@ void WI_drawDeathmatchStats ()
 
 	// draw stats
 	y = DM_MATRIXY+10;
-	w = SHORT(num[0]->width);
+	w = LittleShort(num[0]->width);
 
 	for (i=0 ; i<MAXPLAYERS ; i++)
 	{

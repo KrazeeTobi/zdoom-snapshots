@@ -677,7 +677,7 @@ void FSingleLumpFont::LoadFON2 (int lump, const BYTE *data)
 	widths2 = new int[count];
 	if (data[11] & 1)
 	{
-		GlobalKerning = SHORT(*(SWORD *)&data[12]);
+		GlobalKerning = LittleShort(*(SWORD *)&data[12]);
 		widths = (WORD *)(data + 14);
 	}
 	else
@@ -689,7 +689,7 @@ void FSingleLumpFont::LoadFON2 (int lump, const BYTE *data)
 
 	if (data[8])
 	{
-		totalwidth = SHORT(widths[0]);
+		totalwidth = LittleShort(widths[0]);
 		for (i = 0; i < count; ++i)
 		{
 			widths2[i] = totalwidth;
@@ -701,7 +701,7 @@ void FSingleLumpFont::LoadFON2 (int lump, const BYTE *data)
 	{
 		for (i = 0; i < count; ++i)
 		{
-			widths2[i] = SHORT(widths[i]);
+			widths2[i] = LittleShort(widths[i]);
 			totalwidth += widths2[i];
 		}
 		palette = (BYTE *)(widths + i);
