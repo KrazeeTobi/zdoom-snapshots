@@ -2,10 +2,12 @@ FLAC/Release/
 Release/
 tools/dehsupp/dehsupp.exe
 tools/dehsupp/Release/
+tools/lemon/Build/
 tools/lemon/lemon.exe
 tools/lemon/Release/
 tools/makewad/makewad.exe
 tools/makewad/Release/
+tools/re2c/Build/
 tools/re2c/re2c.exe
 tools/re2c/Release/
 tools/xlatcc/Release/
