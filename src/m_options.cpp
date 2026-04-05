@@ -560,7 +560,7 @@ menu_t AutomapMenu =
 {
 	"AUTOMAP OPTIONS",
 	0,
-	sizeof(AutomapItems/sizeof(AutomapItems[0]),
+	sizeof(AutomapItems)/sizeof(AutomapItems[0]),
 	0,
 	VideoItems,
 };
