@@ -1,0 +1,17 @@
+FLAC/Release/
+Release/
+tools/dehsupp/dehsupp.exe
+tools/dehsupp/Release/
+tools/lemon/lemon.exe
+tools/lemon/Release/
+tools/makewad/makewad.exe
+tools/makewad/Release/
+tools/re2c/re2c.exe
+tools/re2c/Release/
+tools/xlatcc/Release/
+tools/xlatcc/xlatcc.exe
+wadsrc/Release/
+wadsrc/zdoom.wad
+zdoom.ncb
+zdoom.suo
+zlib/Release/
