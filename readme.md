@@ -31,7 +31,6 @@ Before compiling, go to Build > Configuration Manager, and change "Active Soluti
 ## To-do
 ### 20051107
 ・Fixed: Although bit 27 of the actor's flag is now used for something different than in Doom, it's okay to specify it by number in a Dehacked patch, because it's used to set the color translation. When the translation is set, it will be 0'ed then.
-<br>・Increased KneelingGuy's height to 17 so that you cannot step on top of the projector without jumping.
 <br>・Added a confirmation screen for the menu choices that reset your options.
 <br>・Added a new automap menu underneath the display options menu. Moved all the automap options into it and added a few new ones.
 ### 20051108
