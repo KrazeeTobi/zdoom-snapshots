@@ -141,30 +141,6 @@ enum
 };
 
 /*=======================================
- * 
- * Confirm Menu - Used by safemore
- *
- *=======================================*/
-static void ActivateConfirm (char *text, void (*func)());
-static void ConfirmIsAGo ();
-
-static menuitem_t ConfirmItems[] = {
-	{ whitetext,NULL,									{NULL}, {0}, {0}, {0}, {NULL} },
-	{ redtext,	"Do you really want to do this?",		{NULL}, {0}, {0}, {0}, {NULL} },
-	{ redtext,	" ",									{NULL}, {0}, {0}, {0}, {NULL} },
-	{ rightmore,"Yes",									{NULL}, {0}, {0}, {0}, {(value_t*)ConfirmIsAGo} },
-	{ rightmore,"No",									{NULL}, {0}, {0}, {0}, {(value_t*)M_PopMenuStack} },
-};
-
-static menu_t ConfirmMenu = {
-	"PLEASE CONFIRM",
-	3,
-	sizeof(ConfirmItems)/sizeof(ConfirmItems[0]),
-	140,
-	ConfirmItems,
-};
-
-/*=======================================
  *
  * Options Menu
  *
