@@ -35,7 +35,7 @@
 #define HU_INPUTX		0
 #define HU_INPUTY		(0 + (screen->Font->GetHeight () + 1))
 
-EXTERN_CVAR (Int, con_scaletext)
+EXTERN_CVAR (Bool, con_scaletext)
 
 // Public data
 
