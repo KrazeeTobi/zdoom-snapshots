@@ -366,7 +366,7 @@ static menuitem_t ControlsItems[] =
 	{ redtext,	" ",					{NULL},	{0.0}, {0.0}, {0.0}, {NULL} },
 	{ whitetext,"Controls",				{NULL},	{0.0}, {0.0}, {0.0}, {NULL} },
 	{ control,	"Fire",					{NULL}, {0.0}, {0.0}, {0.0}, {(value_t *)"+attack"} },
-	{ control,  "Secondary Fire",       {NULL}, {0.0}, {0.0}, {0.0}, {(value_t *)"+altattack"} },
+	{ control,  "Secondary Fire",       {NULL}, {0.0}, {0.0}, {0.0}, {{value_t *)"+altattack"} },
 	{ control,	"Use / Open",			{NULL}, {0.0}, {0.0}, {0.0}, {(value_t *)"+use"} },
 	{ control,	"Move forward",			{NULL}, {0.0}, {0.0}, {0.0}, {(value_t *)"+forward"} },
 	{ control,	"Move backward",		{NULL}, {0.0}, {0.0}, {0.0}, {(value_t *)"+back"} },
