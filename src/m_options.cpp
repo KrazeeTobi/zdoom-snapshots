@@ -1373,14 +1373,14 @@ void M_OptDrawer ()
 			switch (item->type)
 			{
 			case more:
-			case safemore:
+			case safemore;
 				x = CurrentMenu->indent - width;
 				color = MoreColor;
 				break;
 
 			case numberedmore:
-			case rsafemore:
-			case rightmore:
+			case rsafemore;
+			case rightmore;
 				x = CurrentMenu->indent + 14;
 				color = item->type != rightmore ? CR_GREEN : MoreColor;
 				break;
@@ -2303,7 +2303,7 @@ static void StartMessagesMenu (void)
 
 static void StartAutomapMenu (void)
 {
-	M_SwitchMenu (&AutomapMenu);
+	M_SwitchMenu (AutomapMenu);
 }
 
 CCMD (menu_automap)
