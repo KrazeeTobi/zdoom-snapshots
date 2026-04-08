@@ -44,6 +44,7 @@
 
 #include "r_local.h"
 #include "r_sky.h"
+#include "stats.h"
 
 #include "m_alloc.h"
 #include "v_video.h"
@@ -931,6 +932,8 @@ void R_DrawPlanes ()
 //   9. Put the camera back where it was to begin with.
 //
 //==========================================================================
+CVAR (Bool, r_skyboxes, true, 0)
+static int numskyboxes;
 
 void R_DrawSkyBoxes ()
 {
@@ -954,10 +957,12 @@ void R_DrawSkyBoxes ()
 	visplane_t *pl;
 
 	// Don't draw sky boxes inside sky boxes.
-	//r_InSkyBox = true;
+//	r_InSkyBox = true;
 
 	// Don't let gun flashes brighten the sky box
 	extralight = 0;
+
+	numskyboxes = 0;
 
 	for (pl = visplanes[MAXVISPLANES]; pl != NULL; pl = visplanes[MAXVISPLANES])
 	{
@@ -967,12 +972,18 @@ void R_DrawSkyBoxes ()
 		visplanes[MAXVISPLANES] = pl->next;
 		pl->next = NULL;
 
-		if (pl->maxx < pl->minx)
+		if (pl->maxx < pl->minx || !r_skyboxes)
 		{
+			if (pl->maxx >= pl->minx)
+			{
+				R_DrawSkyPlane (pl);
+			}
 			*freehead = pl;
 			freehead = &pl->next;
 			continue;
 		}
+
+		numskyboxes++;
 
 		ASkyViewpoint *sky = pl->skybox;
 
@@ -1058,6 +1069,11 @@ void R_DrawSkyBoxes ()
 
 	for (*freehead = visplanes[MAXVISPLANES], visplanes[MAXVISPLANES] = NULL; *freehead; )
 		freehead = &(*freehead)->next;
+}
+
+ADD_STAT(skyboxes, out)
+{
+	sprintf (out, "%d skybox planes", numskyboxes);
 }
 
 //==========================================================================

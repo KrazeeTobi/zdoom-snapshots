@@ -199,8 +199,8 @@ void DoMain (HINSTANCE hInstance)
 		IMAGE_NT_HEADERS *ntHeaders = (IMAGE_NT_HEADERS *)(module + dosHeader->e_lfanew);
 		IMAGE_SECTION_HEADER *sections = IMAGE_FIRST_SECTION (ntHeaders);
 		int i;
-		LPVOID *start;
-		SIZE_T size;
+		LPVOID *start = NULL;
+		SIZE_T size = 0;
 		DWORD oldprotect;
 
 		for (i = 0; i < ntHeaders->FileHeader.NumberOfSections; ++i)
@@ -366,7 +366,7 @@ char *DoomSpecificInfo (char *text, char *maxtext)
 		text += wsprintf (text, " %s", arg);
 	}
 
-	arg = W_GetWadName (1);
+	arg = Wads.GetWadName (1);
 	if (arg != NULL)
 	{
 		if (text + strlen(arg) + 10 >= maxtext)
@@ -481,10 +481,12 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE nothing, LPSTR cmdline, int n
 	DuplicateHandle (GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &MainThread,
 		0, FALSE, DUPLICATE_SAME_ACCESS);
 
+#ifdef _DEBUG
 	// Uncomment this line to make the Visual C++ CRT check the heap before
 	// every allocation and deallocation. This will be slow, but it can be a
 	// great help in finding problem areas.
 	//_CrtSetDbgFlag (_CRTDBG_ALLOC_MEM_DF | _CRTDBG_CHECK_ALWAYS_DF);
+#endif
 
 #if !defined(__GNUC__) && !defined(_DEBUG)
 	if (MainThread != INVALID_HANDLE_VALUE)

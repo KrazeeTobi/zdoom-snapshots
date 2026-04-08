@@ -361,7 +361,7 @@ void APathFollower::NewNode ()
 
 bool APathFollower::Interpolate ()
 {
-	fixed_t dx, dy, dz;
+	fixed_t dx = 0, dy = 0, dz = 0;
 
 	if ((args[2] & 8) && Time > 0.f)
 	{

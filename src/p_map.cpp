@@ -692,7 +692,7 @@ BOOL PIT_CheckThing (AActor *thing)
 	if (!(compatflags & COMPATF_NO_PASSMOBJ) && !(tmthing->flags & (MF_FLOAT|MF_MISSILE|MF_SKULLFLY)))
 	{
 		// [RH] Let monsters stand on actors as well as floors
-		if (topz > tmfloorz)
+		if ((thing->flags & MF_SOLID) && topz > tmfloorz && topz <= tmthing->z + 24*FRACUNIT)
 		{
 			tmfloorz = topz;
 		}
@@ -846,7 +846,8 @@ BOOL PIT_CheckThing (AActor *thing)
 		}
 		return false;		// don't traverse any more
 	}
-	if (thing->flags2 & MF2_PUSHABLE && !(tmthing->flags2 & MF2_CANNOTPUSH))
+	if (thing->flags2 & MF2_PUSHABLE && !(tmthing->flags2 & MF2_CANNOTPUSH) &&
+		(tmthing->player == NULL || !(tmthing->player->cheats & CF_PREDICTING)))
 	{ // Push thing
 		thing->momx += tmthing->momx >> 2;
 		thing->momy += tmthing->momy >> 2;
@@ -855,7 +856,11 @@ BOOL PIT_CheckThing (AActor *thing)
 			!(thing->flags & MF_NOCLIP) &&
 			(tmthing->flags & MF_SOLID);
 	// Check for special pickup
-	if ((thing->flags & MF_SPECIAL) && (tmflags & MF_PICKUP))
+	if ((thing->flags & MF_SPECIAL) && (tmflags & MF_PICKUP)
+		// [RH] The next condition is to compensate for the extra height
+		// that gets added by P_CheckPosition() so that you cannot pick
+		// up things that are above your true height.
+		&& thing->z < tmthing->z + tmthing->height - 24*FRACUNIT)
 	{ // Can be picked up by tmthing
 		P_TouchSpecialThing (thing, tmthing);	// can remove thing
 	}
@@ -2307,11 +2312,11 @@ fixed_t P_AimLineAttack (AActor *t1, angle_t angle, fixed_t distance, fixed_t vr
 		}
 		else
 		{
-			vrange = t1->player->userinfo.aimdist;
-			if (vrange > ANGLE_1*35)
-			{
-				vrange = ANGLE_1*35;
-			}
+			// 35 degrees is approximately what Doom used. You cannot have a
+			// vrange of 0 degrees, because then toppitch and bottompitch will
+			// be equal, and PTR_AimTraverse will never find anything to shoot at
+			// if it crosses a line.
+			vrange = clamp (t1->player->userinfo.aimdist, ANGLE_1/2, ANGLE_1*35);
 		}
 	}
 	toppitch = t1->pitch - vrange;
@@ -2396,7 +2401,7 @@ void P_LineAttack (AActor *t1, angle_t angle, fixed_t distance,
 	}
 	else
 	{
-		fixed_t hitx, hity, hitz, closer;
+		fixed_t hitx = 0, hity = 0, hitz = 0, closer;
 		AActor *puff = NULL;
 
 		if (trace.HitType != TRACE_HitActor)
@@ -4109,7 +4114,7 @@ void SpawnShootDecal (AActor *t1, const FTraceResults &trace)
 	}
 }
 
-void SpawnDeepSplash (AActor *t1, const FTraceResults &trace, AActor *puff,
+static void SpawnDeepSplash (AActor *t1, const FTraceResults &trace, AActor *puff,
 	fixed_t vx, fixed_t vy, fixed_t vz)
 {
 	fixed_t num, den, hitdist;

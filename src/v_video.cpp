@@ -301,22 +301,24 @@ int V_GetColorFromString (const DWORD *palette, const char *cstr)
 
 char *V_GetColorStringByName (const char *name)
 {
-	char *rgbNames, *rgbEnd;
+	FMemLump rgbNames;
+	char *rgbEnd;
 	char *rgb, *endp;
 	char descr[5*3];
 	int rgblump;
 	int c[3], step;
 	size_t namelen;
 
-	rgblump = W_CheckNumForName ("X11R6RGB");
+	rgblump = Wads.CheckNumForName ("X11R6RGB");
 	if (rgblump == -1)
 	{
 		Printf ("X11R6RGB lump not found\n");
 		return NULL;
 	}
 
-	rgb = rgbNames = (char *)W_MapLumpNum (rgblump, true);
-	rgbEnd = rgbNames + W_LumpLength (rgblump);
+	rgbNames = Wads.ReadLump (rgblump);
+	rgb = (char *)rgbNames.GetMem();
+	rgbEnd = rgb + Wads.LumpLength (rgblump);
 	step = 0;
 	namelen = strlen (name);
 
@@ -373,7 +375,6 @@ char *V_GetColorStringByName (const char *name)
 	{
 		Printf ("X11R6RGB lump is corrupt\n");
 	}
-	W_UnMapLump (rgbNames);
 	return NULL;
 }
 
@@ -603,17 +604,13 @@ void DFrameBuffer::DrawRateStuff ()
 	if (vid_fps)
 	{
 		QWORD ms = I_MSTime ();
-		QWORD howlong = ms - LastMS;
+		DWORD howlong = DWORD(ms - LastMS);
 		if (howlong > 0)
 		{
 			char fpsbuff[40];
 			int chars;
 
-#if _MSC_VER
-			chars = sprintf (fpsbuff, "%2I64d ms (%3ld fps)", howlong, LastCount);
-#else
-			chars = sprintf (fpsbuff, "%2Ld ms (%3ld fps)", howlong, LastCount);
-#endif
+			chars = sprintf (fpsbuff, "%2lu ms (%3lu fps)", howlong, LastCount);
 			Clear (0, screen->GetHeight() - 8, chars * 8, screen->GetHeight(), 0);
 			SetFont (ConFont);
 			DrawText (CR_WHITE, 0, screen->GetHeight() - 8, (char *)&fpsbuff[0], TAG_DONE);
@@ -702,7 +699,7 @@ bool V_DoModeSetup (int width, int height, int bits)
 
 	RenderTarget = screen;
 	screen->Lock (true);
-	R_SetupBuffer ();
+	R_SetupBuffer (false);
 	screen->Unlock ();
 
 	M_RefreshModesList ();
@@ -804,7 +801,7 @@ void V_Init (void)
 	InitPalette ();
 
 	// load the heads-up font
-	if (W_CheckNumForName ("FONTA_S") >= 0)
+	if (Wads.CheckNumForName ("FONTA_S") >= 0)
 	{
 		SmallFont = new FFont ("SmallFont", "FONTA%02u", HU_FONTSTART, HU_FONTSIZE, 1);
 	}
@@ -812,9 +809,9 @@ void V_Init (void)
 	{
 		SmallFont = new FFont ("SmallFont", "STCFN%.3d", HU_FONTSTART, HU_FONTSIZE, HU_FONTSTART);
 	}
-	if (gameinfo.gametype == GAME_Doom)
+	if (gameinfo.gametype == GAME_Doom || gameinfo.gametype == GAME_Strife)
 	{
-		BigFont = new FSingleLumpFont ("BigFont", W_GetNumForName ("DBIGFONT"));
+		BigFont = new FSingleLumpFont ("BigFont", Wads.GetNumForName ("DBIGFONT"));
 	}
 	else
 	{
@@ -864,7 +861,7 @@ void V_Init (void)
 		Printf ("Resolution: %d x %d\n", SCREENWIDTH, SCREENHEIGHT);
 
 	FBaseCVar::ResetColors ();
-	ConFont = new FSingleLumpFont ("ConsoleFont", W_GetNumForName ("CONFONT"));
+	ConFont = new FSingleLumpFont ("ConsoleFont", Wads.GetNumForName ("CONFONT"));
 
 	BuildTransTable (GPalette.BaseColors);
 }

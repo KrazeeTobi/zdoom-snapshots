@@ -1065,7 +1065,7 @@ FUNC(LS_Thing_Hate)
 // Thing_Hate (hater, hatee, group/"xray"?)
 {
 	FActorIterator haterIt (arg0);
-	AActor *hater, *hatee;
+	AActor *hater, *hatee = NULL;
 	FActorIterator hateeIt (arg1);
 	bool nothingToHate = false;
 

@@ -1302,14 +1302,13 @@ void R_BuildPlayerTranslation (int player)
 
 void R_DrawBorder (int x1, int y1, int x2, int y2)
 {
-	int lump;
+	int picnum;
 
-	lump = W_CheckNumForName (gameinfo.borderFlat, ns_flats);
-	if (lump >= 0)
+	picnum = TexMan.CheckForTexture (gameinfo.borderFlat, FTexture::TEX_Flat);
+	if (picnum >= 0)
 	{
-		byte *flat = (byte *)W_MapLumpNum (lump);
+		const BYTE *flat = TexMan[picnum]->GetPixels ();
 		screen->FlatFill (x1 & ~63, y1, x2, y2, flat);
-		W_UnMapLump (flat);
 	}
 	else
 	{

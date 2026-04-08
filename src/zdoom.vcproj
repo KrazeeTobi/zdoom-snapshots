@@ -30,13 +30,13 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
 				AdditionalIncludeDirectories="win32,sound,.,zlib-1.1.4,g_shared,g_doom,g_raven,g_heretic,g_hexen;flac"
-				PreprocessorDefinitions="NDEBUG,WIN32,_WINDOWS,USEASM"
+				PreprocessorDefinitions="NDEBUG,WIN32,_WIN32,_WINDOWS,USEASM"
 				StringPooling="TRUE"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="FALSE"
 				ForceConformanceInForLoopScope="TRUE"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile=".\Release/zdoom.pch"
+				PrecompiledHeaderFile=""
 				AssemblerOutput="0"
 				AssemblerListingLocation=".\Release/"
 				ObjectFile=".\Release/"
@@ -110,12 +110,12 @@
 				AdditionalOptions="&quot;  /I /fmod/api/inc&quot;  &quot;  /I /fmod/api/inc&quot;  &quot;  /I /fmod/api/inc&quot;  &quot;  /I /fmod/api/inc&quot; "
 				Optimization="0"
 				AdditionalIncludeDirectories="win32;sound;.;&quot;zlib-1.1.4&quot;;g_shared;g_doom;g_raven;g_heretic;g_hexen;flac"
-				PreprocessorDefinitions="WIN32,_DEBUG,_WINDOWS,USEASM,_CRTDBG_MAP_ALLOC"
+				PreprocessorDefinitions="WIN32,_DEBUG,_WIN32,_WINDOWS,USEASM,_CRTDBG_MAP_ALLOC"
 				MinimalRebuild="TRUE"
 				RuntimeLibrary="1"
 				EnableFunctionLevelLinking="TRUE"
 				ForceConformanceInForLoopScope="TRUE"
-				PrecompiledHeaderFile=".\Debug/zdoom.pch"
+				PrecompiledHeaderFile=""
 				AssemblerOutput="0"
 				AssemblerListingLocation=".\Debug/"
 				ObjectFile=".\Debug/"
@@ -2327,9 +2327,6 @@
 			</File>
 			<File
 				RelativePath=".\win32\I_system.h">
-			</File>
-			<File
-				RelativePath="win32\i_wad.cpp">
 			</File>
 			<File
 				RelativePath=".\win32\icon1.ico">

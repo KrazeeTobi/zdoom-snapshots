@@ -376,10 +376,19 @@ manual_ceiling:
 		// Do not interpolate instant movement ceilings.
 		// Note for ZDoomGL: Check to make sure that you update the sector
 		// after the ceiling moves, because it hasn't actually moved yet.
-		if (ceiling->m_Speed >= height)
+		fixed_t movedist;
+
+		if (ceiling->m_Direction < 0)
 		{
-			stopinterpolation (&sec->ceilingplane.d);
-			stopinterpolation (&sec->ceilingtexz);
+			movedist = sec->ceilingplane.d - ceiling->m_BottomHeight;
+		}
+		else
+		{
+			movedist = ceiling->m_TopHeight - sec->ceilingplane.d;
+		}
+		if (ceiling->m_Speed >= movedist)
+		{
+			stopinterpolation (INTERP_SectorCeiling, sec);
 		}
 
 		// set texture/type change properties

@@ -494,7 +494,7 @@ void FCompressedMemFile::Serialize (FArchive &arc)
 		m_Mode = EReading;
 
 		char sig[4];
-		DWORD sizes[2];
+		DWORD sizes[2] = { 0, 0 };
 
 		arc.Read (sig, 4);
 

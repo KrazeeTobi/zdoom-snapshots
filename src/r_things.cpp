@@ -90,7 +90,7 @@ TArray<spritedef_t> sprites;
 TArray<spriteframe_t> SpriteFrames;
 size_t			NumStdSprites;		// The first x sprites that don't belong to skins.
 
-struct : public spriteframe_t
+struct spriteframewithrotate : public spriteframe_t
 {
 	int rotate;
 }
@@ -256,7 +256,7 @@ static void R_InstallSprite (int num)
 				}
 				for (rot = 0; rot < 16; ++rot)
 				{
-					if (sprtemp[frame].Texture[rot] == -1)
+					if (sprtemp[frame].Texture[rot] == 0xFFFF)
 						I_FatalError ("R_InstallSprite: Sprite %s frame %c is missing rotations",
 									  sprites[num].name, frame+'A');
 				}
@@ -428,17 +428,17 @@ void R_InitSkins (void)
 		playersoundrefs[j] = S_FindSound (skinsoundnames[j][1]);
 	}
 
-	while ((base = W_FindLump ("S_SKIN", &lastlump)) != -1)
+	while ((base = Wads.FindLump ("S_SKIN", &lastlump)) != -1)
 	{
 		// The player sprite has 23 frames. This means that the S_SKIN
 		// marker needs a minimum of 23 lumps after it.
-		if (base >= numlumps - 23 || base == -1)
+		if (base >= Wads.GetNumLumps() - 23 || base == -1)
 			continue;
 
 		i++;
 		for (j = 0; j < NUMSKINSOUNDS; j++)
 			sndlumps[j] = -1;
-		skins[i].namespc = lumpinfo[base].namespc;
+		skins[i].namespc = Wads.GetLumpNamespace (base);
 
 		SC_OpenLumpNum (base, "S_SKIN");
 		intname = 0;
@@ -497,10 +497,10 @@ void R_InitSkins (void)
 			}
 			else if (key[0] == '*')
 			{ // Player sound replacment (ZDoom extension)
-				int lump = W_CheckNumForName (sc_String, skins[i].namespc);
+				int lump = Wads.CheckNumForName (sc_String, skins[i].namespc);
 				if (lump == -1)
 				{
-					lump = W_CheckNumForName (sc_String);
+					lump = Wads.CheckNumForName (sc_String);
 				}
 				if (lump != -1)
 				{
@@ -530,10 +530,10 @@ void R_InitSkins (void)
 				{
 					if (stricmp (key, skinsoundnames[j][0]) == 0)
 					{
-						sndlumps[j] = W_CheckNumForName (sc_String, skins[i].namespc);
+						sndlumps[j] = Wads.CheckNumForName (sc_String, skins[i].namespc);
 						if (sndlumps[j] == -1)
 						{ // Replacement not found, try finding it in the global namespace
-							sndlumps[j] = W_CheckNumForName (sc_String);
+							sndlumps[j] = Wads.CheckNumForName (sc_String);
 						}
 					}
 				}
@@ -549,7 +549,9 @@ void R_InitSkins (void)
 		// specified, use whatever immediately follows the specifier lump.
 		if (intname == 0)
 		{
-			intname = *(DWORD *)(lumpinfo[base+1].name);
+			char name[9];
+			Wads.GetLumpName (name, base+1);
+			intname = *(DWORD *)name;
 		}
 
 		memset (sprtemp, 0xFFFF, sizeof(sprtemp));
@@ -559,21 +561,19 @@ void R_InitSkins (void)
 		}
 		maxframe = -1;
 
-		for (k = base + 1; lumpinfo[k].wadnum == lumpinfo[base].wadnum; k++)
+		int basens = Wads.GetLumpNamespace(base);
+
+		for (k = base + 1; Wads.GetLumpNamespace(k) == basens; k++)
 		{
-			if (*(DWORD *)lumpinfo[k].name == intname)
+			char lname[9];
+			Wads.GetLumpName (lname, k);
+			if (*(DWORD *)lname == intname)
 			{
 				int picnum = TexMan.AddTexture (new FPatchTexture (k, FTexture::TEX_SkinSprite));
-				R_InstallSpriteLump (picnum, 
-									 lumpinfo[k].name[4] - 'A',
-									 lumpinfo[k].name[5],
-									 false);
+				R_InstallSpriteLump (picnum, lname[4] - 'A', lname[5], false);
 
-				if (lumpinfo[k].name[6])
-					R_InstallSpriteLump (picnum,
-									 lumpinfo[k].name[6] - 'A',
-									 lumpinfo[k].name[7],
-									 true);
+				if (lname[6])
+					R_InstallSpriteLump (picnum, lname[6] - 'A', lname[7], true);
 			}
 		}
 
@@ -586,7 +586,7 @@ void R_InitSkins (void)
 			continue;
 		}
 
-		strncpy (temp.name, lumpinfo[base+1].name, 4);
+		Wads.GetLumpName (temp.name, base+1);
 		temp.name[4] = 0;
 		skins[i].sprite = (int)sprites.Push (temp);
 		R_InstallSprite (skins[i].sprite);
@@ -675,16 +675,14 @@ int 			newvissprite;
 
 static void R_CreateSkinTranslation (const char *palname)
 {
-	const BYTE *otherPal = (BYTE *)W_MapLumpName (palname);
-	const BYTE *pal_p = otherPal;
-
+	FMemLump lump = Wads.ReadLump (palname);
+	const BYTE *otherPal = (BYTE *)lump.GetMem();
+ 
 	for (int i = 0; i < 256; ++i)
 	{
 		OtherGameSkinRemap[i] = ColorMatcher.Pick (otherPal[0], otherPal[1], otherPal[2]);
 		otherPal += 3;
 	}
-
-	W_UnMapLump (pal_p);
 }
 
 
@@ -738,7 +736,7 @@ void R_InitSprites ()
 	lastlump = 0;
 	if (gameinfo.gametype != GAME_Hexen)
 	{
-		while ((lump = W_FindLump ("S_SKIN", &lastlump)) != -1)
+		while ((lump = Wads.FindLump ("S_SKIN", &lastlump)) != -1)
 		{
 			numskins++;
 		}

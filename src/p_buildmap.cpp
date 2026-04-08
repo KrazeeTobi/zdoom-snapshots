@@ -567,7 +567,7 @@ static void LoadWalls (walltype *walls, int numwalls, sectortype *bsec)
 		slope.wal2 = &walls[slope.wal->point2];
 		slope.dx = slope.wal2->x - slope.wal->x;
 		slope.dy = slope.wal2->y - slope.wal->y;
-		slope.i = long (sqrt (slope.dx*slope.dx+slope.dy*slope.dy)) << 5;
+		slope.i = long (sqrt ((double)(slope.dx*slope.dx+slope.dy*slope.dy))) << 5;
 		if (slope.i == 0)
 		{
 			continue;

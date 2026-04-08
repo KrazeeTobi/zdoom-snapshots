@@ -98,10 +98,10 @@ CUSTOM_CVAR (Int, crosshair, 0, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 	}
 	size = (SCREENWIDTH < 640) ? 'S' : 'B';
 	sprintf (name, "XHAIR%c%d", size, num);
-	if ((lump = W_CheckNumForName (name)) == -1)
+	if ((lump = Wads.CheckNumForName (name)) == -1)
 	{
 		sprintf (name, "XHAIR%c1", size);
-		if ((lump = W_CheckNumForName (name)) == -1)
+		if ((lump = Wads.CheckNumForName (name)) == -1)
 		{
 			strcpy (name, "XHAIRS1");
 		}
@@ -311,6 +311,8 @@ DHUDMessage *FBaseStatusBar::DetachMessage (DHUDMessage *msg)
 	{
 		*prev = probe->Next;
 		probe->Next = NULL;
+		// Redraw the status bar in case it was covered
+		SB_state = screen->GetPageCount ();
 	}
 	return probe;
 }
@@ -329,6 +331,8 @@ DHUDMessage *FBaseStatusBar::DetachMessage (DWORD id)
 	{
 		*prev = probe->Next;
 		probe->Next = NULL;
+		// Redraw the status bar in case it was covered
+		SB_state = screen->GetPageCount ();
 	}
 	return probe;
 }
@@ -380,7 +384,7 @@ void FBaseStatusBar::ShowPlayerName ()
 
 	color = (CPlayer == &players[consoleplayer]) ? CR_GOLD : CR_GREEN;
 	AttachMessage (new DHUDMessageFadeOut (CPlayer->userinfo.netname,
-		1.5f, 0.92f, color, 2.f, 0.35f), 'PNAM');
+		1.5f, 0.92f, 0, 0, color, 2.f, 0.35f), 'PNAM');
 }
 
 //---------------------------------------------------------------------------
@@ -396,18 +400,6 @@ void FBaseStatusBar::DrawImage (FTexture *img,
 {
 	if (img != NULL)
 	{
-		bool main;
-
-		if (y == -999999)
-		{ // Hack for Hexen status bar, which duplicates the top part of the
-		  // bar in the main bar graphic.
-			main = true;
-			y = RelTop - img->GetHeight();
-		}
-		else
-		{
-			main = (y >= img->TopOffset);
-		}
 		screen->DrawTexture (img, x + ST_X, y + ST_Y,
 			DTA_Translation, translation,
 			DTA_320x200, Scaled,
@@ -1058,9 +1050,12 @@ void FBaseStatusBar::Draw (EHudState state)
 		}
 	}
 
-	if (viewactive && CPlayer && CPlayer->camera->player)
+	if (viewactive)
 	{
-		DrawCrosshair ();
+		if (CPlayer && CPlayer->camera->player)
+		{
+			DrawCrosshair ();
+		}
 	}
 	else if (automapactive)
 	{

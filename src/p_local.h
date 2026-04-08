@@ -62,6 +62,7 @@
 #define USERANGE		(64*FRACUNIT)
 #define MELEERANGE		(64*FRACUNIT)
 #define MISSILERANGE	(32*64*FRACUNIT)
+#define PLAYERMISSILERANGE	(32*64*10*FRACUNIT)	// [RH] New MISSILERANGE for players
 
 // follow a player exlusively for 3 seconds
 #define BASETHRESHOLD	100
@@ -74,7 +75,6 @@
 void P_SetupPsprites (player_t* curplayer);
 void P_MovePsprites (player_t* curplayer);
 void P_DropWeapon (player_t* player);
-void P_ActivateMorphWeapon (player_t *player);
 void P_PostMorphWeapon (player_t *player, weapontype_t weapon);
 
 

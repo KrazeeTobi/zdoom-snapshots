@@ -602,7 +602,12 @@ public:
 	char Name[9];
 	BYTE UseType;	// This texture's primary purpose
 
-	BYTE bNoDecals:1;
+	BYTE bNoDecals:1;		// Decals should not stick to texture
+	BYTE bStaticName:1;		// Texture was loaded from a static list of names in the executable
+	BYTE bNoRemap0:1;		// Do not remap color 0 (used by front layer of parallax skies)
+	BYTE bWorldPanning:1;	// Texture is panned in world units rather than texels
+	BYTE bMasked:1;			// Texture (might) have holes
+	BYTE bAlphaTexture:1;	// Texture is an alpha channel without color information
 
 	WORD Rotations;
 
@@ -618,6 +623,7 @@ public:
 		TEX_Decal,
 		TEX_MiscPatch,
 		TEX_FontChar,
+		TEX_Override,	// For patches between TX_START/TX_END
 		TEX_Null,
 	};
 
@@ -638,6 +644,8 @@ public:
 	int GetWidth () { if (Width == 0xFFFF) { GetDimensions(); } return Width; }
 	int GetHeight () { if (Width == 0xFFFF) { GetDimensions(); } return Height; }
 
+	virtual void SetFrontSkyLayer();
+
 	void CopyToBlock (BYTE *dest, int dwidth, int dheight, int x, int y, const BYTE *translation=NULL);
 
 	// Returns true if the next call to GetPixels() will return an image different from the
@@ -655,6 +663,9 @@ protected:
 	void CalcBitSize ();
 
 	static void FlipSquareBlock (BYTE *block, int x, int y);
+	static void FlipSquareBlockRemap (BYTE *block, int x, int y, const BYTE *remap);
+	static void FlipNonSquareBlock (BYTE *blockto, const BYTE *blockfrom, int x, int y);
+	static void FlipNonSquareBlockRemap (BYTE *blockto, const BYTE *blockfrom, int x, int y, const BYTE *remap);
 };
 
 // Texture manager
@@ -700,17 +711,26 @@ public:
 		}
 	}
 
-	int CheckForTexture (const char *name, int usetype, bool tryany=true);
-	int GetTexture (const char *name, int usetype);
+	enum
+	{
+		TEXMAN_TryAny = 1,
+		TEXMAN_Overridable = 2,
+		TEXMAN_NoStaticNames = 4,
+	};
+
+	int CheckForTexture (const char *name, int usetype, BITFIELD flags=TEXMAN_TryAny);
+	int GetTexture (const char *name, int usetype, BITFIELD flags=0);
 
 	void AddTexturesLump (int lumpnum, int patcheslump, bool texture1);
 	void AddFlats ();
 	void AddSprites ();
 	void AddPatches (int lumpnum);
-	void AddTiles (const void *tileFile);
+	void AddTiles (void *tileFile);
+	void AddExtraTextures ();	// Adds patches in the ns_newtextures namespace
 
+	int CreateTexture (int lumpnum, int usetype=FTexture::TEX_Any);	// Also calls AddTexture
 	int AddTexture (FTexture *texture);
-	int AddPatch (const char *patchname, int namespc=0);
+	int AddPatch (const char *patchname, bool staticname=true, int namespc=0);
 
 	// Replaces one texture with another. The new texture will be assigned
 	// the same name, slot, and use type as the texture as it is replacing.

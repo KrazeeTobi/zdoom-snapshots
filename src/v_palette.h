@@ -49,7 +49,7 @@ struct PalEntry
 {
 	PalEntry () {}
 	PalEntry (DWORD argb) { *(DWORD *)this = argb; }
-	operator DWORD () { return *(DWORD *)this; }
+	operator DWORD () const { return *(DWORD *)this; }
 	PalEntry &operator= (DWORD other) { *(DWORD *)this = other; return *this; }
 
 #ifdef __BIG_ENDIAN__
@@ -76,8 +76,15 @@ struct FPalette
 	void SetPalette (const BYTE *colors);
 	void GammaAdjust ();
 
+	void MakeGoodRemap ();
+
 	PalEntry	Colors[256];		// gamma corrected palette
 	PalEntry	BaseColors[256];	// non-gamma corrected palette
+	BYTE		Remap[256];			// remap original palette indices to in-game indices
+
+	// Given an array of colors, fills in remap with values to remap the
+	// passed array of colors to this palette.
+	void MakeRemap (const DWORD *colors, BYTE *remap, const BYTE *useful, int numcolors) const;
 };
 
 struct FDynamicColormap

@@ -252,6 +252,8 @@ void DCajunMaster::Dofire (AActor *actor, ticcmd_t *cmd)
 		case wp_mstaff:
 			m /= GetDefaultByName ("MageStaffFX2")->Speed;
 			break;
+		default:
+			break;
 		}
 		SetBodyAt (enemy->x + enemy->momx*m*2, enemy->y + enemy->momy*m*2, ONFLOORZ, 1);
 		actor->player->angle = R_PointToAngle2 (actor->x, actor->y, body1->x, body1->y);

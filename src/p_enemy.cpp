@@ -440,7 +440,6 @@ BOOL P_TryWalk (AActor *actor)
 	{
 		return false;
 	}
-
 	actor->movecount = pr_trywalk() & 15;
 	return true;
 }
@@ -524,7 +523,6 @@ void P_NewChaseDir (AActor *actor)
 	if (d[2] != DI_NODIR)
 	{
 		actor->movedir = d[2];
-
 		if (P_TryWalk (actor))
 			return;
 	}
@@ -533,7 +531,6 @@ void P_NewChaseDir (AActor *actor)
 	if (olddir != DI_NODIR)
 	{
 		actor->movedir = olddir;
-
 		if (P_TryWalk (actor))
 			return;
 	}
@@ -546,7 +543,6 @@ void P_NewChaseDir (AActor *actor)
 			if (tdir != turnaround)
 			{
 				actor->movedir = tdir;
-				
 				if ( P_TryWalk(actor) )
 					return;
 			}
@@ -559,7 +555,6 @@ void P_NewChaseDir (AActor *actor)
 			if (tdir != turnaround)
 			{
 				actor->movedir = tdir;
-				
 				if ( P_TryWalk(actor) )
 					return;
 			}
@@ -1579,8 +1574,10 @@ int P_Massacre ()
 
 	while ( (actor = iterator.Next ()) )
 	{
-		if ((actor->flags & MF_SHOOTABLE) && (actor->flags3 & MF3_ISMONSTER))
+		if (!(actor->flags2 & MF2_DORMANT) && (actor->flags3 & MF3_ISMONSTER))
 		{
+			actor->flags |= MF_SHOOTABLE;
+
 			// killough 3/6/98: kill even if PE is dead
 			if (actor->health > 0)
 			{

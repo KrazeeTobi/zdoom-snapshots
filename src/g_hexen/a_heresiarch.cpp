@@ -1106,6 +1106,12 @@ void A_SorcOffense2(AActor *actor)
 	AActor *dest = parent->target;
 	int dist;
 
+	// [RH] If no enemy, then don't try to shoot.
+	if (dest == NULL)
+	{
+		return;
+	}
+
 	index = actor->args[4] << 5;
 	actor->args[4] += 15;
 	delta = (finesine[index])*SORCFX4_SPREAD_ANGLE;

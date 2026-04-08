@@ -137,7 +137,7 @@ static BOOL PTR_TraceIterator (intercept_t *in)
 		hity = trace.y + FixedMul (Vy, dist);
 		hitz = StartZ + FixedMul (Vz, dist);
 
-		fixed_t ff, fc, bf, bc;
+		fixed_t ff, fc, bf = 0, bc = 0;
 
 		if (in->d.line->frontsector == CurSector)
 		{

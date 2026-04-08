@@ -86,10 +86,6 @@ void DPolyAction::Serialize (FArchive &arc)
 {
 	Super::Serialize (arc);
 	arc << m_PolyObj << m_Speed << m_Dist;
-	if (arc.IsLoading ())
-	{
-		SetInterpolation ();
-	}
 }
 
 DPolyAction::DPolyAction (int polyNum)
@@ -116,10 +112,8 @@ void DPolyAction::SetInterpolation ()
 	polyobj_t *poly = GetPolyobj (m_PolyObj);
 	for (int i = 0; i < poly->numsegs; ++i)
 	{
-		setinterpolation (&poly->segs[i]->v1->x);
-		setinterpolation (&poly->segs[i]->v1->y);
-		setinterpolation (&poly->segs[i]->v2->x);
-		setinterpolation (&poly->segs[i]->v2->x);
+		setinterpolation (INTERP_Vertex, poly->segs[i]->v1);
+		setinterpolation (INTERP_Vertex, poly->segs[i]->v2);
 	}
 }
 
@@ -128,10 +122,8 @@ void DPolyAction::StopInterpolation ()
 	polyobj_t *poly = GetPolyobj (m_PolyObj);
 	for (int i = 0; i < poly->numsegs; ++i)
 	{
-		stopinterpolation (&poly->segs[i]->v1->x);
-		stopinterpolation (&poly->segs[i]->v1->y);
-		stopinterpolation (&poly->segs[i]->v2->x);
-		stopinterpolation (&poly->segs[i]->v2->x);
+		stopinterpolation (INTERP_Vertex, poly->segs[i]->v1);
+		stopinterpolation (INTERP_Vertex, poly->segs[i]->v2);
 	}
 }
 
@@ -1250,7 +1242,7 @@ static void IterFindPolySegs (vertex_t *v1, vertex_t *v2p, seg_t **segList)
 		}
 		v2 = segs[j].v2 - vertexes;
 	}
-	I_Error ("IterFindPolySegs: Non-closed Polyobj around (%d,%d).\n",
+	I_Error ("IterFindPolySegs: Non-closed Polyobj around (%ld,%ld).\n",
 		v1->x >> FRACBITS, v1->y >> FRACBITS);
 }
 

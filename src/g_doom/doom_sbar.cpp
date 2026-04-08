@@ -130,10 +130,14 @@ public:
 
 	void AttachToPlayer (player_t *player)
 	{
+		player_t *oldplayer = CPlayer;
 		int i;
 
 		FBaseStatusBar::AttachToPlayer (player);
-		SetFace (&skins[CPlayer->userinfo.skin]);
+		if (oldplayer != CPlayer)
+		{
+			SetFace (&skins[CPlayer->userinfo.skin]);
+		}
 		if (multiplayer)
 		{
 			// draw face background
@@ -415,14 +419,14 @@ private:
 			FaceRefresh = screen->GetPageCount ();
 			OldFaceIndex = FaceIndex;
 		}
-		if (FaceRefresh || CPlayer->inventory[CPlayer->readyArtifact] != 0)
+		if (FaceRefresh || (CPlayer->inventory[CPlayer->readyArtifact] != 0 && !(level.flags & LEVEL_NOINVENTORYBAR)))
 		{
 			if (FaceRefresh)
 			{
 				FaceRefresh--;
 			}
 			DrawPartialImage (&StatusBarTex, 142, 37);
-			if (CPlayer->inventory[CPlayer->readyArtifact] == 0)
+			if (CPlayer->inventory[CPlayer->readyArtifact] == 0 || (level.flags & LEVEL_NOINVENTORYBAR))
 			{
 				DrawImage (Faces[FaceIndex], 143, 0);
 			}
@@ -433,6 +437,7 @@ private:
 				{
 					DrSmallNumber (CPlayer->inventory[CPlayer->readyArtifact], 165, 24);
 				}
+				OldFaceIndex = -1;
 			}
 		}
 	}
@@ -947,7 +952,7 @@ private:
 };
 
 FDoomStatusBar::FDoomStatusBarTexture::FDoomStatusBarTexture ()
-: FPatchTexture (W_GetNumForName ("STBAR"), FTexture::TEX_MiscPatch)
+: FPatchTexture (Wads.GetNumForName ("STBAR"), FTexture::TEX_MiscPatch)
 {
 }
 

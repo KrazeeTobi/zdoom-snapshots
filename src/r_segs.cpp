@@ -218,7 +218,10 @@ void R_RenderMaskedSegRange (drawseg_t *ds, int x1, int x2)
 
 	tex = TexMan(curline->sidedef->midtexture);
 
-	basecolormap = frontsector->ColorMap->Maps;	// [RH] Set basecolormap
+	// killough 4/13/98: get correct lightlevel for 2s normal textures
+	const sector_t *sec = R_FakeFlat (frontsector, &tempsec, NULL, NULL, false);
+
+	basecolormap = sec->ColorMap->Maps;	// [RH] Set basecolormap
 
 	// [RH] Get wall light level
 	if (curline->sidedef->Flags & WALLF_ABSLIGHTING)
@@ -227,8 +230,6 @@ void R_RenderMaskedSegRange (drawseg_t *ds, int x1, int x2)
 	}
 	else
 	{
-		// killough 4/13/98: get correct lightlevel for 2s normal textures
-		const sector_t *sec = R_FakeFlat (frontsector, &tempsec, NULL, NULL, false);
 		lightnum = sec->lightlevel;
 
 		if (!level.fadeto &&
@@ -264,7 +265,7 @@ void R_RenderMaskedSegRange (drawseg_t *ds, int x1, int x2)
 	if (curline->linedef->flags & ML_DONTPEGBOTTOM)
 	{
 		dc_texturemid = MAX (frontsector->floortexz, backsector->floortexz);
-		dc_texturemid += tex->GetHeight() << FRACBITS;
+		dc_texturemid += DivScale19 (tex->GetHeight(), tex->ScaleY ? tex->ScaleY : ty);
 	}
 	else
 	{
@@ -626,6 +627,7 @@ void R_RenderSegLoop ()
 	int x2 = rw_stopx;
 	int x;
 	int xscale;
+	fixed_t xoffset = rw_offset;
 
 	if (fixedlightlev)
 		dc_colormap = basecolormap + fixedlightlev;
@@ -690,6 +692,10 @@ void R_RenderSegLoop ()
 				PrepLWall (lwall, (curline->sidedef->TexelLength*xscale) << (FRACBITS-3));
 				lwallscale = xscale;
 			}
+			if (midtexture->bWorldPanning)
+			{
+				rw_offset = MulScale3 (xoffset, midtexture->ScaleX ? midtexture->ScaleX : ty);
+			}
 			if (fixedlightlev || fixedcolormap || !frontsector->ExtraLights)
 			{
 				wallscan (x1, x2-1, walltop, wallbottom, swall, lwall);
@@ -717,6 +723,10 @@ void R_RenderSegLoop ()
 			{
 				PrepLWall (lwall, (curline->sidedef->TexelLength*xscale) << (FRACBITS-3));
 				lwallscale = xscale;
+			}
+			if (toptexture->bWorldPanning)
+			{
+				rw_offset = MulScale3 (xoffset, toptexture->ScaleY ? toptexture->ScaleY : ty);
 			}
 			if (fixedlightlev || fixedcolormap || !frontsector->ExtraLights)
 			{
@@ -748,6 +758,14 @@ void R_RenderSegLoop ()
 				PrepLWall (lwall, (curline->sidedef->TexelLength*xscale) << (FRACBITS-3));
 				lwallscale = xscale;
 			}
+			if (bottomtexture->bWorldPanning)
+			{
+				rw_offset = MulScale3 (xoffset, bottomtexture->ScaleY ? bottomtexture->ScaleY : ty);
+			}
+			else
+			{
+				rw_offset = xoffset;
+			}
 			if (fixedlightlev || fixedcolormap || !frontsector->ExtraLights)
 			{
 				wallscan (x1, x2-1, walllower, wallbottom, swall, lwall);
@@ -763,6 +781,7 @@ void R_RenderSegLoop ()
 			memcpy (floorclip+x1, wallbottom+x1, (x2-x1)*sizeof(short));
 		}
 	}
+	rw_offset = xoffset;
 }
 
 void R_NewWall ()
@@ -797,11 +816,19 @@ void R_NewWall ()
 				{ // top of texture at top
 					rw_midtexturemid = frontsector->ceilingtexz;
 				}
-				// rowoffset is added outside the multiply so that it positions the texture
-				// by texels instead of world units.
-				rw_midtexturemid = MulScale3 (rw_midtexturemid - viewz,
-					midtexture->ScaleY ? midtexture->ScaleY : ty)
-					+ sidedef->rowoffset;
+				if (midtexture->bWorldPanning)
+				{
+					rw_midtexturemid = MulScale3 (rw_midtexturemid - viewz + sidedef->rowoffset,
+						midtexture->ScaleY ? midtexture->ScaleY : ty);
+				}
+				else
+				{
+					// rowoffset is added outside the multiply so that it positions the texture
+					// by texels instead of world units.
+					rw_midtexturemid = MulScale3 (rw_midtexturemid - viewz,
+						midtexture->ScaleY ? midtexture->ScaleY : ty)
+						+ sidedef->rowoffset;
+				}
 			}
 		}
 		else
@@ -898,7 +925,14 @@ void R_NewWall ()
 			{ // bottom of texture at bottom
 				rw_toptexturemid = MulScale3 (backsector->ceilingtexz - viewz, scale) + (toptexture->GetHeight() << FRACBITS);
 			}
-			rw_toptexturemid += sidedef->rowoffset;
+			if (toptexture->bWorldPanning)
+			{
+				rw_toptexturemid += MulScale3 (sidedef->rowoffset, scale);
+			}
+			else
+			{
+				rw_toptexturemid += sidedef->rowoffset;
+			}
 		}
 		if (rw_havelow)
 		{ // bottom texture
@@ -912,9 +946,17 @@ void R_NewWall ()
 			{ // top of texture at top
 				rw_bottomtexturemid = backsector->floortexz;
 			}
-			rw_bottomtexturemid = MulScale3 (rw_bottomtexturemid - viewz,
-				bottomtexture->ScaleY ? bottomtexture->ScaleY : ty)
-				+ sidedef->rowoffset;
+			if (bottomtexture->bWorldPanning)
+			{
+				rw_bottomtexturemid = MulScale3 (rw_bottomtexturemid - viewz + sidedef->rowoffset,
+					bottomtexture->ScaleY ? bottomtexture->ScaleY : ty);
+			}
+			else
+			{
+				rw_bottomtexturemid = MulScale3 (rw_bottomtexturemid - viewz,
+					bottomtexture->ScaleY ? bottomtexture->ScaleY : ty)
+					+ sidedef->rowoffset;
+			}
 		}
 	}
 
@@ -967,13 +1009,13 @@ int side_s::GetLightLevel (bool foggy, int baselight) const
 	// [RH] Get wall light level
 	if (sidedef->Flags & WALLF_ABSLIGHTING)
 	{
-		return (BYTE)sidedef->Light;
+		return (BYTE)this->Light;
 	}
 	else
 	{
 		if (!foggy) // Don't do relative lighting in foggy sectors
 		{
-			baselight += curline->sidedef->Light * 2;
+			baselight += this->Light * 2;
 		}
 		return baselight;
 	}
