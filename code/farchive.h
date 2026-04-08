@@ -44,8 +44,8 @@ class FLZOFile : public FFile
 {
 public:
 	FLZOFile ();
-	FLZOFile (const char *name, EOpenMode mode);
-	FLZOFile (FILE *file, EOpenMode mode);
+	FLZOFile (const char *name, EOpenMode mode, bool dontcompress = false);
+	FLZOFile (FILE *file, EOpenMode mode, bool dontcompress = false);
 	~FLZOFile ();
 
 	bool Open (const char *name, EOpenMode mode);
@@ -65,6 +65,7 @@ protected:
 	unsigned int m_BufferSize;
 	unsigned int m_MaxBufferSize;
 	unsigned char *m_Buffer;
+	bool m_NoCompress;
 	EOpenMode m_Mode;
 	FILE *m_File;
 

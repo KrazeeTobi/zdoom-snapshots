@@ -454,7 +454,7 @@ static void zapDefereds (acsdefered_t *def)
 {
 	while (def) {
 		acsdefered_t *next = def->next;
-		Z_Free (def);
+		delete def;
 		def = next;
 	}
 }

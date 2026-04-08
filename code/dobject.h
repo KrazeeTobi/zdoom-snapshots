@@ -67,13 +67,13 @@ struct TypeInfo
 	const char *Name;
 	const TypeInfo *ParentType;
 	unsigned int SizeOf;
-	const size_t *const Pointers;
 	DObject *(*CreateNew)();
 	unsigned short TypeIndex;
+	const size_t *const Pointers;
 
 	void RegisterType ();
 
-	// Returns true if this type is an ancestor of (or same as) the passed type.
+	// Returns true if this type is an ansector of (or same as) the passed type.
 	bool IsAncestorOf (const TypeInfo *ti) const
 	{
 		while (ti)

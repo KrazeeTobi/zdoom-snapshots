@@ -768,7 +768,7 @@ void S_ResumeSound (void)
 //
 void S_UpdateSounds (void *listener_p)
 {
-	fixed_t *listener = listener_p ? &((AActor *)listener_p)->x : NULL;
+	fixed_t *listener = &((AActor *)listener_p)->x;
 	fixed_t x, y;
 	int i, dist, vol;
 	angle_t angle;

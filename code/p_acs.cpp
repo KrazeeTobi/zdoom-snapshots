@@ -1378,13 +1378,10 @@ FArchive &operator<< (FArchive &arc, acsdefered_s *defer)
 {
 	while (defer)
 	{
+		arc << (BYTE)1;
 		arc << (BYTE)defer->type << defer->script
 			<< defer->arg0 << defer->arg1 << defer->arg2;
-		if (defer->next)
-		{
-			arc << (BYTE)1;
-			defer = defer->next;
-		}
+		defer = defer->next;
 	}
 	arc << (BYTE)0;
 	return arc;

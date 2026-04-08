@@ -291,24 +291,25 @@ void DCajunMaster::WhatToGet (AActor *actor, AActor *item)
 void DCajunMaster::Set_enemy (AActor *actor)
 {
 	AActor *oldenemy;
+	AActor **enemy = &actor->player->enemy;
 
-	if (actor->player->enemy
-		&& actor->player->enemy->health > 0
-		&& P_CheckSight (actor, actor->player->enemy))
+	if (*enemy
+		&& (*enemy)->health > 0
+		&& P_CheckSight (actor, *enemy))
 	{
-		oldenemy = actor->player->enemy;
+		oldenemy = *enemy;
 	}
 	else
 	{
 		oldenemy = NULL;
 	}
 
-	actor->player->allround = !!actor->player->enemy;
-	actor->player->enemy = NULL;
-	actor->player->enemy = Find_enemy(actor);
-	if (!actor->player->enemy)
-		actor->player->enemy = oldenemy; //Try go for last (it will be NULL if there wasn't anyone)
+	actor->player->allround = !!*enemy;
+	*enemy = NULL;
+	*enemy = Find_enemy(actor);
+	if (!*enemy)
+		*enemy = oldenemy; //Try go for last (it will be NULL if there wasn't anyone)
 	//Verify that that enemy is really something alive that bot can kill.
-	if (!actor->player->enemy || actor->player->enemy->health < 0 || !(actor->player->enemy->flags&MF_SHOOTABLE))
-		actor->player->enemy = NULL;
+	if (*enemy && ((*enemy)->health < 0 || !((*enemy)->flags&MF_SHOOTABLE)))
+		*enemy = NULL;
 }

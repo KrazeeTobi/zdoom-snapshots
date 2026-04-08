@@ -1276,7 +1276,9 @@ void P_DamageMobj (AActor *target, AActor *inflictor, AActor *source, int damage
 	{
         //Added by MC: Lets bots look allround for enemies if they survive an ambush.
         if (player->isbot)
+		{
             player->allround = true;
+		}
 
 		// end of game hell hack
 		if ((target->subsector->sector->special & 255) == dDamage_End

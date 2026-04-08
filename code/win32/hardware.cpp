@@ -76,14 +76,14 @@ void I_FinishUpdate ()
 		QWORD howlong = ms - lastms;
 		if (howlong > 0)
 		{
-			chars = sprintf (fpsbuff, "%Ld ms (%d fps)",
+			chars = sprintf (fpsbuff, "%I64d ms (%d fps)",
 							 howlong, lastcount);
 			screen->Clear (0, screen->height - 8, chars * 8, screen->height, 0);
 			screen->PrintStr (0, screen->height - 8, (char *)&fpsbuff[0], chars);
-			if (lastsec != ms / 1000)
+			if (lastsec < ms / 1000)
 			{
+				lastcount = framecount / (ms/1000 - lastsec);
 				lastsec = ms / 1000;
-				lastcount = framecount;
 				framecount = 0;
 			}
 			framecount++;

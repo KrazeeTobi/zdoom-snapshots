@@ -135,8 +135,9 @@ void DThinker::RunThinkers ()
 	currentthinker = FirstThinker;
 	while (currentthinker)
 	{
+		DThinker *next = currentthinker->m_Next;
 		currentthinker->RunThink ();
-		currentthinker = currentthinker->m_Next;
+		currentthinker = next;
 	}
 	unclock (ThinkCycles);
 }

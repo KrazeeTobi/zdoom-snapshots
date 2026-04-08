@@ -139,7 +139,7 @@ void AActor::Serialize (FArchive &arc)
 			<< special
 			<< args[0] << args[1] << args[2] << args[3] << args[4]
 			<< goal
-			<< targettic
+			<< (unsigned)0
 			<< translucency
 			<< waterlevel;
 
@@ -151,6 +151,7 @@ void AActor::Serialize (FArchive &arc)
 	}
 	else
 	{
+		unsigned dummy;
 		arc >> x
 			>> y
 			>> z
@@ -194,7 +195,7 @@ void AActor::Serialize (FArchive &arc)
 			>> args[3]
 			>> args[4]
 			>> goal
-			>> targettic
+			>> dummy
 			>> translucency
 			>> waterlevel;
 
@@ -1073,10 +1074,6 @@ void AActor::RunThink ()
 {
 	AActor *onmo;
 	int i;
-
-	// [RH] Decrement targettic
-	if (targettic)
-		targettic--;
 
 	// [RH] Pulse in and out of visibility
 	if (effects & FX_VISIBILITYPULSE)
@@ -2139,9 +2136,6 @@ BOOL P_CheckMissileSpawn (AActor* th)
 	if (th->tics < 1)
 		th->tics = 1;
 
-	// [RH] Give the missile time to get away from the shooter
-	th->targettic = 10;
-	
 	// move a little forward so an angle can
 	// be computed if it immediately explodes
 	th->x += th->momx>>1;

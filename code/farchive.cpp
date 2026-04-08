@@ -43,6 +43,7 @@ void FLZOFile::BeEmpty ()
 	m_MaxBufferSize = 0;
 	m_Buffer = NULL;
 	m_File = NULL;
+	m_NoCompress = false;
 }
 
 static const char LZOSig[4] = { 'F', 'L', 'Z', 'O' };
@@ -52,17 +53,19 @@ FLZOFile::FLZOFile ()
 	BeEmpty ();
 }
 
-FLZOFile::FLZOFile (const char *name, EOpenMode mode)
+FLZOFile::FLZOFile (const char *name, EOpenMode mode, bool dontCompress)
 {
 	BeEmpty ();
 	Open (name, mode);
+	m_NoCompress = dontCompress;
 }
 
-FLZOFile::FLZOFile (FILE *file, EOpenMode mode)
+FLZOFile::FLZOFile (FILE *file, EOpenMode mode, bool dontCompress)
 {
 	BeEmpty ();
 	m_Mode = mode;
 	m_File = file;
+	m_NoCompress = dontCompress;
 	PostOpen ();
 }
 
@@ -225,7 +228,7 @@ void FLZOFile::Implode ()
 	byte *oldbuf = m_Buffer;
 	int r;
 
-	if (!nofilecompression.value)
+	if (!nofilecompression.value && !m_NoCompress)
 	{
 		compressed = new lzo_byte[OUT_LEN(len)];
 		wrkmem = new lzo_byte[LZO1X_1_MEM_COMPRESS];
@@ -392,7 +395,7 @@ void FLZOMemFile::Serialize (FArchive &arc)
 	{
 		if (m_ImplodedBuffer == NULL)
 		{
-			//I_Error ("FLZOMemFile must be imploded before storing\n");
+			I_Error ("FLZOMemFile must be imploded before storing\n");
 			// Q: How do we get here without closing FLZOMemFile first?
 			Close ();
 		}
@@ -427,7 +430,9 @@ void FLZOMemFile::Serialize (FArchive &arc)
 		((DWORD *)m_Buffer)[0] = sizes[0];
 		((DWORD *)m_Buffer)[1] = sizes[1];
 		arc.Read (m_Buffer+8, len);
-		Explode ();
+		m_ImplodedBuffer = m_Buffer;
+		m_Buffer = NULL;
+		m_Mode = EWriting;
 	}
 }
 
@@ -785,7 +790,7 @@ FArchive &FArchive::ReadObject (DObject* &obj, TypeInfo *wanttype)
 
 			DObject *tempobj = type->CreateNew ();
 			tempobj->Serialize (*this);
-			delete tempobj;
+			tempobj->Destroy ();
 			break;
 		}
 		/* fallthrough */

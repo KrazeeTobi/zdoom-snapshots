@@ -1,3 +1,28 @@
+November 26, 1999
+- Added the hud_scale cvar to control scaling of the fullscreen hud.
+- Removed targettic from AActor, because it's no longer meaningful (and
+  hasn't been for quite a while). Replaced it with dummies in the
+  AActor serializer so that savegame compatibility can be retained.
+- Fixed a next thinker determination problem in DThinker::RunThinkers().
+  A thinker can destroy itself during its RunThink(), so the next thinker
+  to run needs to be determined before we run the current thinker, not
+  after.
+- Added calls to I_FinishUpdateNoBlit() and I_BeginUpdate() at
+  strategic locations in R_RenderPlayerView().
+
+November 25, 1999
+- Removed the outer layer of compression from savegames. Since all
+  the snapshots in the savegame are already compressed, compressing
+  them again will do little good.
+- Fixed archiving of defered ACS scripts. There were actually two
+  problems here. One, if there were any, it would get stuck in an
+  infinite loop. Two, they were being saved in a format different
+  from what they were being loaded as.
+- Fixed the operation of FLZOMemFile's serializer so that it restores
+  to the state it was archived in (e.g. an imploded file stored in
+  m_ImplodedBuffer, as opposed to an uncompressed file stored in
+  m_BUffer).
+
 November 24, 1999
 - Fixed BOOM generalized locked doors so that the open/close type will
   actually close.

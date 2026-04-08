@@ -41,6 +41,7 @@
 #include "v_video.h"
 #include "stats.h"
 #include "z_zone.h"
+#include "i_video.h"
 
 // MACROS ------------------------------------------------------------------
 
@@ -1037,8 +1038,10 @@ void R_RenderPlayerView (player_t *player)
 	R_ClearPlanes ();
 	R_ClearSprites ();
 	
+	I_FinishUpdateNoBlit ();
 	// check for new console commands.
 	NetUpdate ();
+	I_BeginUpdate ();
 
 	// [RH] Show off segs if r_drawflat is 1
 	if (r_drawflat.value)
@@ -1071,24 +1074,30 @@ void R_RenderPlayerView (player_t *player)
 		R_RenderBSPNode (numnodes-1);	// The head node is the last node output.
 	unclock (WallCycles);
 
+	I_FinishUpdateNoBlit ();
 	// Check for new console commands.
 	NetUpdate ();
+	I_BeginUpdate ();
 	
 	clock (PlaneCycles);
 	R_DrawPlanes ();
 	unclock (PlaneCycles);
 
 	spanfunc = R_DrawSpan;
-	
+
+	I_FinishUpdateNoBlit ();
 	// Check for new console commands.
 	NetUpdate ();
+	I_BeginUpdate ();
 	
 	clock (MaskedCycles);
 	R_DrawMasked ();
 	unclock (MaskedCycles);
 
+	I_FinishUpdateNoBlit ();
 	// Check for new console commands.
 	NetUpdate ();
+	I_BeginUpdate ();
 
 	// [RH] Apply detail mode doubling
 	R_DetailDouble ();
