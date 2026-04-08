@@ -2523,7 +2523,7 @@ void DLevelScript::RunScript ()
 				}
 				else
 				{
-					locals = &Stack[sp - activeFunction->ArgCount - activeFunction->LocalCount];
+					locals = &Stack[sp - activeFunction->ArgCount - activeFunction->LocalCount - sizeof(CallReturn)/sizeof(int)];
 				}
 				if (!retState->bDiscardResult)
 				{
@@ -2989,19 +2989,28 @@ void DLevelScript::RunScript ()
 			break;
 
 		case PCD_DELAY:
-			state = SCRIPT_Delayed;
 			statedata = STACK(1);
+			if (statedata > 0)
+			{
+				state = SCRIPT_Delayed;
+			}
 			sp--;
 			break;
 
 		case PCD_DELAYDIRECT:
-			state = SCRIPT_Delayed;
 			statedata = NEXTWORD;
+			if (statedata > 0)
+			{
+				state = SCRIPT_Delayed;
+			}
 			break;
 
 		case PCD_DELAYDIRECTB:
-			state = SCRIPT_Delayed;
 			statedata = *(BYTE *)pc;
+			if (statedata > 0)
+			{
+				state = SCRIPT_Delayed;
+			}
 			pc = (int *)((BYTE *)pc + 1);
 			break;
 

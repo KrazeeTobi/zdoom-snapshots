@@ -314,6 +314,14 @@ void APathFollower::Tick ()
 	if (HoldTime > gametic)
 		return;
 
+	// Splines must have a previous node.
+	if (PrevNode == NULL && !(args[2] & 1))
+	{
+		bActive = false;
+		return;
+	}
+
+	// All paths must have a current node.
 	if (CurrNode->Next == NULL)
 	{
 		bActive = false;

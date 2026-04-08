@@ -219,7 +219,10 @@ void DoMain (HINSTANCE hInstance)
 		// resolutions at the same time either way. Perhaps the file mappings for
 		// executables are created with PAGE_WRITECOPY, so any attempts to give them
 		// write access are automatically transformed to copy-on-write?
-		if (!VirtualProtect (start, size, PAGE_EXECUTE_WRITECOPY, &oldprotect))
+		//
+		// This used to be PAGE_EXECUTE_WRITECOPY until Timmie found out Win9x doesn't
+		// support it, although the MSDN does not indicate it.
+		if (!VirtualProtect (start, size, PAGE_EXECUTE_READWRITE, &oldprotect))
 		{
 			I_FatalError ("The self-modifying code section code not be made writeable.");
 		}

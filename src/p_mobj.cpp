@@ -489,6 +489,13 @@ void P_ExplodeMissile (AActor *mo, line_t *line)
 		return;
 	}
 
+	if (line != NULL && line->special == Line_Horizon)
+	{
+		// [RH] Don't explode missiles on horizon lines.
+		mo->Destroy ();
+		return;
+	}
+
 	if (line != NULL && cl_missiledecals)
 	{
 		int side = P_PointOnLineSide (mo->x, mo->y, line);
@@ -1910,7 +1917,7 @@ void AActor::Tick ()
 					&& !players[i].enemy
 					&& player ? !IsTeammate (players[i].mo) : true
 					&& P_AproxDistance (players[i].mo->x-x, players[i].mo->y-y) < MAX_MONSTER_TARGET_DIST
-					&& P_CheckSight (players[i].mo, this))
+					&& P_CheckSight (players[i].mo, this, 2))
 				{ //Probably a monster, so go kill it.
 					players[i].enemy = this;
 				}
@@ -2788,7 +2795,8 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 
 	if (mthing->type == PO_ANCHOR_TYPE ||
 		mthing->type == PO_SPAWN_TYPE ||
-		mthing->type == PO_SPAWNCRUSH_TYPE)
+		mthing->type == PO_SPAWNCRUSH_TYPE ||
+		mthing->type == PO_SPAWNHURT_TYPE)
 	{
 		polyspawns_t *polyspawn = new polyspawns_t;
 		polyspawn->next = polyspawns;

@@ -113,7 +113,7 @@ int FTextureManager::CheckForTexture (const char *name, int usetype, bool tryany
 {
 	int i;
 
-	if (name == NULL)
+	if (name == NULL || name[0] == '\0')
 	{
 		return -1;
 	}
@@ -523,7 +523,7 @@ void FTextureManager::AddTexturesLump (int lumpnum, int patcheslump, bool textur
 		}
 		if (j == 0)
 		{
-			int num = AddTexture (new FMultiPatchTexture ((const BYTE *)maptex + offset, patchlookup, isStrife));
+			int num = AddTexture (new FMultiPatchTexture ((const BYTE *)maptex + offset, patchlookup, numpatches, isStrife));
 		}
 	}
 	W_UnMapLump (maptex);
@@ -535,13 +535,18 @@ void FTextureManager::AddTexturesLump (int lumpnum, int patcheslump, bool textur
 FTexture::FTexture ()
 : LeftOffset(0), TopOffset(0),
   WidthBits(0), HeightBits(0), ScaleX(8), ScaleY(8),
-  UseType(TEX_Any), bNoDecals(false), bModified(false),
+  UseType(TEX_Any), bNoDecals(false),
   Rotations(0xFFFF), Width(0xFFFF), Height(0), WidthMask(0)
 {
 }
 
 FTexture::~FTexture ()
 {
+}
+
+bool FTexture::CheckModified ()
+{
+	return false;
 }
 
 void FTexture::GetDimensions ()
@@ -1055,6 +1060,10 @@ FFlatTexture::FFlatTexture (int lumpnum)
 	{
 		ScaleX = ScaleY = 8 << (bits - 6);
 	}
+	else
+	{
+		ScaleX = ScaleY = 8;
+	}
 
 	UseType = TEX_Flat;
 }
@@ -1416,7 +1425,7 @@ const BYTE *FBuildTexture::GetColumn (unsigned int column, const Span **spans_ou
 	return Pixels + column*Height;
 }
 
-FMultiPatchTexture::FMultiPatchTexture (const void *texdef, FTexture **patchlookup, bool strife)
+FMultiPatchTexture::FMultiPatchTexture (const void *texdef, FTexture **patchlookup, int maxpatchnum, bool strife)
 : Pixels (0), Spans(0), Parts(0), bRedirect(false)
 {
 	union
@@ -1480,6 +1489,11 @@ FMultiPatchTexture::FMultiPatchTexture (const void *texdef, FTexture **patchlook
 
 	for (i = 0; i < NumParts; ++i)
 	{
+		if (unsigned(SHORT(mpatch.d->patch)) >= unsigned(maxpatchnum))
+		{
+			I_FatalError ("Bad PNAMES and/or texture directory:\n\nPNAMES has %d entries, but\n%s wants to use entry %d.",
+				maxpatchnum, Name, SHORT(mpatch.d->patch)+1);
+		}
 		Parts[i].OriginX = SHORT(mpatch.d->originx);
 		Parts[i].OriginY = SHORT(mpatch.d->originy);
 		Parts[i].Texture = patchlookup[SHORT(mpatch.d->patch)];
@@ -1728,6 +1742,11 @@ void FWarpTexture::Unload ()
 		Spans = NULL;
 	}
 	SourcePic->Unload ();
+}
+
+bool FWarpTexture::CheckModified ()
+{
+	return r_FrameTime != GenTime;
 }
 
 const BYTE *FWarpTexture::GetPixels ()
@@ -2277,7 +2296,8 @@ static void R_InitPatches ()
 		"FINALE3",
 		"STTPRCNT",
 		"STARMS",
-		"VICTORY2"
+		"VICTORY2",
+		"STFBANY"
 	};
 	static const char spinners[][9] =
 	{

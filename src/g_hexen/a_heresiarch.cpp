@@ -831,6 +831,8 @@ void A_SorcBallOrbit(AActor *ball)
 	actor->x = x;
 	actor->y = y;
 	actor->z = parent->z - parent->floorclip + parent->height;
+	actor->floorz = parent->floorz;
+	actor->ceilingz = parent->ceilingz;
 }
 
 //============================================================================
@@ -1289,6 +1291,8 @@ void A_SorcFX2Orbit (AActor *actor)
 	actor->x = x;
 	actor->y = y;
 	actor->z = z;
+	actor->floorz = parent->floorz;
+	actor->ceilingz = parent->ceilingz;
 }
 
 //============================================================================

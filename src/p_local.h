@@ -288,7 +288,7 @@ BOOL	P_TryMove (AActor* thing, fixed_t x, fixed_t y, BOOL dropoff, bool onfloor 
 BOOL	P_TeleportMove (AActor* thing, fixed_t x, fixed_t y, fixed_t z, BOOL telefrag);	// [RH] Added z and telefrag parameters
 void	P_SlideMove (AActor* mo, fixed_t tryx, fixed_t tryy, int numsteps);
 bool	P_BounceWall (AActor *mo);
-bool	P_CheckSight (const AActor* t1, const AActor* t2, BOOL ignoreInvisibility=false);
+bool	P_CheckSight (const AActor* t1, const AActor* t2, int flags=0);
 void	P_ResetSightCounters (bool full);
 void	P_UseLines (player_t* player);
 bool	P_UsePuzzleItem (player_t *player, int itemType);
@@ -392,6 +392,8 @@ public:
 	DPolyAction (int polyNum);
 	~DPolyAction ();
 	void Serialize (FArchive &arc);
+
+	void StopInterpolation ();
 protected:
 	DPolyAction ();
 	int m_PolyObj;
@@ -471,7 +473,8 @@ enum
 	// [RH] Thing numbers that don't conflict with Doom things
 	PO_ANCHOR_TYPE = 9300,
 	PO_SPAWN_TYPE,
-	PO_SPAWNCRUSH_TYPE
+	PO_SPAWNCRUSH_TYPE,
+	PO_SPAWNHURT_TYPE
 };
 
 #define PO_LINE_START 1 // polyobj line start special

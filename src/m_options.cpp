@@ -1054,9 +1054,11 @@ void M_OptDrawer ()
 
 	if (BigFont && CurrentMenu->texttitle)
 	{
+		screen->SetFont (BigFont);
 		screen->DrawText (gameinfo.gametype == GAME_Doom ? CR_RED : CR_UNTRANSLATED,
 			160-BigFont->StringWidth (CurrentMenu->texttitle)/2, 10,
 			CurrentMenu->texttitle, DTA_Clean, true, TAG_DONE);
+		screen->SetFont (SmallFont);
 		y = 15 + BigFont->GetHeight ();
 	}
 	else

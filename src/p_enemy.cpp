@@ -211,7 +211,7 @@ BOOL P_CheckMeleeRange (AActor *actor)
 	if (pl->z + pl->height < actor->z)
 		return false;
 		
-	if (!P_CheckSight (actor, pl, false))
+	if (!P_CheckSight (actor, pl, 0))
 		return false;
 														
 	return true;				
@@ -260,7 +260,7 @@ BOOL P_CheckMissileRange (AActor *actor)
 {
 	fixed_t dist;
 		
-	if (!P_CheckSight (actor, actor->target, false))
+	if (!P_CheckSight (actor, actor->target, 0))
 		return false;
 		
 	if (actor->flags & MF_JUSTHIT)
@@ -592,7 +592,7 @@ BOOL P_LookForMonsters (AActor *actor)
 	AActor *mo;
 	TThinkerIterator<AActor> iterator;
 
-	if (!P_CheckSight (players[0].mo, actor))
+	if (!P_CheckSight (players[0].mo, actor, 2))
 	{ // Player can't see monster
 		return false;
 	}
@@ -621,7 +621,7 @@ BOOL P_LookForMonsters (AActor *actor)
 		{ // [RH] Don't go after same species
 			continue;
 		}
-		if (!P_CheckSight (actor, mo))
+		if (!P_CheckSight (actor, mo, 2))
 		{ // Out of sight
 			continue;
 		}
@@ -682,7 +682,7 @@ AActor *LookForTIDinBlock (AActor *lookee, int index)
 
 		if (!(lookee->flags3 & MF3_NOSIGHTCHECK))
 		{
-			if (!P_CheckSight (lookee, other, false))
+			if (!P_CheckSight (lookee, other, 2))
 				continue;			// out of sight
 	/*						
 			if (!allaround)
@@ -767,7 +767,7 @@ BOOL P_LookForTID (AActor *actor, BOOL allaround)
 
 		if (!(actor->flags3 & MF3_NOSIGHTCHECK))
 		{
-			if (!P_CheckSight (actor, other, false))
+			if (!P_CheckSight (actor, other, 2))
 				continue;			// out of sight
 							
 			if (!allaround)
@@ -909,7 +909,7 @@ BOOL P_LookForPlayers (AActor *actor, BOOL allaround)
 		if (player->health <= 0)
 			continue;			// dead
 
-		if (!P_CheckSight (actor, player->mo, false))
+		if (!P_CheckSight (actor, player->mo, 2))
 			continue;			// out of sight
 
 		if (!allaround)
@@ -1010,7 +1010,7 @@ void A_Look (AActor *actor)
 
 		if (actor->flags & MF_AMBUSH)
 		{
-			if (P_CheckSight (actor, actor->target, false))
+			if (P_CheckSight (actor, actor->target, 2))
 				goto seeyou;
 		}
 		else
@@ -1217,7 +1217,7 @@ void A_Chase (AActor *actor)
 	// possibly choose another target
 	if ((multiplayer || actor->TIDtoHate)
 		&& !actor->threshold
-		&& !P_CheckSight (actor, actor->target, false) )
+		&& !P_CheckSight (actor, actor->target, 0) )
 	{
 		bool lookForBetter = false;
 		BOOL gotNew;
@@ -1766,7 +1766,7 @@ nomissile:
 //
 	if ((multiplayer || actor->TIDtoHate)
 		&& !actor->threshold
-		&& !P_CheckSight (actor, actor->target, false) )
+		&& !P_CheckSight (actor, actor->target, 0) )
 	{
 		bool lookForBetter = false;
 		BOOL gotNew;

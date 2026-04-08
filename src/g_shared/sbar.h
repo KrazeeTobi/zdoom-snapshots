@@ -160,9 +160,8 @@ public:
 protected:
 	void UpdateRect (int x, int y, int width, int height) const;
 	void DrawImage (FTexture *image, int x, int y, byte *translation=NULL) const;
-	void DrawImageNoUpdate (FTexture *image, int x, int y, byte *translation=NULL) const;
 	void DrawFadedImage (FTexture *image, int x, int y, fixed_t shade) const;
-	void DrawPartialImage (FTexture *image, int x, int y, int wx, int wy, int ww, int wh) const;
+	void DrawPartialImage (FTexture *image, int wx, int ww) const;
 
 	void SetHorizCentering (bool which) { Centering = which; }
 	void OverrideImageOrigin (bool which) { FixedOrigin = which; }
@@ -182,7 +181,6 @@ protected:
 
 	void DrawCrosshair ();
 
-	void CopyToScreen (int x, int y, int w, int h) const;
 	void RefreshBackground () const;
 
 	void FindInventoryPos (int &pos, bool &moreleft, bool &moreright) const;
@@ -212,7 +210,6 @@ protected:
 	FImageCollection AmmoImages;
 	FImageCollection ArtiImages;
 	FImageCollection ArmorImages;
-	DCanvas *ScaleCopy;
 
 	player_s *CPlayer;
 

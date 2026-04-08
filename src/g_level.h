@@ -45,6 +45,7 @@
 #define LEVEL_NOINTERMISSION	0x00000001
 #define LEVEL_NOINVENTORYBAR	0x00000002		// This effects Doom only, since it's the only one without a standard inventory bar.
 #define	LEVEL_DOUBLESKY			0x00000004
+#define LEVEL_HASFADETABLE		0x00000008		// Level uses Hexen's fadetable mapinfo to get fog
 
 #define LEVEL_MAP07SPECIAL		0x00000010
 #define LEVEL_BRUISERSPECIAL	0x00000020

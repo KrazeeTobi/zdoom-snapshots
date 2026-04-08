@@ -373,8 +373,8 @@ void F_TextWrite (void)
 			if (scale)
 			{
 				screen->DrawTexture (pic,
-					cx * CleanXfac + SCREENWIDTH / 2,
-					cy * CleanYfac + SCREENHEIGHT / 2,
+					cx + 320 / 2,
+					cy + 200 / 2,
 					DTA_Translation, range,
 					DTA_Clean, true,
 					TAG_DONE);
@@ -382,8 +382,8 @@ void F_TextWrite (void)
 			else
 			{
 				screen->DrawTexture (pic,
-					cx + SCREENWIDTH / 2,
-					cy + SCREENHEIGHT / 2,
+					cx + 320 / 2,
+					cy + 200 / 2,
 					DTA_Translation, range,
 					TAG_DONE);
 			}

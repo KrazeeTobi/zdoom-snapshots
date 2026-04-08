@@ -23,6 +23,7 @@
 #ifndef __W_WAD__
 #define __W_WAD__
 
+#include "files.h"
 
 // [RH] Compare wad header as ints instead of chars
 #ifdef __BIG_ENDIAN__

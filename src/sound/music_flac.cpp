@@ -24,7 +24,7 @@ protected:
 	const FLAC__byte *MemStart;
 	const FLAC__byte *MemEnd;
 	const FLAC__byte *MemPos;
-
+	
 	FLAC__int32 *SamplePool[2];
 	size_t PoolSize;
 	size_t PoolUsed;
@@ -252,8 +252,7 @@ void FLACSong::FLACStreamer::CopyToStream (void *&sbuff, FLAC__int32 **buffer, s
 			{
 				*bytes = MemEnd - MemPos;
 			}
-			memcpy (buffer, MemPos, *bytes);
-			MemPos += *bytes;
+			File->Read (buffer, *bytes);
 			return FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
 		}
 	}

@@ -20,6 +20,7 @@ public:
 	const BYTE *GetColumn (unsigned int column, const Span **spans_out);
 	const BYTE *GetPixels ();
 	void Unload ();
+	bool CheckModified ();
 
 	void SetVial (FTexture *pic, int level);
 
@@ -52,6 +53,11 @@ void FManaBar::Unload ()
 	{
 		VialPic->Unload ();
 	}
+}
+
+bool FManaBar::CheckModified ()
+{
+	return NeedRefresh;
 }
 
 const BYTE *FManaBar::GetColumn (unsigned int column, const Span **spans_out)

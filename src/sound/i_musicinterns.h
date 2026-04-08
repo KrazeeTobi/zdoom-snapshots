@@ -192,9 +192,10 @@ protected:
 
 // SPC file, rendered with SNESAPU.DLL and streamed through FMOD ------------
 
-typedef void (__stdcall *SNESAPUInfo_TYPE) (DWORD&, DWORD&, DWORD&);
+typedef void (__stdcall *SNESAPUInfo_TYPE) (DWORD*, DWORD*, DWORD*);
 typedef void (__stdcall *GetAPUData_TYPE) (void**, BYTE**, BYTE**, DWORD**, void**, void**, DWORD**, DWORD**);
 typedef void (__stdcall *ResetAPU_TYPE) (DWORD);
+typedef void (__stdcall *SetDSPAmp_TYPE) (DWORD);
 typedef void (__stdcall *FixAPU_TYPE) (WORD, BYTE, BYTE, BYTE, BYTE, BYTE);
 typedef void (__stdcall *SetAPUOpt_TYPE) (DWORD, DWORD, DWORD, DWORD, DWORD, DWORD);
 typedef void *(__stdcall *EmuAPU_TYPE) (void *, DWORD, BYTE);
@@ -215,10 +216,12 @@ protected:
 	static signed char STACK_ARGS FillStream (FSOUND_STREAM *stream, void *buff, int len, int param);
 
 	HINSTANCE HandleAPU;
+	int APUVersion;
 
 	SNESAPUInfo_TYPE SNESAPUInfo;
 	GetAPUData_TYPE GetAPUData;
 	ResetAPU_TYPE ResetAPU;
+	SetDSPAmp_TYPE SetDSPAmp;
 	FixAPU_TYPE FixAPU;
 	SetAPUOpt_TYPE SetAPUOpt;
 	EmuAPU_TYPE EmuAPU;

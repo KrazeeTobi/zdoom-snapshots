@@ -322,7 +322,7 @@ static bool P_LoadBloodMap (BYTE *data, size_t len, mapthing2_t **mapthings, int
 
 static void LoadSectors (sectortype *bsec)
 {
-	FDynamicColormap *map = GetSpecialLights (PalEntry (255,255,255), level.fadeto);
+	FDynamicColormap *map = GetSpecialLights (PalEntry (255,255,255), level.fadeto, 0);
 	sector_t *sec;
 	char tnam[9];
 

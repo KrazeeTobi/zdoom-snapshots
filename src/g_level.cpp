@@ -764,7 +764,7 @@ static void ParseEpisodeInfo ()
 	char map[9];
 	char *pic = NULL;
 	bool picisgfx;
-	bool remove;
+	bool remove = false;
 	char key = 0;
 	bool addedgfx = false;
 
@@ -1568,6 +1568,7 @@ void G_InitLevelLocals ()
 
 	level.gravity = sv_gravity * 35/TICRATE;
 	level.aircontrol = (fixed_t)(sv_aircontrol * 65536.f);
+	level.flags = 0;
 
 	if ((i = FindWadLevelInfo (level.mapname)) > -1)
 	{
@@ -1584,6 +1585,10 @@ void G_InitLevelLocals ()
 		if (level.fadeto == 0)
 		{
 			R_SetDefaultColormap (pinfo->fadetable);
+			if (strnicmp (pinfo->fadetable, "COLORMAP", 8) != 0)
+			{
+				level.flags |= LEVEL_HASFADETABLE;
+			}
 			/*
 		}
 		else
@@ -1628,7 +1633,7 @@ void G_InitLevelLocals ()
 		level.partime = info->partime;
 		level.cluster = info->cluster;
 		level.clusterflags = clus ? clus->flags : 0;
-		level.flags = info->flags;
+		level.flags |= info->flags;
 		level.levelnum = info->levelnum;
 		level.music = info->music;
 		level.musicorder = info->musicorder;

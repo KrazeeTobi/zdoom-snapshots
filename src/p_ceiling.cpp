@@ -373,6 +373,15 @@ manual_ceiling:
 		ceiling->m_Type = type;
 		ceiling->m_Crush = crush;
 
+		// Do not interpolate instant movement ceilings.
+		// Note for ZDoomGL: Check to make sure that you update the sector
+		// after the ceiling moves, because it hasn't actually moved yet.
+		if (ceiling->m_Speed >= height)
+		{
+			stopinterpolation (&sec->ceilingplane.d);
+			stopinterpolation (&sec->ceilingtexz);
+		}
+
 		// set texture/type change properties
 		if (change & 3)		// if a texture change is indicated
 		{

@@ -83,13 +83,14 @@ struct FPalette
 struct FDynamicColormap
 {
 	void ChangeFade (PalEntry fadecolor);
-	void ChangeColor (PalEntry lightcolor);
+	void ChangeColor (PalEntry lightcolor, int desaturate);
 	void ChangeColorFade (PalEntry lightcolor, PalEntry fadecolor);
 	void BuildLights ();
 
 	BYTE *Maps;
 	PalEntry Color;
 	PalEntry Fade;
+	int Desaturate;
 	FDynamicColormap *Next;
 };
 
@@ -125,6 +126,6 @@ void V_ForceBlend (int blendr, int blendg, int blendb, int blenda);
 void RGBtoHSV (float r, float g, float b, float *h, float *s, float *v);
 void HSVtoRGB (float *r, float *g, float *b, float h, float s, float v);
 
-FDynamicColormap *GetSpecialLights (PalEntry lightcolor, PalEntry fadecolor);
+FDynamicColormap *GetSpecialLights (PalEntry lightcolor, PalEntry fadecolor, int desaturate);
 
 #endif //__V_PALETTE_H__

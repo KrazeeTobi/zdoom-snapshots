@@ -204,7 +204,10 @@ static void P_InitAnimDefs ()
 					SC_ScriptError (NULL, NULL);
 				}
 				int picnum = TexMan.CheckForTexture (sc_String, isflat ? FTexture::TEX_Flat : FTexture::TEX_Wall);
-				TexMan.ReplaceTexture (picnum, new FWarpTexture (TexMan[picnum]), false);
+				if (picnum != -1)
+				{
+					TexMan.ReplaceTexture (picnum, new FWarpTexture (TexMan[picnum]), false);
+				}
 			}
 			else
 			{
@@ -232,6 +235,7 @@ static void ParseAnim (byte istex)
 	sink.CurFrame = 0;
 	sink.BasePic = picnum;
 	sink.bUniqueFrames = true;
+	sink.AnimType = FAnimDef::ANIM_Forward;
 
 	// no decals on animating textures, by default
 	if (picnum >= 0)
@@ -1990,7 +1994,7 @@ BOOL PIT_PushThing (AActor *thing)
 		// If speed <= 0, you're outside the effective radius. You also have
 		// to be able to see the push/pull source point.
 
-		if ((speed > 0) && (P_CheckSight (thing, tmpusher->m_Source, true)))
+		if ((speed > 0) && (P_CheckSight (thing, tmpusher->m_Source, 1)))
 		{
 			angle_t pushangle = R_PointToAngle2 (thing->x, thing->y, sx, sy);
 			if (tmpusher->m_Source->IsA (RUNTIME_CLASS(APointPusher)))

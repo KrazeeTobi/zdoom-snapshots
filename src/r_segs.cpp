@@ -231,8 +231,9 @@ void R_RenderMaskedSegRange (drawseg_t *ds, int x1, int x2)
 		const sector_t *sec = R_FakeFlat (frontsector, &tempsec, NULL, NULL, false);
 		lightnum = sec->lightlevel;
 
-		if (!level.fadeto && !sec->ColorMap) // Don't do relative lighting in foggy sectors
-		{
+		if (!level.fadeto &&
+			(sec->ColorMap == NULL || sec->ColorMap->Fade == MAKERGB(0,0,0)))
+		{ // Don't do relative lighting in foggy sectors
 			lightnum += curline->sidedef->Light * 2;
 		}
 	}
@@ -330,7 +331,7 @@ void R_RenderMaskedSegRange (drawseg_t *ds, int x1, int x2)
 		// [RH] Draw up to four columns at once
 		int stop = (x2+1) & ~3;
 
-		if (x1 >= x2)
+		if (x1 > x2)
 			goto clearfog;
 
 		dc_x = x1;
@@ -361,7 +362,7 @@ void R_RenderMaskedSegRange (drawseg_t *ds, int x1, int x2)
 
 clearfog:
 	R_FinishSetPatchStyle ();
-	if (ds->bFogBoundary)
+	//if (ds->bFogBoundary)
 	{
 		clearbufshort (openings + ds->sprtopclip - ds->x1 + x1, x2-x1+1, viewheight);
 	}
@@ -435,7 +436,7 @@ void wallscan (int x1, int x2, short *uwal, short *dwal, fixed_t *swal, fixed_t 
 		}
 
 		dc_source = getcol (rw_pic, (lwal[x] + xoffset) >> FRACBITS);
-		dc_dest = ylookup[y1ve[0]] + x;
+		dc_dest = ylookup[y1ve[0]] + x + dc_destorg;
 		dc_iscale = swal[x] * yrepeat;
 		dc_count = y2ve[0] - y1ve[0];
 		dc_texturefrac = texturemid + FixedMul (dc_iscale, (y1ve[0]<<FRACBITS)-centeryfrac+FRACUNIT);
@@ -480,7 +481,7 @@ void wallscan (int x1, int x2, short *uwal, short *dwal, fixed_t *swal, fixed_t 
 			{
 				if (!(bad & 1))
 				{
-					prevline1(vince[z],palookupoffse[z],y2ve[z]-y1ve[z],vplce[z],bufplce[z],ylookup[y1ve[z]]+x+z);
+					prevline1(vince[z],palookupoffse[z],y2ve[z]-y1ve[z],vplce[z],bufplce[z],ylookup[y1ve[z]]+x+z+dc_destorg);
 				}
 				bad >>= 1;
 			}
@@ -491,18 +492,18 @@ void wallscan (int x1, int x2, short *uwal, short *dwal, fixed_t *swal, fixed_t 
 		{
 			if (u4 > y1ve[z])
 			{
-				vplce[z] = prevline1(vince[z],palookupoffse[z],u4-y1ve[z],vplce[z],bufplce[z],ylookup[y1ve[z]]+x+z);
+				vplce[z] = prevline1(vince[z],palookupoffse[z],u4-y1ve[z],vplce[z],bufplce[z],ylookup[y1ve[z]]+x+z+dc_destorg);
 			}
 		}
 
 		if (d4 > u4)
 		{
 			dc_count = d4-u4;
-			dc_dest = ylookup[u4]+x;
+			dc_dest = ylookup[u4]+x+dc_destorg;
 			dovline4();
 		}
 
-		BYTE *i = x+ylookup[d4];
+		BYTE *i = x+ylookup[d4]+dc_destorg;
 		for (z = 0; z < 4; ++z)
 		{
 			if (y2ve[z] > d4)
@@ -524,7 +525,7 @@ void wallscan (int x1, int x2, short *uwal, short *dwal, fixed_t *swal, fixed_t 
 		}
 
 		dc_source = getcol (rw_pic, (lwal[x] + xoffset) >> FRACBITS);
-		dc_dest = ylookup[y1ve[0]] + x;
+		dc_dest = ylookup[y1ve[0]] + x + dc_destorg;
 		dc_iscale = swal[x] * yrepeat;
 		dc_count = y2ve[0] - y1ve[0];
 		dc_texturefrac = texturemid + FixedMul (dc_iscale, (y1ve[0]<<FRACBITS)-centeryfrac+FRACUNIT);
@@ -1085,28 +1086,14 @@ void R_StoreWallRange (int start, int stop)
 		// two sided line
 		ds_p->silhouette = 0;
 
-		if (frontsector->floorplane.a != backsector->floorplane.a ||
-			frontsector->floorplane.b != backsector->floorplane.b ||
-			frontsector->floorplane.c != backsector->floorplane.c)
-		{
-			ds_p->silhouette = SIL_BOTTOM;
-		}
-		else
-		if (rw_frontfz1 > rw_backfz1 || rw_backfz1 > viewz ||
-			rw_frontfz2 > rw_backfz2 || rw_backfz2 > viewz)
+		if (rw_frontfz1 > rw_backfz1 || rw_frontfz2 > rw_backfz2 ||
+			backsector->floorplane.ZatPoint (viewx, viewy) > viewz)
 		{
 			ds_p->silhouette = SIL_BOTTOM;
 		}
 
-		if (frontsector->ceilingplane.a != backsector->ceilingplane.a ||
-			frontsector->ceilingplane.b != backsector->ceilingplane.b ||
-			frontsector->ceilingplane.c != backsector->ceilingplane.c)
-		{
-			ds_p->silhouette |= SIL_TOP;
-		}
-		else
-		if (rw_frontcz1 < rw_backcz1 || rw_backcz1 < viewz ||
-			rw_frontcz2 < rw_backcz2 || rw_backcz2 < viewz)
+		if (rw_frontcz1 < rw_backcz1 || rw_frontcz2 < rw_backcz2 ||
+			backsector->ceilingplane.ZatPoint (viewx, viewy) < viewz)
 		{
 			ds_p->silhouette |= SIL_TOP;
 		}
@@ -1137,7 +1124,7 @@ void R_StoreWallRange (int start, int stop)
 
 		// allocate space for masked texture tables, if needed
 		// [RH] Don't just allocate the space; fill it in too.
-		if ((TexMan(sidedef->midtexture) || IsFogBoundary (frontsector, backsector)) &&
+		if ((TexMan(sidedef->midtexture)->UseType != FTexture::TEX_Null || IsFogBoundary (frontsector, backsector)) &&
 			(rw_ceilstat != 12 || sidedef->toptexture == 0) &&
 			(rw_floorstat != 3 || sidedef->bottomtexture == 0) &&
 			(WallSZ1 >= TOO_CLOSE_Z && WallSZ2 >= TOO_CLOSE_Z))
@@ -1239,7 +1226,7 @@ void R_StoreWallRange (int start, int stop)
 		memcpy (openings + ds_p->sprbottomclip, &floorclip[start], sizeof(short)*(stop-start));
 	}
 
-	if (maskedtexture)
+	if (maskedtexture && curline->sidedef->midtexture != 0)
 	{
 		ds_p->silhouette |= SIL_TOP | SIL_BOTTOM;
 	}

@@ -1,8 +1,16 @@
 #include "i_musicinterns.h"
 #include "templates.h"
 #include "c_cvars.h"
+#include "doomdef.h"
 
 #ifndef NOSPC
+
+struct XID6Tag
+{
+	BYTE ID;
+	BYTE Type;
+	WORD Value;
+};
 
 EXTERN_CVAR (Int, snd_samplerate)
 
@@ -12,6 +20,7 @@ CVAR (Bool, spc_stereo, true, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR (Bool, spc_lowpass, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR (Bool, spc_surround, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR (Bool, spc_oldsamples, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
+CVAR (Bool, spc_noecho, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 
 CUSTOM_CVAR (Int, spc_quality, 1, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 {
@@ -60,8 +69,8 @@ SPCSong::SPCSong (const void *mem, int len)
 	}
 
 	ResetAPU (spc_amp);
-	SetAPUOpt (0, spc_stereo + 1, spc_8bit ? 8 : 16, freq, spc_quality,
-		(spc_lowpass ? 1 : 0) | (spc_oldsamples ? 2 : 0) | (spc_surround ? 4 : 0));
+	SetAPUOpt (-1, spc_stereo + 1, spc_8bit ? 8 : 16, freq, spc_quality,
+		(spc_lowpass ? 1 : 0) | (spc_oldsamples ? 2 : 0) | (spc_surround ? 4 : 0) | (spc_noecho ? 16 : 0));
 
 	BYTE spcfile[66048];
 
@@ -78,6 +87,40 @@ SPCSong::SPCSong (const void *mem, int len)
 	memcpy (extraram, spcfile + 0x101c0, 64);
 
 	FixAPU (spcfile[37]+spcfile[38]*256, spcfile[39], spcfile[41], spcfile[40], spcfile[42], spcfile[43]);
+
+	// Search for amplification tag in extended ID666 info
+	if (len > 66056 && *(const DWORD *)((const BYTE *)mem + 66048) == MAKE_ID('x','i','d','6'))
+	{
+		DWORD size = LONG(*(const DWORD *)((const BYTE *)mem + 66052)) + 66056;
+		DWORD pos = 66056;
+
+		while (pos < size)
+		{
+			const XID6Tag *tag = (const XID6Tag *)((const BYTE *)mem + pos);
+			pos += 4;
+			if (tag->Type == 0)
+			{
+				// Don't care about these
+			}
+			else
+			{
+				if (pos + SHORT(tag->Value) <= size)
+				{
+					if (tag->Type == 4 && tag->ID == 0x36)
+					{
+						DWORD amp = LONG(*(const DWORD *)((const BYTE *)mem + pos));
+						if (APUVersion < 98)
+						{
+							amp >>= 12;
+						}
+						SetDSPAmp (amp);
+						break;
+					}
+				}
+				pos += SHORT(tag->Value);
+			}
+		}
+	}
 }
 
 SPCSong::~SPCSong ()
@@ -123,6 +166,8 @@ signed char STACK_ARGS SPCSong::FillStream (FSOUND_STREAM *stream, void *buff, i
 
 bool SPCSong::LoadEmu ()
 {
+	APUVersion = 0;
+
 	HandleAPU = LoadLibraryA ("snesapu.dll");
 	if (HandleAPU == NULL)
 	{
@@ -130,17 +175,52 @@ bool SPCSong::LoadEmu ()
 		return false;
 	}
 
-	DWORD ver, min, opt;
-
-	if (!(SNESAPUInfo = (SNESAPUInfo_TYPE)GetProcAddress (HandleAPU, "SNESAPUInfo")) ||
-		!(GetAPUData = (GetAPUData_TYPE)GetProcAddress (HandleAPU, "GetAPUData")) ||
-		!(ResetAPU = (ResetAPU_TYPE)GetProcAddress (HandleAPU, "ResetAPU")) ||
-		!(FixAPU = (FixAPU_TYPE)GetProcAddress (HandleAPU, "FixAPU")) ||
-		!(SetAPUOpt = (SetAPUOpt_TYPE)GetProcAddress (HandleAPU, "SetAPUOpt")) ||
-		!(EmuAPU = (EmuAPU_TYPE)GetProcAddress (HandleAPU, "EmuAPU")) ||
-		(SNESAPUInfo (ver, min, opt), ((min>>8)&0xffff) > 0x095))
+	SNESAPUInfo = (SNESAPUInfo_TYPE)GetProcAddress (HandleAPU, "SNESAPUInfo");
+	if (SNESAPUInfo == NULL)
 	{
-		Printf ("snesapu.dll is wrong version\n");
+		Printf ("This snesapu.dll is too old.\n");
+	}
+	else
+	{
+		DWORD ver, min, opt;
+
+		SNESAPUInfo (&ver, &min, &opt);
+
+		if ((min & 0xffff00) >= 0x8500 && (min & 0xffff00) < 0x9800)
+		{
+			APUVersion = 85;
+		}
+		else if ((min & 0xffff00) == 0x9800)
+		{
+			APUVersion = 98;
+		}
+		else
+		{
+			char letters[4];
+			letters[0] = (char)ver; letters[1] = 0;
+			letters[2] = (char)min; letters[3] = 0;
+			Printf ("This snesapu.dll is too new. It is version %x.%02x%s.\n"
+				"It supports DLLs back to %x.%02x%s.\n"
+				"ZDoom is only known to support DLL versions 0.95 - 1.01\n",
+				(ver>>16) & 255, (ver>>8) & 255, letters,
+				(min>>16) & 255, (min>>8) & 255, letters+2);
+		}
+		if (APUVersion != 0)
+		{
+			if (!(GetAPUData = (GetAPUData_TYPE)GetProcAddress (HandleAPU, "GetAPUData")) ||
+				!(ResetAPU = (ResetAPU_TYPE)GetProcAddress (HandleAPU, "ResetAPU")) ||
+				!(SetDSPAmp = (SetDSPAmp_TYPE)GetProcAddress (HandleAPU, "SetDSPAmp")) ||
+				!(FixAPU = (FixAPU_TYPE)GetProcAddress (HandleAPU, "FixAPU")) ||
+				!(SetAPUOpt = (SetAPUOpt_TYPE)GetProcAddress (HandleAPU, "SetAPUOpt")) ||
+				!(EmuAPU = (EmuAPU_TYPE)GetProcAddress (HandleAPU, "EmuAPU")))
+			{
+				Printf ("Snesapu.dll is missing some functions.\n");
+				APUVersion = 0;
+			}
+		}
+	}
+	if (APUVersion == 0)
+	{
 		FreeLibrary (HandleAPU);
 		HandleAPU = NULL;
 		return false;

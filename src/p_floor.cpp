@@ -492,6 +492,15 @@ manual_floor:
 			break;
 		}
 
+		// Do not interpolate instant movement floors.
+		// Note for ZDoomGL: Check to make sure that you update the sector
+		// after the floor moves, because it hasn't actually moved yet.
+		if (floor->m_Speed >= height)
+		{
+			stopinterpolation (&sec->floorplane.d);
+			stopinterpolation (&sec->floortexz);
+		}
+
 		if (change & 3)
 		{
 			// [RH] Need to do some transferring

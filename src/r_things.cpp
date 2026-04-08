@@ -192,7 +192,7 @@ static void R_InstallSprite (int num)
 {
 	int frame;
 	int framestart;
-	int undefinedFix;
+//	int undefinedFix;
 
 	if (maxframe == -1)
 	{
@@ -209,10 +209,12 @@ static void R_InstallSprite (int num)
 	// bool, this code never detected that it was not actually present. After switching
 	// to the unified texture system, this caused it to crash while loading the wad.
 
-	for (frame = 0; frame < maxframe && sprtemp[frame].rotate == -1; ++frame)
-	{ }
-
-	undefinedFix = frame;
+// [RH] Let undefined frames actually be blank because LWM uses this in at least
+// one of her wads.
+//	for (frame = 0; frame < maxframe && sprtemp[frame].rotate == -1; ++frame)
+//	{ }
+//
+//	undefinedFix = frame;
 
 	for (frame = 0; frame < maxframe; ++frame)
 	{
@@ -267,7 +269,7 @@ static void R_InstallSprite (int num)
 	{
 		if (sprtemp[frame].rotate == -1)
 		{
-			sprtemp[frame] = sprtemp[undefinedFix];
+			memset (&sprtemp[frame], 0, sizeof(sprtemp[0]));
 		}
 	}
 	
@@ -845,7 +847,7 @@ void R_DrawMaskedColumn (const BYTE *column, const FTexture::Span *span)
 
 		// calculate unclipped screen coordinates for post
 		dc_yl = (sprtopscreen + spryscale * top) >> FRACBITS;
-		dc_yh = ((sprtopscreen + spryscale * (top + length)) >> FRACBITS) - 1;
+		dc_yh = (sprtopscreen + spryscale * (top + length) - FRACUNIT) >> FRACBITS;
 
 		if (sprflipvert)
 		{
@@ -894,7 +896,11 @@ void R_DrawMaskedColumn (const BYTE *column, const FTexture::Span *span)
 				}
 				fixed_t endfrac = dc_texturefrac + (dc_yh-dc_yl)*dc_iscale;
 				const fixed_t maxfrac = length << FRACBITS;
-				while (endfrac >= maxfrac)
+				if (dc_yh < mfloorclip[dc_x]-1 && endfrac < maxfrac - dc_iscale)
+				{
+					dc_yh++;
+				}
+				else while (endfrac >= maxfrac)
 				{
 					if (--dc_yh < dc_yl)
 						goto nextpost;
@@ -902,6 +908,8 @@ void R_DrawMaskedColumn (const BYTE *column, const FTexture::Span *span)
 				}
 			}
 			dc_source = column + top;
+			dc_dest = ylookup[dc_yl] + dc_x + dc_destorg;
+			dc_count = dc_yh - dc_yl + 1;
 			colfunc ();
 		}
 nextpost:
@@ -1050,7 +1058,7 @@ void R_ProjectSprite (AActor *thing, int fakeside)
 	// [RH] Flip for mirrors
 	if (MirrorFlags & RF_XFLIP)
 	{
-		tx = viewwidth - tx - 1;
+		tx = -tx;
 	}
 	tx2 = tx >> 4;
 
@@ -1080,17 +1088,7 @@ void R_ProjectSprite (AActor *thing, int fakeside)
 		if (thing->frame >= sprdef->numframes)
 		{
 			// If there are no frames at all for this sprite, don't draw it.
-			// If there are some frames, then use the "unknown" sprite.
-			if (sprdef->numframes > 0)
-			{
-				DPrintf ("R_ProjectSprite: invalid sprite frame %s: %c (max %c)\n",
-					sprdef->name, thing->frame + 'A', sprdef->numframes + 'A' - 1);
-				picnum = TexMan.GetTexture ("UNKNA0", FTexture::TEX_Sprite);
-			}
-			else
-			{
-				return;
-			}
+			return;
 		}
 		else
 		{
@@ -1099,6 +1097,10 @@ void R_ProjectSprite (AActor *thing, int fakeside)
 	}
 
 	tex = TexMan(picnum);	// <- Look! You could animate sprites if ANIMDEFS supported it!
+	if (tex->UseType == FTexture::TEX_Null)
+	{
+		return;
+	}
 	flip = 0;
 
 	if (tex->Rotations != 0xFFFF)
@@ -1397,7 +1399,7 @@ void R_DrawPSprite (pspdef_t* psp, AActor *owner)
 		// fixed color
 		vis->colormap = fixedcolormap;
 	}
-	else if (psp->state->GetFullbright())
+	else if (!foggy && psp->state->GetFullbright())
 	{
 		// full bright
 		vis->colormap = basecolormap;	// [RH] use basecolormap
@@ -1442,7 +1444,7 @@ void R_DrawPlayerSprites (void)
 		&ceilinglight, false);
 
 	// [RH] set foggy flag
-	foggy = (level.fadeto || sec->ColorMap->Fade);
+	foggy = (level.fadeto || sec->ColorMap->Fade || (level.flags & LEVEL_HASFADETABLE));
 	r_actualextralight = foggy ? 0 : extralight << 4;
 
 	// [RH] set basecolormap
@@ -1565,10 +1567,12 @@ void R_DrawSprite (vissprite_t *spr)
 	if (spr->heightsec &&
 		!(spr->heightsec->MoreFlags & SECF_IGNOREHEIGHTSEC))
 	{ // only things in specially marked sectors
+		fixed_t scale = SafeDivScale12 (InvZtoScale, spr->depth);
 		if (spr->FakeFlatStat != FAKED_AboveCeiling)
 		{
 			fixed_t h = spr->heightsec->floorplane.ZatPoint (spr->gx, spr->gy);
-			h = (centeryfrac - FixedMul (h-viewz, spr->yscale)) >> FRACBITS;
+			//h = (centeryfrac - FixedMul (h-viewz, spr->yscale)) >> FRACBITS;
+			h = (centeryfrac - FixedMul (h-viewz, scale)) >> FRACBITS;
 
 			if (spr->FakeFlatStat == FAKED_BelowFloor)
 			{ // seen below floor: clip top
@@ -1588,7 +1592,7 @@ void R_DrawSprite (vissprite_t *spr)
 		if (spr->FakeFlatStat != FAKED_BelowFloor)
 		{
 			fixed_t h = spr->heightsec->ceilingplane.ZatPoint (spr->gx, spr->gy);
-			h = (centeryfrac - FixedMul (h-viewz, spr->yscale)) >> FRACBITS;
+			h = (centeryfrac - FixedMul (h-viewz, scale)) >> FRACBITS;
 
 			if (spr->FakeFlatStat == FAKED_AboveCeiling)
 			{ // seen above ceiling: clip bottom
@@ -1626,7 +1630,7 @@ void R_DrawSprite (vissprite_t *spr)
 		*clip1++ = botclip;
 		*clip2++ = topclip;
 	} while (--i);
-	
+
 	// Scan drawsegs from end to start for obscuring segs.
 	// The first drawseg that is closer than the sprite is the clip seg.
 
@@ -1842,7 +1846,7 @@ void R_ProjectParticle (particle_t *particle, const sector_t *sector, int shade,
 	x1 = MAX<int> (WindowLeft, (centerxfrac + MulScale12 (tx-psize, xscale)) >> FRACBITS);
 	x2 = MIN<int> (WindowRight, (centerxfrac + MulScale12 (tx+psize, xscale)) >> FRACBITS);
 
-	if (x1 > x2)
+	if (x1 >= x2)
 		return;
 
 	yscale = MulScale16 (yaspectmul, xscale);
@@ -1968,9 +1972,8 @@ static void R_DrawMaskedSegsBehindParticle (const vissprite_t *vis)
 		{
 			continue;
 		}
-		if ((//ds->neardepth > vis->depth || (ds->fardepth > vis->depth &&
-			DMulScale24 (vis->depth - ds->cy, ds->cdx,
-						 ds->cdy, ds->cx - vis->cx) < 0))
+		if (DMulScale24 (vis->depth - ds->cy, ds->cdx,
+						 ds->cdy, ds->cx - vis->cx) < 0)
 		{
 			R_RenderMaskedSegRange (ds, MAX<int> (ds->x1, x1), MIN<int> (ds->x2, x2-1));
 		}
@@ -2004,7 +2007,7 @@ void R_DrawParticle (vissprite_t *vis)
 	}
 
 	spacing = (RenderTarget->GetPitch()<<detailyshift) - countbase;
-	dest = ylookup[yl] + x1;
+	dest = ylookup[yl] + x1 + dc_destorg;
 
 	do
 	{

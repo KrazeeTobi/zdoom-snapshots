@@ -438,14 +438,16 @@ void HSVtoRGB (float *r, float *g, float *b, float h, float s, float v)
 
 /****** Colored Lighting Stuffs ******/
 
-FDynamicColormap *GetSpecialLights (PalEntry color, PalEntry fade)
+FDynamicColormap *GetSpecialLights (PalEntry color, PalEntry fade, int desaturate)
 {
 	FDynamicColormap *colormap;
 
 	// If this colormap has already been created, just return it
 	for (colormap = &NormalLight; colormap != NULL; colormap = colormap->Next)
 	{
-		if (color == colormap->Color && fade == colormap->Fade)
+		if (color == colormap->Color &&
+			fade == colormap->Fade &&
+			desaturate == colormap->Desaturate)
 		{
 			return colormap;
 		}
@@ -457,6 +459,7 @@ FDynamicColormap *GetSpecialLights (PalEntry color, PalEntry fade)
 	colormap->Next = NormalLight.Next;
 	colormap->Color = color;
 	colormap->Fade = fade;
+	colormap->Desaturate = desaturate;
 	NormalLight.Next = colormap;
 
 	colormap->BuildLights ();
@@ -468,8 +471,8 @@ FDynamicColormap *GetSpecialLights (PalEntry color, PalEntry fade)
 void FDynamicColormap::BuildLights ()
 {
 	int l, c;
-	int lr, lg, lb;
-	PalEntry colors[256];
+	int lr, lg, lb, ld, ild;
+	PalEntry colors[256], basecolors[256];
 	BYTE *shade;
 
 	// Scale light to the range 0-256, so we can avoid
@@ -477,11 +480,37 @@ void FDynamicColormap::BuildLights ()
 	lr = Color.r*256/255;
 	lg = Color.g*256/255;
 	lb = Color.b*256/255;
+	ld = Desaturate*256/255;
+	if (ld < 0)	// No negative desaturations, please.
+	{
+		ld = -ld;
+	}
+	ild = 256-ld;
+
+	if (ld == 0)
+	{
+		memcpy (basecolors, GPalette.BaseColors, sizeof(basecolors));
+	}
+	else
+	{
+		// Desaturate the palette before lighting it.
+		for (c = 0; c < 256; c++)
+		{
+			int r = GPalette.BaseColors[c].r;
+			int g = GPalette.BaseColors[c].g;
+			int b = GPalette.BaseColors[c].b;
+			int intensity = ((r * 77 + g * 143 + b * 37) >> 8) * ld;
+			basecolors[c].r = (r*ild + intensity) >> 8;
+			basecolors[c].g = (g*ild + intensity) >> 8;
+			basecolors[c].b = (b*ild + intensity) >> 8;
+			basecolors[c].a = 0;
+		}
+	}
 
 	// build normal (but colored) light mappings
 	for (l = 0; l < NUMCOLORMAPS; l++)
 	{
-		DoBlending (GPalette.BaseColors, colors, 256,
+		DoBlending (basecolors, colors, 256,
 			Fade.r, Fade.g, Fade.b, l * (256 / NUMCOLORMAPS));
 
 		shade = Maps + 256*l;
@@ -505,11 +534,12 @@ void FDynamicColormap::BuildLights ()
 	}
 }
 
-void FDynamicColormap::ChangeColor (PalEntry lightcolor)
+void FDynamicColormap::ChangeColor (PalEntry lightcolor, int desaturate)
 {
-	if (lightcolor != Color)
+	if (lightcolor != Color || desaturate != Desaturate)
 	{
 		Color = lightcolor;
+		Desaturate = desaturate;
 		BuildLights ();
 	}
 }
@@ -537,10 +567,11 @@ CCMD (testcolor)
 {
 	char *colorstring;
 	DWORD color;
+	int desaturate;
 
 	if (argv.argc() < 2)
 	{
-		Printf ("testcolor <color>\n");
+		Printf ("testcolor <color> [desaturation]\n");
 	}
 	else
 	{
@@ -553,6 +584,14 @@ CCMD (testcolor)
 		{
 			color = V_GetColorFromString (NULL, argv[1]);
 		}
-		NormalLight.ChangeColor (color);
+		if (argv.argc() > 2)
+		{
+			desaturate = atoi (argv[2]);
+		}
+		else
+		{
+			desaturate = NormalLight.Desaturate;
+		}
+		NormalLight.ChangeColor (color, desaturate);
 	}
 }

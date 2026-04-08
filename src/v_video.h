@@ -90,6 +90,8 @@ enum
 	DTA_VirtualHeight,	// pretend the canvas is this tall
 	DTA_TopOffset,		// override texture's top offset
 	DTA_LeftOffset,		// override texture's left offset
+	DTA_WindowLeft,		// don't draw anything left of this column (on source, not dest)
+	DTA_WindowRight,	// don't draw anything at or to the right of this column (on source, not dest)
 };
 
 

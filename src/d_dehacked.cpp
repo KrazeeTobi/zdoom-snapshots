@@ -2438,9 +2438,20 @@ void A_SpawnDehackedPickup (AActor *actor)
 	if ((size_t)actor->health < DehackedPickups.Size())
 	{
 		AActor *real = Spawn (DehackedPickups[actor->health], actor->x, actor->y, actor->z);
-		if (real != NULL && (actor->flags & MF_DROPPED))
+		if (real != NULL)
 		{
-			real->flags |= MF_DROPPED;
+			// Copy properties from the original item to the dehacked pickup it spawns
+			if (actor->flags & MF_DROPPED)
+			{
+				real->flags |= MF_DROPPED;
+			}
+			real->special = actor->special;
+			memcpy (real->args, actor->args, sizeof(real->args));
+			if (actor->tid != 0)
+			{
+				real->tid = actor->tid;
+				real->AddToHash ();
+			}
 		}
 	}
 }

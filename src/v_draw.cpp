@@ -376,7 +376,9 @@ void DCanvas::DrawTexture (FTexture *img, int x0, int y0, DWORD tags_first, ...)
 	BOOL boolval;
 	int intval;
 
-	int destwidth = img->GetWidth() << FRACBITS;
+	int windowleft = 0;
+	int windowright = img->GetWidth();
+	int destwidth = windowright << FRACBITS;
 	int destheight = img->GetHeight() << FRACBITS;
 	int top = img->TopOffset;
 	int left = img->LeftOffset;
@@ -385,7 +387,6 @@ void DCanvas::DrawTexture (FTexture *img, int x0, int y0, DWORD tags_first, ...)
 	const BYTE *translation = NULL;
 	BOOL alphaChannel = false;
 	BOOL flipX = false;
-	EWrapperCode drawer;
 	fixed_t shadowAlpha = 0;
 	int shadowColor = 0;
 
@@ -494,6 +495,14 @@ void DCanvas::DrawTexture (FTexture *img, int x0, int y0, DWORD tags_first, ...)
 			left = va_arg (tags, int);
 			break;
 
+		case DTA_WindowLeft:
+			windowleft = va_arg (tags, int);
+			break;
+
+		case DTA_WindowRight:
+			windowright = va_arg (tags, int);
+			break;
+
 		case DTA_ShadowAlpha:
 			shadowAlpha = MIN<fixed_t> (FRACUNIT, va_arg (tags, fixed_t));
 			break;
@@ -518,6 +527,11 @@ void DCanvas::DrawTexture (FTexture *img, int x0, int y0, DWORD tags_first, ...)
 		tag = va_arg (tags, DWORD);
 	}
 	va_end (tags);
+
+	if (destwidth <= 0 || destheight <= 0)
+	{
+		return;
+	}
 
 #if 0
 	// Determine which routine to use for drawing
@@ -616,6 +630,9 @@ void DCanvas::DrawTexture (FTexture *img, int x0, int y0, DWORD tags_first, ...)
 
 	ESPSResult mode = R_SetPatchStyle (style, alpha, 0, fillcolor<<24);
 
+	BYTE *destorgsave = dc_destorg;
+	dc_destorg = screen->GetBuffer();
+
 	x0 -= Scale (left, destwidth, img->GetWidth());
 	y0 -= Scale (top, destheight, img->GetHeight());
 
@@ -659,7 +676,7 @@ void DCanvas::DrawTexture (FTexture *img, int x0, int y0, DWORD tags_first, ...)
 			clearbufshort (bottomclipper, screen->GetWidth(), (short)screen->GetHeight());
 			if (identitymap[1] != 1)
 			{
-				for (int i = 1; i < 256; ++i)
+				for (int i = 0; i < 256; ++i)
 				{
 					identitymap[i] = i;
 				}
@@ -675,10 +692,21 @@ void DCanvas::DrawTexture (FTexture *img, int x0, int y0, DWORD tags_first, ...)
 		}
 
 		dc_x = x0 >> FRACBITS;
+		if (windowleft > 0 || windowright < img->GetWidth())
+		{
+			fixed_t xscale = destwidth / img->GetWidth();
+			dc_x += (windowleft * xscale) >> FRACBITS;
+			frac += windowleft << FRACBITS;
+			x2 -= ((img->GetWidth() - windowright) * xscale) >> FRACBITS;
+		}
 		if (dc_x < 0)
 		{
 			frac += -dc_x * xiscale;
 			dc_x = 0;
+		}
+		if (x2 > Width)
+		{
+			x2 = Width;
 		}
 
 		if (destheight < 32*FRACUNIT)
@@ -732,6 +760,8 @@ void DCanvas::DrawTexture (FTexture *img, int x0, int y0, DWORD tags_first, ...)
 		centeryfrac = centeryback;
 	}
 	R_FinishSetPatchStyle ();
+
+	dc_destorg = destorgsave;
 
 	if (ticdup != 0)
 	{

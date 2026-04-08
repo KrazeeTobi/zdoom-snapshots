@@ -67,7 +67,7 @@ protected:
 class FMultiPatchTexture : public FTexture
 {
 public:
-	FMultiPatchTexture (const void *texdef, FTexture **patchlookup, bool strife);
+	FMultiPatchTexture (const void *texdef, FTexture **patchlookup, int maxpatchnum, bool strife);
 	~FMultiPatchTexture ();
 
 	const BYTE *GetColumn (unsigned int column, const Span **spans_out);
@@ -182,6 +182,7 @@ public:
 	const BYTE *GetColumn (unsigned int column, const Span **spans_out);
 	const BYTE *GetPixels ();
 	void Unload ();
+	bool CheckModified ();
 
 protected:
 	FTexture *SourcePic;

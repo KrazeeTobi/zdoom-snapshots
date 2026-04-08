@@ -1258,9 +1258,10 @@ void R_SetupBuffer ()
 			ASM_PatchPitch ();
 #endif
 		}
-		for (int i = 0; i < screen->GetHeight(); i++, lineptr += pitch)
+		dc_destorg = lineptr;
+		for (int i = 0; i < screen->GetHeight(); i++)
 		{
-			ylookup[i] = lineptr;
+			ylookup[i] = i * pitch;
 		}
 	}
 }
@@ -1402,6 +1403,9 @@ void R_RenderViewToCanvas (player_t *player, DCanvas *canvas,
 	bRenderingToCanvas = false;
 	R_SetDetail (saveddetail);
 	R_ExecuteSetViewSize ();
+	screen->Lock (true);
+	R_SetupBuffer ();
+	screen->Unlock ();
 }
 
 //==========================================================================

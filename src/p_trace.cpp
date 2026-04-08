@@ -200,7 +200,7 @@ static BOOL PTR_TraceIterator (intercept_t *in)
 				hitz >= bc ? TIER_Upper : TIER_Middle;
 			if (TraceFlags & TRACE_Impact)
 			{
-				P_ActivateLine (in->d.line, IgnoreThis, 0, SPAC_IMPACT);
+				P_ActivateLine (in->d.line, IgnoreThis, lineside, SPAC_IMPACT);
 			}
 		}
 		else
@@ -208,12 +208,12 @@ static BOOL PTR_TraceIterator (intercept_t *in)
 			Results->HitType = TRACE_HitNone;
 			if (TraceFlags & TRACE_PCross)
 			{
-				P_ActivateLine (in->d.line, IgnoreThis, 0, SPAC_PCROSS);
+				P_ActivateLine (in->d.line, IgnoreThis, lineside, SPAC_PCROSS);
 			}
 			if (TraceFlags & TRACE_Impact)
 			{ // This is incorrect for "impact", but Hexen did this, so
 			  // we need to as well, for compatibility
-				P_ActivateLine (in->d.line, IgnoreThis, 0, SPAC_IMPACT);
+				P_ActivateLine (in->d.line, IgnoreThis, lineside, SPAC_IMPACT);
 			}
 		}
 
@@ -246,7 +246,7 @@ static BOOL PTR_TraceIterator (intercept_t *in)
 				}
 				if (Results->HitType == TRACE_HitWall && TraceFlags & TRACE_Impact)
 				{
-					P_ActivateLine (in->d.line, IgnoreThis, 0, SPAC_IMPACT);
+					P_ActivateLine (in->d.line, IgnoreThis, lineside, SPAC_IMPACT);
 				}
 			}
 

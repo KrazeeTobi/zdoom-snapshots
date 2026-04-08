@@ -360,7 +360,7 @@ struct sector_t
 
 	// [RH] The sky box to render for this sector. NULL means use a
 	// regular sky.
-	ASkyViewpoint *SkyBox;
+	ASkyViewpoint *FloorSkyBox, *CeilingSkyBox;
 
 	// Planes that partition this sector into different light zones.
 	FExtraLight *ExtraLights;
@@ -518,7 +518,8 @@ typedef struct FPolyObj
 	int			tag;			// reference tag assigned in HereticEd
 	int			bbox[4];
 	int			validcount;
-	BOOL		crush; 			// should the polyobj attempt to crush mobjs?
+	int			crush; 			// should the polyobj attempt to crush mobjs?
+	bool		bHurtOnTouch;	// should the polyobj hurt anything it touches?
 	int			seqType;
 	fixed_t		size;			// polyobj size (area of POLY_AREAUNIT == size of FRACUNIT)
 	DThinker	*specialdata;	// pointer to a thinker, if the poly is moving
@@ -602,7 +603,6 @@ public:
 	BYTE UseType;	// This texture's primary purpose
 
 	BYTE bNoDecals:1;
-	BYTE bModified:1;
 
 	WORD Rotations;
 
@@ -639,6 +639,11 @@ public:
 	int GetHeight () { if (Width == 0xFFFF) { GetDimensions(); } return Height; }
 
 	void CopyToBlock (BYTE *dest, int dwidth, int dheight, int x, int y, const BYTE *translation=NULL);
+
+	// Returns true if the next call to GetPixels() will return an image different from the
+	// last call to GetPixels(). This should be considered valid only if a call to CheckModified()
+	// is immediately followed by a call to GetPixels().
+	virtual bool CheckModified ();
 
 protected:
 	WORD Width, Height, WidthMask;

@@ -156,7 +156,6 @@ AActor**		blocklinks;		// for thing chains
 //	used as a PVS lookup as well.
 //
 byte*			rejectmatrix;
-static bool		rejectmapped;
 
 static bool		ForceNodeBuild;
 
@@ -334,19 +333,21 @@ void P_LoadSegs (int lump)
 		vertchanged[line->v1 - vertexes] = vertchanged[line->v2 - vertexes] = 1;
 	}
 
-	for (i = 0; i < numsegs; i++)
+	try
 	{
-		seg_t *li = segs+i;
-		mapseg_t *ml = (mapseg_t *) data + i;
+		for (i = 0; i < numsegs; i++)
+		{
+			seg_t *li = segs+i;
+			mapseg_t *ml = (mapseg_t *) data + i;
 
-		int side, linedef;
-		line_t *ldef;
+			int side, linedef;
+			line_t *ldef;
 
-		li->v1 = &vertexes[SHORT(ml->v1)];
-		li->v2 = &vertexes[SHORT(ml->v2)];
-		li->PartnerSeg = NULL;
+			li->v1 = &vertexes[SHORT(ml->v1)];
+			li->v2 = &vertexes[SHORT(ml->v2)];
+			li->PartnerSeg = NULL;
 
-		segangle = (WORD)SHORT(ml->angle);
+			segangle = (WORD)SHORT(ml->angle);
 
 // phares 10/4/98: In the case of a lineseg that was created by splitting
 // another line, it appears that the line angle is inherited from the
@@ -378,65 +379,89 @@ void P_LoadSegs (int lump)
 // off, then move one vertex. This may seem insignificant, but one degree
 // errors _can_ cause firelines.
 
-		ptp_angle = R_PointToAngle2 (li->v1->x, li->v1->y, li->v2->x, li->v2->y);
-		dis = 0;
-		delta_angle = (abs(ptp_angle-(segangle<<16))>>ANGLETOFINESHIFT)*360/FINEANGLES;
+			ptp_angle = R_PointToAngle2 (li->v1->x, li->v1->y, li->v2->x, li->v2->y);
+			dis = 0;
+			delta_angle = (abs(ptp_angle-(segangle<<16))>>ANGLETOFINESHIFT)*360/FINEANGLES;
 
-		vnum1 = li->v1 - vertexes;
-		vnum2 = li->v2 - vertexes;
+			vnum1 = li->v1 - vertexes;
+			vnum2 = li->v2 - vertexes;
 
-		if (vnum1 >= numvertexes || vnum2 >= numvertexes)
-		{
-			Printf ("Seg %d references a nonexistant vertex.\n"
-					"The BSP will be rebuilt.\n", i);
-			delete[] vertchanged;
-			W_UnMapLump (data);
-			delete[] segs;
-			delete[] subsectors;
-			delete[] nodes;
-			ForceNodeBuild = true;
-			return;
-		}
-
-		if (delta_angle != 0)
-		{
-			segangle >>= (ANGLETOFINESHIFT-16);
-			dx = (li->v1->x - li->v2->x)>>FRACBITS;
-			dy = (li->v1->y - li->v2->y)>>FRACBITS;
-			dis = ((int) sqrt(dx*dx + dy*dy))<<FRACBITS;
-			dx = finecosine[segangle];
-			dy = finesine[segangle];
-			if ((vnum2 > vnum1) && (vertchanged[vnum2] == 0))
+			if (vnum1 >= numvertexes || vnum2 >= numvertexes)
 			{
-				li->v2->x = li->v1->x + FixedMul(dis,dx);
-				li->v2->y = li->v1->y + FixedMul(dis,dy);
-				vertchanged[vnum2] = 1; // this was changed
+				throw i * 4;
 			}
-			else if (vertchanged[vnum1] == 0)
+
+			if (delta_angle != 0)
 			{
-				li->v1->x = li->v2->x - FixedMul(dis,dx);
-				li->v1->y = li->v2->y - FixedMul(dis,dy);
-				vertchanged[vnum1] = 1; // this was changed
+				segangle >>= (ANGLETOFINESHIFT-16);
+				dx = (li->v1->x - li->v2->x)>>FRACBITS;
+				dy = (li->v1->y - li->v2->y)>>FRACBITS;
+				dis = ((int) sqrt(dx*dx + dy*dy))<<FRACBITS;
+				dx = finecosine[segangle];
+				dy = finesine[segangle];
+				if ((vnum2 > vnum1) && (vertchanged[vnum2] == 0))
+				{
+					li->v2->x = li->v1->x + FixedMul(dis,dx);
+					li->v2->y = li->v1->y + FixedMul(dis,dy);
+					vertchanged[vnum2] = 1; // this was changed
+				}
+				else if (vertchanged[vnum1] == 0)
+				{
+					li->v1->x = li->v2->x - FixedMul(dis,dx);
+					li->v1->y = li->v2->y - FixedMul(dis,dy);
+					vertchanged[vnum1] = 1; // this was changed
+				}
+			}
+
+			linedef = SHORT(ml->linedef);
+			if ((unsigned)linedef >= numlines)
+			{
+				throw i * 4 + 1;
+			}
+			ldef = &lines[linedef];
+			li->linedef = ldef;
+			side = SHORT(ml->side);
+			if ((unsigned)ldef->sidenum[side] >= numsides)
+			{
+				throw i * 4 + 2;
+			}
+			li->sidedef = &sides[ldef->sidenum[side]];
+			li->frontsector = sides[ldef->sidenum[side]].sector;
+
+			// killough 5/3/98: ignore 2s flag if second sidedef missing:
+			if (ldef->flags & ML_TWOSIDED && ldef->sidenum[side^1] != NO_INDEX)
+			{
+				li->backsector = sides[ldef->sidenum[side^1]].sector;
+			}
+			else
+			{
+				li->backsector = 0;
+				ldef->flags &= ~ML_TWOSIDED;
 			}
 		}
-
-		linedef = SHORT(ml->linedef);
-		ldef = &lines[linedef];
-		li->linedef = ldef;
-		side = SHORT(ml->side);
-		li->sidedef = &sides[ldef->sidenum[side]];
-		li->frontsector = sides[ldef->sidenum[side]].sector;
-
-		// killough 5/3/98: ignore 2s flag if second sidedef missing:
-		if (ldef->flags & ML_TWOSIDED && ldef->sidenum[side^1] != NO_INDEX)
+	}
+	catch (int foo)
+	{
+		switch (foo & 3)
 		{
-			li->backsector = sides[ldef->sidenum[side^1]].sector;
+		case 0:
+			Printf ("Seg %d references a nonexistant vertex.\n", foo >> 2);
+			break;
+
+		case 1:
+			Printf ("Seg %d references a nonexistant linedef.\n", foo >> 2);
+			break;
+
+		case 2:
+			Printf ("The linedef for seg %d references a nonexistant sidedef.\n", foo >> 2);
+			break;
 		}
-		else
-		{
-			li->backsector = 0;
-			ldef->flags &= ~ML_TWOSIDED;
-		}
+		Printf ("The BSP will be rebuilt.\n");
+		delete[] segs;
+		delete[] subsectors;
+		delete[] nodes;
+		ForceNodeBuild = true;
+		return;
 	}
 
 	W_UnMapLump (data);
@@ -572,13 +597,13 @@ void P_LoadSectors (int lump)
 		if (level.outsidefog != 0xff000000 && ss->ceilingpic == skyflatnum)
 		{
 			if (fogMap == NULL)
-				fogMap = GetSpecialLights (PalEntry (255,255,255), level.outsidefog);
+				fogMap = GetSpecialLights (PalEntry (255,255,255), level.outsidefog, 0);
 			ss->ColorMap = fogMap;
 		}
 		else
 		{
 			if (normMap == NULL)
-				normMap = GetSpecialLights (PalEntry (255,255,255), level.fadeto);
+				normMap = GetSpecialLights (PalEntry (255,255,255), level.fadeto, NormalLight.Desaturate);
 			ss->ColorMap = normMap;
 		}
 
@@ -1488,7 +1513,7 @@ void P_LoadSideDefs2 (int lump)
 				if (fog != 0x000000 || color != 0xffffff)
 				{
 					int s;
-					FDynamicColormap *colormap = GetSpecialLights (color, fog);
+					FDynamicColormap *colormap = GetSpecialLights (color, fog, 0);
 
 					for (s = 0; s < numsectors; s++)
 					{
@@ -2300,55 +2325,41 @@ void P_LoadReject (int lump, bool junk)
 		{
 			Printf ("REJECT is %d byte%s too small.\n", neededsize - rejectsize,
 				neededsize-rejectsize==1?"":"s");
-			rejectmatrix = new byte[neededsize];
-			rejectmapped = false;
-			W_ReadLump (lump, rejectmatrix);
-			memset (rejectmatrix+rejectsize, 0, neededsize-rejectsize);
 		}
-		else
-		{
-			rejectmatrix = NULL;
-		}
+		rejectmatrix = NULL;
 	}
 	else
 	{
 		rejectmatrix = (byte *)W_MapLumpNum (lump);
-		rejectmapped = true;
-	}
 
-	// Check if the reject has some actual content. If not, free it.
-	rejectsize = MIN (rejectsize, neededsize);
-	int qwords = rejectsize / 8;
-	int i;
+		// Check if the reject has some actual content. If not, free it.
+		rejectsize = MIN (rejectsize, neededsize);
+		int qwords = rejectsize / 8;
+		int i;
 
-	if (qwords > 0)
-	{
-		QWORD *qreject = (QWORD *)rejectmatrix;
-
-		for (i = 0; i < qwords; ++i)
+		if (qwords > 0)
 		{
-			if (qreject != 0)
+			const QWORD *qreject = (const QWORD *)rejectmatrix;
+
+			i = 0;
+			do
+			{
+				if (qreject[i] != 0)
+					return;
+			} while (++i < qwords);
+		}
+		rejectsize &= 7;
+		qwords *= 8;
+		for (i = 0; i < rejectsize; ++i)
+		{
+			if (rejectmatrix[qwords+rejectsize] != 0)
 				return;
 		}
-	}
-	rejectsize &= 7;
-	qwords *= 8;
-	for (i = 0; i < rejectsize; ++i)
-	{
-		if (rejectmatrix[qwords+rejectsize] != 0)
-			return;
-	}
 
-	// Reject has no data, so pretend it isn't there.
-	if (rejectmapped)
-	{
+		// Reject has no data, so pretend it isn't there.
 		W_UnMapLump (rejectmatrix);
+		rejectmatrix = NULL;
 	}
-	else
-	{
-		delete[] rejectmatrix;
-	}
-	rejectmatrix = NULL;
 }
 
 //
@@ -2395,7 +2406,7 @@ static void P_GetPolySpots (int lump, TArray<FNodeBuilder::FPolyStart> &spots, T
 {
 	if (HasBehavior)
 	{
-		int spot1, spot2, anchor;
+		int spot1, spot2, spot3, anchor;
 		const mapthing2_t *mt = (mapthing2_t *)W_MapLumpNum (lump);
 		int num = W_LumpLength (lump) / sizeof(*mt);
 
@@ -2411,10 +2422,11 @@ static void P_GetPolySpots (int lump, TArray<FNodeBuilder::FPolyStart> &spots, T
 			spot2 = SHORT(PO_SPAWNCRUSH_TYPE);
 			anchor = SHORT(PO_ANCHOR_TYPE);
 		}
+		spot3 = SHORT(PO_SPAWNHURT_TYPE);
 
 		for (int i = 0; i < num; ++i)
 		{
-			if (mt[i].type == spot1 || mt[i].type == spot2 || mt[i].type == anchor)
+			if (mt[i].type == spot1 || mt[i].type == spot2 || mt[i].type == spot3 || mt[i].type == anchor)
 			{
 				FNodeBuilder::FPolyStart newvert;
 				newvert.x = SHORT(mt[i].x) << FRACBITS;
@@ -2503,14 +2515,7 @@ void P_FreeLevelData ()
 	}
 	if (rejectmatrix != NULL)
 	{
-		if (rejectmapped)
-		{
-			W_UnMapLump (rejectmatrix);
-		}
-		else
-		{
-			delete[] rejectmatrix;
-		}
+		W_UnMapLump (rejectmatrix);
 		rejectmatrix = NULL;
 	}
 	if (LightStacks != NULL)
@@ -2667,8 +2672,6 @@ void P_SetupLevel (char *lumpname, int position)
 		ForceNodeBuild = true;
 	}
 
-	P_LoadBlockMap (lumpnum+ML_BLOCKMAP);
-
 	UsingGLNodes = false;
 	if (!ForceNodeBuild) P_LoadSubsectors (lumpnum+ML_SSECTORS);
 	if (!ForceNodeBuild) P_LoadNodes (lumpnum+ML_NODES);
@@ -2697,6 +2700,7 @@ void P_SetupLevel (char *lumpname, int position)
 		Printf ("BSP generation took %.3f sec (%d segs)\n", (endTime - startTime) * 0.001, numsegs);
 	}
 
+	P_LoadBlockMap (lumpnum+ML_BLOCKMAP);
 	P_LoadReject (lumpnum+ML_REJECT, buildmap);
 
 	P_GroupLines (buildmap);

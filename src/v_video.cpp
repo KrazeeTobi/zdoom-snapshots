@@ -511,7 +511,8 @@ void DCanvas::Blit (int srcx, int srcy, int srcwidth, int srcheight,
 void DCanvas::CalcGamma (float gamma, BYTE gammalookup[256])
 {
 	// I found this formula on the web at
-	// <http://panda.mostang.com/sane/sane-gamma.html>
+	// <http://panda.mostang.com/sane/sane-gamma.html>,
+	// but that page no longer exits.
 
 	double invgamma = 1.f / gamma;
 	int i;
@@ -522,53 +523,37 @@ void DCanvas::CalcGamma (float gamma, BYTE gammalookup[256])
 	}
 }
 
-CUSTOM_CVAR (Int, ff, 0, CVAR_NOINITCALL)
-{
-	if (screen != NULL)
-	{
-		char foo[256];
-		sprintf (foo, "vid_setmode %d %d", screen->GetWidth(), screen->GetHeight());
-		AddCommandString (foo);
-	}
-}
-
 DSimpleCanvas::DSimpleCanvas (int width, int height)
 	: DCanvas (width, height)
 {
 	// Making the pitch a power of 2 is very bad for performance
 	// Try to maximize the number of cache lines that can be filled
 	// for each column drawing operation by making the pitch slightly
-	// longer than the width. Assumptions about the size and number
-	// of cache lines are based on the PMMX/PII/PIII, which have 512
-	// 32-byte cache lines, which are 4-way set associative, so any data
-	// access 4K apart will be in the same cache set. By minimizing
-	// the number of cache sets assigned to each cache line, we should
-	// be able to maximize the number of cache lines used. The important
-	// thing here is that cache lines are 32 bytes in size. Other
-	// processors are different. For instance, an Athlon has a 16-way
-	// set associative cache with 1024 64-byte cache lines. And the P4
-	// has 128-byte cache lines (don't know about its associativity).
-	// For simplicity, I just assume 32-byte cache lines here.
+	// longer than the width. The values used here are all based on
+	// empirical evidence.
 
-	Pitch = width;
-	if (ff <= -10)
+	if (width <= 640)
 	{
-		Pitch = ff * -64;
+		// For low resolutions, just keep the pitch the same as the width.
+		// Some speedup can be seen using the technique below, but the speedup
+		// is so marginal that I don't consider it worthwhile.
+		Pitch = width;
 	}
-	else if (ff == -2)
+	else
 	{
-		Pitch = (width & ~63) + 64;
-	}
-	else if (ff == -1)
-	{
-		Pitch = 1;
-		while (Pitch < width)
-			Pitch <<= 1;
-		Pitch += 64;
-	}
-	else if (ff > 0)
-	{
-		Pitch = width | (8*ff);
+		// The Athlon and P3 have very different caches, apparently.
+		// I am going to generalize the Athlon's performance to all AMD
+		// processor and the P3's to all non-AMD processors. I don't know
+		// how smart that is, but I don't have a vast plethora of
+		// processors to test with.
+		if (CPU.bIsAMD)
+		{
+			Pitch = width + CPU.DataL1LineSize;
+		}
+		else
+		{
+			Pitch = width + CPU.DataL1LineSize - 8;
+		}
 	}
 	MemBuffer = new BYTE[Pitch * height];
 }
