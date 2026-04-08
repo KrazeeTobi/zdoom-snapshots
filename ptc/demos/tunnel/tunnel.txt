@@ -1,0 +1,162 @@
+                      ===================================
+                      = Free-Directional Tunnel example =
+                      ===================================
+
+
+Overview
+--------
+
+This example renders a free-directional tunnel to a 16bit RGB565 system memory
+surface and updates this 16bit surface to the display - converting to the
+output format if necessary.
+
+I'm too tired to write something serious. Gaffer just asked me to whip up fast
+some free-directional tunnel as an advanced example in his next PTC release.
+Took me to hours to build this effect from scratch and i'm too tired now to
+write something really good.
+
+Ah yeah, before i forget, this effect is coded and this text is written by
+BlackAxe from the german demo-group KOLOR.
+
+
+
+
+Step One - Doing Blabla
+-----------------------
+
+You might want to take a look at the free-directional tunnel tutor i wrote:
+it can be found at: ftp://ftp.cdrom.com/pub/demos/incoming/code/fdtunnel.zip
+
+This commonly used effect uses raycasting, a simplification of the raytracing 
+algorithm, which is just basically non-recursive raytracing.
+
+We just want to send rays through each pixel and check for intersections
+with objects. For a tunnel, we check if a ray intersects a cylinder, and then
+texture-map the intersection point.
+
+A ray is defined as follows
+
+------>    -------->
+Origin + t*Direction
+
+Origin and Direction are both Vectors and t is a real, Origin represents
+the camera, and direction the Direction of the ray. Direction is a normalized
+vector. t is used to define a position of a ray.
+
+Now for the intersection:
+The equation of a cylinder with centre (a,b) and radius R is:
+        (x-a)^2 + (y-b)^2 = R^2
+we want to have our cylinder at (0,0) so we have now:
+        x^2 + y^2 = R^2
+Now we substituate our ray equation
+because of lazyness ox represents Origin.X and dy e.g Direction.Y
+you will understand
+
+        (ox + t*dx)^2 + (oy + t*dy)^2 = R^2
+        (ox + t*dx)^2 + (oy + t*dy)^2 - R^2 = 0
+        ox^2 + 2*ox*t*dx + t^2*dx^2 + oy^2 + 2*oy*t*dy + t^2*dy^2 - R^2 = 0
+        t^2*(dx^2 + dy^2) + t*(2*ox*dx + 2*oy*dy) + ox^2 + oy^2 - R^2 = 0
+
+this gives us a nice quadratic equation which we can solve for t using the
+standard formula with the discriminant.
+
+and then we have:
+
+----------->   ----->     -------->
+Intersection = Origin + t*Direction
+
+and for the mapping and depth cue (c is the shade value)
+
+> u = abs(Intersection.Z)*0.2);
+> v = abs(atan2(Intersection.Y, Intersection.X)*256/PI);
+> c = 128 - abs(Intersection.Z - Origin.Z)*0.08;
+> // if we have 128 shade values with 0 being black, 128 being normal color
+> // and 255 white
+
+
+to get Origin and Direction, we do:
+Origin.x = 0;
+Origin.y = 0;
+Origin.z = -128;
+
+Direction.x = PixelX - 160;
+Direction.y = PixelY - 100;
+Direction.z = 128;
+and then we normalize Direction.
+
+To get rotation we just multiply Direction with a rotation Matrix.
+
+
+
+
+Step Two - Grid Mapping
+-----------------------
+
+The trick to make this realtimeis to calculate the above formula on a 41x26
+grid (which are 1066 calculations instead of 64000) and then to have 8x8
+pixel wide blocks where you interpolate the (u,v,c) values over the block.
+Easy trick but effective!
+To see how it works check the Tunnel::InterpolateBlock() function in tunnel.cpp
+To save speed, we don't recalculate each time the Direction Vector (because
+1066 matrix multiplications is a considerable speed-loss already) but we only
+calculate it at the 4 border points of the screen, and then interpolate it
+over the whole screen. This might be a bit unprecise, but it still looks like
+a tunnel.
+
+
+
+
+Step Three - Closing off
+------------------------
+It's already late, i want to finish, so let's stop :)
+You see in the code that i used OOP for vector, matrix and colourshade stuff
+yeah go on, use OOP, it really helps you. Enjoy it.
+Btw: there are a few mathematical optimisations possible. I won't tell you
+     now, find out yourself, big boy :-)   [nasty me, ehehe]
+
+If you want further informations about the tunnel effect, grab my tutor from
+ftp://ftp.cdrom.com/pub/demos/incoming/code/fdtunnel.zip
+
+
+
+
+Step Four - Greets
+------------------
+Too tired to think of names
+
+
+
+
+Step Five - The very last
+-------------------------
+Everything is coded by me, that is BlackAxe from KoLOr aka Laurent Schmalen.
+You may want to rip it for your next killer-demo, but then, please think
+about the time and the efforts i put into this. If you really plaan to rip
+this just like this, i'll fart at you. Please Please put me in the credits
+and greet me (as well as Gaffer who's PTC really kicks ass)
+I would really be cheered up seeing my name in the greets!
+
+Get our demo Wissenschaft which was done using PTC and which won Evoke97
+ftp://ftp.cdrom.com/pub/demos/demos/1997/k/kwissen.zip
+
+other kolor demos are:
+ftp://ftp.cdrom.com/pub/demos/demos/1997/k/kmulti.zip
+ftp://ftp.cdrom.com/pub/demos/demos/1997/t/toontown.zip
+ftp://ftp.cdrom.com/pub/demos/demos/1996/k/karanga.zip
+
+
+If you like to contact me for any reasons (no illegal activities!) do so:
+e-mail    :  blackaxe@sl.lu
+snail-mail:  Laurent Schmalen
+             6, rue Tony Schmit
+             L-9081 Ettelbruck
+             Luxembourg
+
+I really would like to get contacts from IOI students getting this effect or
+product.
+
+
+
+
+signoff
+        BlackAxe / KoLOr

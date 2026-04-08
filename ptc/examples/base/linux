@@ -1,0 +1,40 @@
+#!/bin/sh
+
+if test -z $1; then
+echo "*************************************"
+echo "*      Linux PTC example build      *"
+echo "* --------------------------------- *"
+echo "* Syntax: linux [example] (library) *"
+echo "*                                   *"
+echo "* [example] = example source name   *"
+echo "* (library) = \"debug\" or \"release\"  *"
+echo "*************************************"
+exit
+fi
+
+# check if example.cpp exists
+if test ! -e $1".cpp"; then
+	echo "$1.cpp does not exist"
+	exit
+fi
+
+# default to release build
+LIBRARY=$2
+if test -z $LIBRARY; then
+    LIBRARY=release
+fi
+
+# notify user of build operation
+echo "Building "$1.cpp" : linux $LIBRARY"
+
+# release build
+if test $LIBRARY = release; then
+    g++ -D__LINUX__ -o $1 $1.cpp -I. -I../../source -O2 ../../library/linux/gcc/$LIBRARY.a /lib/libvga.so
+    exit
+fi
+
+# debug build
+if test $LIBRARY = debug; then
+    g++ -D__LINUX__ -o $1 $1.cpp -I. -I../../source ../../library/linux/gcc/$LIBRARY.a /lib/libvga.so
+    exit
+fi

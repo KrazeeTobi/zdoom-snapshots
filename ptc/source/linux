@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# *************************************
+# * Linux PTC build                   *
+# * --------------------------------- *
+# * Syntax: linux (library)           *
+# *                                   *
+# * (library)  = "debug" or "release" *
+# *                                   *
+# * NOTE: to clean "linux clean"      *
+# *************************************
+
+# clean linux
+if test ! -z $1; then
+    if test $1 = "clean"; then
+	    make -f linux.mak clean LIBRARY=debug;
+	    make -f linux.mak clean LIBRARY=release;
+	    exit;
+    fi
+fi
+
+# setup library variable
+if test -z $1; then
+    LIBRARY=release;
+else
+    LIBRARY=$1
+fi
+
+# build dependencies if required
+if test ! -e .depend; then
+	make -f linux.mak depend LIBRARY=$LIBRARY
+fi
+
+# build library
+make -f linux.mak LIBRARY=$LIBRARY

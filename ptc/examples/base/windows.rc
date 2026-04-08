@@ -1,0 +1,10 @@
+/////////////////////
+// resource script //
+/////////////////////
+
+
+
+
+// ptc main window icon
+IDI_PTC_ICON ICON DISCARDABLE "windows.ico"
+

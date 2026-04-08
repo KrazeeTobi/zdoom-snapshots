@@ -1,0 +1,10 @@
+   P R O M E T H E U S   T R U E C O L O R
+         
+  Portable truecolor graphics system for C++
+  programmers. Supports DOS, Win32 and Linux
+  platforms and output using VGA, VESA, GDI,
+  DirectX, and SVGALIB.
+   
+        Version 0.72, 26th April 1998
+
+     homepage: http://www.gaffer.org/ptc
