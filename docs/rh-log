@@ -1,3 +1,24 @@
+December 12, 1999
+- Added sorting of the cvars that get sent during netgame arbitration. In
+  the old system, they were sent out in whatever order they were registered,
+  which was compiler-dependant. This worked fine when playing against a copy
+  built with the same compiler, but broke when trying to play a version
+  built with a different compiler. Thus, Windows, Linux, and OSF/1 versions
+  could not play each other.
+
+December 11, 1999
+- Made some changes to get the code to compile and run without
+  unaligned accesses on Alpha processors. ZDoom will now compile and run
+  under OSF/1. It appears to play ordinary Doom levels properly. Levels
+  with Hexen features will crash it, and savegames seem to have problems,
+  too. (Some of which, I think, is attributable to using LZO for
+  compression. It apparently isn't 64-bit friendly.)
+
+November 30, 1999
+- Made the Scroll_Texture_Both and TranslucentLine specials dynamic.
+  That is, they can be used from inside the game after the level is
+  loaded.
+
 November 26, 1999
 - Added the hud_scale cvar to control scaling of the fullscreen hud.
 - Removed targettic from AActor, because it's no longer meaningful (and
