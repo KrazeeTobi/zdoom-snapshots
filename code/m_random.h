@@ -125,6 +125,8 @@ typedef enum {
 	pr_ssdelay,					// 73
 	pr_afx,						// 74
 	pr_chainwiggle,				// 75
+	pr_switchanim,				// 76
+	pr_scaredycat,				// 77
 	// Start new entries -- add new entries below
 
 	// End of new entries

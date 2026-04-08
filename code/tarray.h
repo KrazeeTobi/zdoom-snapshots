@@ -52,8 +52,27 @@ public:
 	{
 		if (index < Count-1)
 			memmove (Array + index, Array + index + 1, (Count - index) * sizeof(T));
-		if (index < Count)
+		else if (index < Count)
 			Count--;
+	}
+	void ShrinkToFit ()
+	{
+		if (Most > Count)
+		{
+			Most = Count;
+			if (Most == 0)
+			{
+				if (Array != NULL)
+				{
+					free (Array);
+					Array = NULL;
+				}
+			}
+			else
+			{
+				Array = (T *)Realloc (Array, sizeof(T)*Most);
+			}
+		}
 	}
 	size_t Size ()
 	{

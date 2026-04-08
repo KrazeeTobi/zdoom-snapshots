@@ -23,35 +23,29 @@
 
 
 
+#include "stringtable.h"
 #include "doomstat.h"
 #include "c_cvars.h"
 
+// Localizable strings
+FStringTable	GStrings;
 
 // Game speed
-EGameSpeed		GameSpeed = SPEED_NoneYet;
+EGameSpeed		GameSpeed = SPEED_Normal;
 
 // Game Mode - identify IWAD as shareware, retail etc.
 GameMode_t		gamemode = undetermined;
 GameMission_t	gamemission = doom;
 
-// Language.
-Language_t		language = english;
-
-// Set if homebrew PWAD stuff has been added.
-BOOL			modifiedgame;
-
 // Show developer messages if true.
-CVAR (developer, "0", 0)
+CVAR (Bool, developer, false, 0)
 
 // [RH] Feature control cvars
-CVAR (var_friction, "1", CVAR_SERVERINFO);
-CVAR (var_pushers, "1", CVAR_SERVERINFO);
+CVAR (Bool, var_friction, true, CVAR_SERVERINFO);
+CVAR (Bool, var_pushers, true, CVAR_SERVERINFO);
 
-// [RH] Deathmatch flags
-int				dmflags;		// Copy of dmflagsvar.value, but as an integer.
-
-CVAR (alwaysapplydmflags, "0", CVAR_SERVERINFO);
-CVAR (friendlyfire, "0", CVAR_SERVERINFO);
+CVAR (Bool, alwaysapplydmflags, false, CVAR_SERVERINFO);
+CVAR (Float, teamdamage, 0.f, CVAR_SERVERINFO);
 
 // [RH] Network arbitrator
 int Net_Arbitrator = 0;

@@ -40,13 +40,13 @@ virtual	FFile& Seek (int, ESeekPos) = 0;
 inline	FFile& Seek (unsigned int i, ESeekPos p) { return Seek ((int)i, p); }
 };
 
-class FLZOFile : public FFile
+class FCompressedFile : public FFile
 {
 public:
-	FLZOFile ();
-	FLZOFile (const char *name, EOpenMode mode, bool dontcompress = false);
-	FLZOFile (FILE *file, EOpenMode mode, bool dontcompress = false);
-	~FLZOFile ();
+	FCompressedFile ();
+	FCompressedFile (const char *name, EOpenMode mode, bool dontcompress = false);
+	FCompressedFile (FILE *file, EOpenMode mode, bool dontcompress = false);
+	~FCompressedFile ();
 
 	bool Open (const char *name, EOpenMode mode);
 	void Close ();
@@ -78,11 +78,11 @@ private:
 	void PostOpen ();
 };
 
-class FLZOMemFile : public FLZOFile
+class FCompressedMemFile : public FCompressedFile
 {
 public:
-	FLZOMemFile ();
-	FLZOMemFile (FILE *file);	// Create for reading
+	FCompressedMemFile ();
+	FCompressedMemFile (FILE *file);	// Create for reading
 
 	bool Open (const char *name, EOpenMode mode);	// Works for reading only
 	bool Open (void *memblock);	// Open for reading only
@@ -133,6 +133,7 @@ virtual void Read (void *mem, unsigned int len);
 		FArchive& operator<< (double &d);
 		FArchive& operator<< (char *&str);
 		FArchive& SerializePointer (void *ptrbase, BYTE **ptr, DWORD elemSize);
+		FArchive& SerializeObject (DObject *&object, TypeInfo *type);
 		FArchive& WriteObject (DObject *obj);
 		FArchive& ReadObject (DObject *&obj, TypeInfo *wanttype);
 

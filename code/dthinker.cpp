@@ -2,42 +2,60 @@
 #include "z_zone.h"
 #include "stats.h"
 #include "p_local.h"
+#include "statnums.h"
 
 static cycle_t ThinkCycles;
 extern cycle_t BotSupportCycles;
 
-IMPLEMENT_SERIAL (DThinker, DObject)
+IMPLEMENT_CLASS (DThinker)
 
-static DThinker *NextToThink;
+static Node *NextToThink;
 
-DThinker *DThinker::FirstThinker = NULL;
-DThinker *DThinker::LastThinker = NULL;
-
-void DThinker::Serialize (FArchive &arc)
-{
-	Super::Serialize (arc);
-
-	// We do not serialize m_Next or m_Prev, because the DThinker
-	// constructor handles them for us.
-}
+List DThinker::Thinkers[MAX_STATNUM+1];
+bool DThinker::bSerialOverride = false;
 
 void DThinker::SerializeAll (FArchive &arc, bool hubLoad)
 {
+	Node *node;
 	DThinker *thinker;
-	BYTE id;
+	BYTE stat;
+	int statcount;
+	int i;
+
+	// Save lists of thinkers, but not by storing the first one and letting
+	// the archiver catch the rest. (Which leads to buttloads of recursion
+	// and makes the file larger.) Instead, we explicitly save each thinker
+	// in sequence. When restoring an archive, we also have to maintain
+	// the thinker lists here instead of relying an the archiver to do it
+	// for us.
 
 	if (arc.IsStoring ())
 	{
-		thinker = FirstThinker;
-		id = 1;
-		while (thinker)
+		for (statcount = i = 0; i <= MAX_STATNUM; i++)
 		{
-			arc << id;
-			arc << thinker;
-			thinker = thinker->m_Next;
+			if (!Thinkers[i].IsEmpty ())
+			{
+				statcount++;
+			}
 		}
-		id = 0;
-		arc << id;
+		arc << statcount;
+		for (i = 0; i <= MAX_STATNUM; i++)
+		{
+			node = Thinkers[i].Head;
+			if (node->Succ != NULL)
+			{
+				stat = i;
+				arc << stat;
+				do
+				{
+					thinker = static_cast<DThinker *> (node);
+					arc << thinker;
+					node = node->Succ;
+				} while (node->Succ != NULL);
+				thinker = NULL;
+				arc << thinker;		// Save a final NULL for this list
+			}
+		}
 	}
 	else
 	{
@@ -46,112 +64,157 @@ void DThinker::SerializeAll (FArchive &arc, bool hubLoad)
 		else
 			DestroyAllThinkers ();
 
-		arc << id;
-		while (id)
+		// Prevent the constructor from inserting thinkers into a list.
+		bSerialOverride = true;
+		arc << statcount;
+		while (statcount > 0)
 		{
-			DThinker *thinker;
-			arc << thinker;
-			arc << id;
+			arc << stat << thinker;
+			while (thinker != NULL)
+			{
+				Thinkers[stat].AddTail (thinker);
+				arc << thinker;
+			}
+			statcount--;
 		}
-
-		// killough 3/26/98: Spawn icon landings:
-		P_SpawnBrainTargets ();
+		bSerialOverride = false;
 	}
 }
 
-DThinker::DThinker ()
+DThinker::DThinker (int statnum)
 {
-	// Add a new thinker at the end of the list.
-	m_Prev = LastThinker;
-	m_Next = NULL;
-	if (LastThinker)
-		LastThinker->m_Next = this;
-	if (!FirstThinker)
-		FirstThinker = this;
-	LastThinker = this;
+	if (bSerialOverride)
+	{ // The serializer will insert us into the right list
+		Succ = NULL;
+		return;
+	}
+
+	if ((unsigned)statnum > MAX_STATNUM)
+	{
+		statnum = MAX_STATNUM;
+	}
+	Thinkers[statnum].AddTail (this);
 }
 
 DThinker::~DThinker ()
 {
-	if (FirstThinker == this)
-		FirstThinker = m_Next;
-	if (LastThinker == this)
-		LastThinker = m_Prev;
-	if (m_Next)
-		m_Next->m_Prev = m_Prev;
-	if (m_Prev)
-		m_Prev->m_Next = m_Next;
+	if (Succ != NULL)
+	{
+		Remove ();
+	}
 }
 
 void DThinker::Destroy ()
 {
 	if (this == NextToThink)
-		NextToThink = m_Next;
-	if (FirstThinker == this)
-		FirstThinker = m_Next;
-	if (LastThinker == this)
-		LastThinker = m_Prev;
-	if (m_Next)
-		m_Next->m_Prev = m_Prev;
-	if (m_Prev)
-		m_Prev->m_Next = m_Next;
-	m_Next = m_Prev = NULL;
+		NextToThink = Succ;
+
+	if (Succ != NULL)
+	{
+		Remove ();
+		Succ = NULL;
+	}
 	Super::Destroy ();
+}
+
+void DThinker::ChangeStatNum (int statnum)
+{
+	if ((unsigned)statnum > MAX_STATNUM)
+	{
+		statnum = MAX_STATNUM;
+	}
+	Remove ();
+	Thinkers[statnum].AddTail (this);
 }
 
 // Destroy every thinker
 void DThinker::DestroyAllThinkers ()
 {
-	DThinker *currentthinker = FirstThinker;
-	while (currentthinker)
+	int i;
+
+	for (i = 0; i <= MAX_STATNUM; i++)
 	{
-		DThinker *next = currentthinker->m_Next;
-		DObject::BeginFrame ();
-		currentthinker->Destroy ();
-		DObject::EndFrame ();
-		currentthinker = next;
+		Node *node = Thinkers[i].Head;
+		while (node->Succ != NULL)
+		{
+			Node *next = node->Succ;
+			DObject::BeginFrame ();
+			static_cast<DThinker *> (node)->Destroy ();
+			DObject::EndFrame ();
+			node = next;
+		}
+		// Should already be empty from the Destroys
+		//Thinkers[i].MakeEmpty ();
 	}
 }
 
 // Destroy all thinkers except for player-controlled actors
+// Players are simply removed from the list of thinkers and
+// will be added back after serialization is complete.
 void DThinker::DestroyMostThinkers ()
 {
-	DThinker *thinker = FirstThinker;
-	while (thinker)
+	int i;
+
+	for (i = 0; i <= MAX_STATNUM; i++)
 	{
-		DThinker *next = thinker->m_Next;
-		if (!thinker->IsKindOf (RUNTIME_CLASS (AActor)) ||
-			static_cast<AActor *>(thinker)->player == NULL ||
-			static_cast<AActor *>(thinker)->player->mo
-			 != static_cast<AActor *>(thinker))
+		if (i != STAT_PLAYER)
 		{
-			thinker->Destroy ();
+			Node *node = Thinkers[i].Head;
+			while (node->Succ != NULL)
+			{
+				Node *next = node->Succ;
+				DObject::BeginFrame ();
+				static_cast<DThinker *> (node)->Destroy ();
+				DObject::EndFrame ();
+				node = next;
+			}
 		}
-		thinker = next;
+		else
+		{
+			Node *node = Thinkers[i].Head;
+			while (node->Succ != NULL)
+			{
+				Node *next = node->Succ;
+				node->Remove ();
+				node = next;
+			}
+		}
 	}
-	DObject::EndFrame ();
 }
 
 void DThinker::RunThinkers ()
 {
-	DThinker *currentthinker;
+	int i;
 
 	ThinkCycles = BotSupportCycles = 0;
 
 	clock (ThinkCycles);
-	currentthinker = FirstThinker;
-	while (currentthinker)
+	for (i = STAT_FIRST_THINKING; i <= MAX_STATNUM; i++)
 	{
-		NextToThink = currentthinker->m_Next;
-		if (currentthinker->ObjectFlags & OF_JustSpawned)
-		{	// OF_JustSpawned is valid with actors only
-			currentthinker->ObjectFlags &= ~OF_JustSpawned;
-			(static_cast<AActor *> (currentthinker))->PostBeginPlay ();
+		Node *node = Thinkers[i].Head;
+		while (node->Succ != NULL)
+		{
+			NextToThink = node->Succ;
+			DThinker *thinker = static_cast<DThinker *> (node);
+			if (thinker->ObjectFlags & OF_JustSpawned)
+			{	// OF_JustSpawned is valid with actors only
+				thinker->ObjectFlags &= ~OF_JustSpawned;
+				static_cast<AActor *> (thinker)->PostBeginPlay ();
+				if (thinker->ObjectFlags & OF_MassDestruction)
+				{ // object destroyed itself
+					return;
+				}
+			}
+	//		Printf (PRINT_HIGH, "%d: %s\n", gametic, RUNTIME_TYPE(thinker)->Name);
+			thinker->RunThink ();
+			node = NextToThink;
 		}
-		currentthinker->RunThink ();
-		currentthinker = NextToThink;
 	}
 	unclock (ThinkCycles);
+}
+
+void DThinker::RunThink ()
+{
 }
 
 void *DThinker::operator new (size_t size)
@@ -166,9 +229,56 @@ void DThinker::operator delete (void *mem)
 	Z_Free (mem);
 }
 
-BEGIN_STAT (think)
+FThinkerIterator::FThinkerIterator (TypeInfo *type, int statnum)
+{
+	if ((unsigned)statnum > MAX_STATNUM)
+	{
+		m_Stat = STAT_FIRST_THINKING;
+		m_SearchStats = true;
+	}
+	else
+	{
+		m_Stat = statnum;
+		m_SearchStats = false;
+	}
+	m_ParentType = type;
+	m_CurrThinker = DThinker::Thinkers[m_Stat].Head;
+}
+
+void FThinkerIterator::Reinit ()
+{
+	m_CurrThinker = DThinker::Thinkers[m_Stat].Head;
+}
+
+DThinker *FThinkerIterator::Next ()
+{
+	do
+	{
+		while (m_CurrThinker->Succ)
+		{
+			DThinker *thinker = static_cast<DThinker *> (m_CurrThinker);
+			if (thinker->IsKindOf (m_ParentType))
+			{
+				m_CurrThinker = m_CurrThinker->Succ;
+				return thinker;
+			}
+			m_CurrThinker = m_CurrThinker->Succ;
+		}
+		if (m_SearchStats)
+		{
+			m_Stat++;
+			if (m_Stat > MAX_STATNUM)
+			{
+				m_Stat = STAT_FIRST_THINKING;
+			}
+		}
+		m_CurrThinker = DThinker::Thinkers[m_Stat].Head;
+	} while (m_SearchStats && m_Stat != STAT_FIRST_THINKING);
+	return NULL;
+}
+
+ADD_STAT (think, out)
 {
 	sprintf (out, "Think time = %04.1f ms",
 		SecondsPerCycle * (double)ThinkCycles * 1000);
 }
-END_STAT (think)

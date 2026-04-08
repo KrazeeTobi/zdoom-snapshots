@@ -105,8 +105,8 @@ bool S_CheckSound (int sfxid);
 #define CHAN_ITEM				3
 #define CHAN_BODY				4
 // modifier flags
-//#define CHAN_NO_PHS_ADD		8	// send to all clients, not just ones in PHS (ATTN 0 will also do this)
-//#define CHAN_RELIABLE			16	// send by reliable message, not datagram
+#define CHAN_LISTENERZ			8
+#define CHAN_IMMOBILE			16
 
 
 // sound attenuation values
@@ -136,15 +136,20 @@ bool S_GetSoundPlayingInfo (fixed_t *pt, int sound_id);
 void S_RelinkSound (AActor *from, AActor *to);
 
 // Start music using <music_name>
-void S_StartMusic (char *music_name);
+bool S_StartMusic (char *music_name);
 
 // Start music using <music_name>, and set whether looping
-void S_ChangeMusic (const char *music_name, int looping);
+bool S_ChangeMusic (const char *music_name, int order=0, bool looping=true, bool force=false);
+
+// Start playing a cd track as music
+bool S_ChangeCDMusic (int track, unsigned int id=0, bool looping=true);
 
 void S_RestartMusic ();
 
-// Stops the music fer sure.
-void S_StopMusic ();
+int S_GetMusic (char **name);
+
+// Stops the music for sure.
+void S_StopMusic (bool force);
 
 // Stop and resume music, during game PAUSE.
 void S_PauseSound ();
@@ -172,9 +177,6 @@ int S_AddSoundLump (char *logicalname, int lump);	// Add sound by lump index
 // [RH] Prints sound debug info to the screen.
 //		Modelled after Hexen's noise cheat.
 void S_NoiseDebug ();
-
-class cvar_t;
-extern cvar_t noisedebug;
 
 
 #endif

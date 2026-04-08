@@ -11,8 +11,43 @@
 #include "doomstat.h"
 #include "m_alloc.h"
 #include "d_player.h"
+#include "configfile.h"
 
-CVAR (lookspring, "1", CVAR_ARCHIVE);	// Generate centerview when -mlook encountered?
+static long ParseCommandLine (const char *args, int *argc, char **argv);
+
+CVAR (Bool, lookspring, true, CVAR_ARCHIVE);	// Generate centerview when -mlook encountered?
+
+class DWaitingCommand : public DThinker
+{
+	DECLARE_CLASS (DWaitingCommand, DThinker)
+public:
+	DWaitingCommand (const char *cmd, int tics);
+	~DWaitingCommand ();
+	void Serialize (FArchive &arc);
+	void RunThink ();
+
+private:
+	DWaitingCommand ();
+
+	char *Command;
+	int TicsLeft;
+};
+
+class DStoredCommand : public DThinker
+{
+	DECLARE_CLASS (DStoredCommand, DThinker)
+public:
+	DStoredCommand (int argc, char **argv, const char *args);
+	~DStoredCommand ();
+	void RunThink ();
+
+private:
+	DStoredCommand ();
+
+	int ArgC;
+	char **ArgV;
+	char *ArgS;
+};
 
 static FConsoleCommand *FindNameInHashTable (FConsoleCommand **table, const char *name);
 static FConsoleCommand *ScanChainForName (FConsoleCommand *start, const char *name, FConsoleCommand **prev);
@@ -41,6 +76,99 @@ struct ActionBits actionbits[NUM_ACTIONS] =
 	{ 0x2314d, ACTION_SHOWSCORES, "showscores" }
 };
 byte Actions[NUM_ACTIONS];
+
+IMPLEMENT_CLASS (DWaitingCommand)
+
+void DWaitingCommand::Serialize (FArchive &arc)
+{
+	Super::Serialize (arc);
+	arc << Command << TicsLeft;
+}
+
+DWaitingCommand::DWaitingCommand ()
+{
+	Command = NULL;
+	TicsLeft = 1;
+}
+
+DWaitingCommand::DWaitingCommand (const char *cmd, int tics)
+{
+	Command = copystring (cmd);
+	TicsLeft = tics;
+}
+
+DWaitingCommand::~DWaitingCommand ()
+{
+	if (Command != NULL)
+	{
+		delete[] Command;
+	}
+}
+
+void DWaitingCommand::RunThink ()
+{
+	if (--TicsLeft == 0)
+	{
+		AddCommandString (Command);
+		Destroy ();
+	}
+}
+
+IMPLEMENT_CLASS (DStoredCommand)
+
+DStoredCommand::DStoredCommand ()
+{
+	Destroy ();
+}
+
+DStoredCommand::DStoredCommand (int argc, char **argv, const char *args)
+{
+	ArgC = argc;
+	if (argc != 0)
+	{
+		int len;
+		int i;
+
+		for (i = len = 0; i < argc; i++)
+		{
+			len += strlen (argv[i]) + 1;
+		}
+		ArgV = new char *[argc];
+		ArgV[0] = new char[len];
+		ArgV[0][0] = 0;
+		for (i = len = 0; i < argc; i++)
+		{
+			ArgV[i] = ArgV[0] + len;
+			strcpy (ArgV[0] + len, argv[i]);
+			len += strlen (argv[i]) + 1;
+		}
+		ArgS = new char[strlen (args) + 1];
+		strcpy (ArgS, args);
+	}
+}		
+
+DStoredCommand::~DStoredCommand ()
+{
+	if (ArgC != 0)
+	{
+		delete[] ArgV[0];
+		delete[] ArgV;
+		delete[] ArgS;
+	}
+}
+
+void DStoredCommand::RunThink ()
+{
+	if (ArgC != 0)
+	{
+		FConsoleCommand *com = FindNameInHashTable (Commands, ArgV[0]);
+		if (com != NULL)
+		{
+			com->Run (ArgC, ArgV, ArgS, players[consoleplayer].mo);
+		}
+	}
+	Destroy ();
+}
 
 static int ListActionCommands (void)
 {
@@ -96,109 +224,100 @@ int GetActionBit (unsigned int key)
 
 void C_DoCommand (char *cmd)
 {
-	int argc, argsize;
+	int argc;
+	long argsize;
 	char **argv;
-	char *args, *arg, *realargs;
-	char *data;
 	FConsoleCommand *com;
-	int check = -1;
 
-	data = ParseString (cmd);
-	if (!data)
-		return;
+	while (*cmd && *cmd <= ' ')
+		cmd++;
 
 	// Check if this is an action
-	if (*com_token == '+')
+	if (*cmd == '+' || *cmd == '-')
 	{
-		check = GetActionBit (MakeKey (com_token + 1));
-		//if (Actions[check] < 255)
-		//	Actions[check]++;
-		Actions[check] = 1;
-	}
-	else if (*com_token == '-')
-	{
-		check = GetActionBit (MakeKey (com_token + 1));
-		//if (Actions[check])
-		//	Actions[check]--;
-		Actions[check] = 0;
-		if (check == ACTION_MLOOK && lookspring.value)
+		int action;
+		char *end = cmd+1;
+		char brk;
+
+		while (*end && *end > ' ')
+			end++;
+		brk = *end;
+		*end = 0;
+		action = GetActionBit (MakeKey (cmd + 1));
+		*end = brk;
+		if (action >= 0)
 		{
-			AddCommandString ("centerview");
-		}
-	}
-	
-	// Check if this is a normal command
-	if (check == -1)
-	{
-		argc = 1;
-		argsize = strlen (com_token) + 1;
-
-		realargs = new char[strlen (data) + 1];
-		strcpy (realargs, data);
-
-		while ( (data = ParseString (data)) )
-		{
-			argc++;
-			argsize += strlen (com_token) + 1;
-		}
-
-		args = new char[argsize];
-		argv = new char *[argc];
-
-		arg = args;
-		data = cmd;
-		argsize = 0;
-		while ( (data = ParseString (data)) )
-		{
-			strcpy (arg, com_token);
-			argv[argsize] = arg;
-			arg += strlen (arg);
-			*arg++ = 0;
-			argsize++;
-		}
-
-		// Checking for matching commands follows this search order:
-		//	1. Check the Commands[] hash table
-		//	2. Check the CVars list
-
-		if ( (com = FindNameInHashTable (Commands, argv[0])) )
-		{
-			com->argc = argc;
-			com->argv = argv;
-			com->args = realargs;
-			com->m_Instigator = players[consoleplayer].mo;
-			com->Run ();
-		}
-		else
-		{
-			// Check for any CVars that match the command
-			cvar_t *var, *dummy;
-
-			if ( (var = FindCVar (argv[0], &dummy)) )
+			if (*cmd == '+')
 			{
-				if (argc >= 2)
-				{
-					com = FindNameInHashTable (Commands, "set");
-					com->argc = argc + 1;
-					com->argv = argv - 1;	// Hack
-					com->m_Instigator = players[consoleplayer].mo;
-					com->Run ();
-				}
-				else
-				{
-					Printf (PRINT_HIGH, "\"%s\" is \"%s\"\n", var->name, var->string);
-				}
+				//if (Actions[check] < 255)
+				//	Actions[check]++;
+				Actions[action] = 1;
 			}
 			else
 			{
-				// We don't know how to handle this command
-				Printf (PRINT_HIGH, "Unknown command \"%s\"\n", argv[0]);
+				//if (Actions[check])
+				//	Actions[check]--;
+				Actions[action] = 0;
+				if (action == ACTION_MLOOK && *lookspring)
+				{
+					AddCommandString ("centerview");
+				}
+			}
+			return;
+		}
+	}
+	
+	// Parse it as a normal command
+	argsize = ParseCommandLine (cmd, &argc, NULL);
+	argv = (char **)Malloc (argc*sizeof(char *) + argsize);
+	argv[0] = (char *)argv + argc*sizeof(char *);
+	ParseCommandLine (cmd, NULL, argv);
+
+	// Checking for matching commands follows this search order:
+	//	1. Check the Commands[] hash table
+	//	2. Check the CVars list
+
+	if ( (com = FindNameInHashTable (Commands, argv[0])) )
+	{
+		if (gamestate != GS_STARTUP ||
+			stricmp (argv[0], "set") == 0 ||
+			stricmp (argv[0], "logfile") == 0 ||
+			stricmp (argv[0], "unbindall") == 0 ||
+			stricmp (argv[0], "exec") == 0)
+		{
+			com->Run (argc, argv, cmd, players[consoleplayer].mo);
+		}
+		else
+		{
+			new DStoredCommand (argc, argv, cmd);
+		}
+	}
+	else
+	{
+		// Check for any console vars that match the command
+		FBaseCVar *var;
+
+		if ( (var = FindCVar (argv[0], NULL)) )
+		{
+			if (argc >= 2)
+			{ // Hack
+				com = FindNameInHashTable (Commands, "set");
+				com->Run (argc + 1, argv - 1, cmd, players[consoleplayer].mo);
+			}
+			else
+			{
+				UCVarValue val = var->GetGenericRep (CVAR_String);
+				Printf (PRINT_HIGH, "\"%s\" is \"%s\"\n",
+					var->GetName(), val);
 			}
 		}
-		delete[] argv;
-		delete[] args;
-		delete[] realargs;
+		else
+		{
+			// We don't know how to handle this command
+			Printf (PRINT_HIGH, "Unknown command \"%s\"\n", argv[0]);
+		}
 	}
+	free (argv);
 }
 
 void AddCommandString (char *cmd)
@@ -216,7 +335,7 @@ void AddCommandString (char *cmd)
 				if (*brkpt == '\"')
 				{
 					brkpt++;
-					while (*brkpt != '\"' && *brkpt != '\0')
+					while (*brkpt != '\0' && (*brkpt != '\"' || *(brkpt-1) == '\\'))
 						brkpt++;
 				}
 				brkpt++;
@@ -230,7 +349,38 @@ void AddCommandString (char *cmd)
 			{
 				more = 0;
 			}
-			C_DoCommand (cmd);
+			// Intercept wait commands here
+			while (*cmd && *cmd <= ' ')
+				cmd++;
+			if (*cmd)
+			{
+				if (strnicmp (cmd, "wait", 4) == 0 && (cmd[4] == 0 || cmd[4] == ' '))
+				{
+					int tics;
+
+					if (cmd[4] == ' ')
+					{
+						tics = strtol (cmd + 5, NULL, 0);
+					}
+					else
+					{
+						tics = 1;
+					}
+					if (tics > 0)
+					{
+						if (more)
+						{ // The remainder of the command will be executed later
+							*brkpt = ';';
+							new DWaitingCommand (brkpt + 1, tics);
+						}
+						return;
+					}
+				}
+				else
+				{
+					C_DoCommand (cmd);
+				}
+			}
 			if (more)
 			{
 				*brkpt = ';';
@@ -240,78 +390,103 @@ void AddCommandString (char *cmd)
 	}
 }
 
-// ParseString2 is adapted from COM_Parse
-// found in the Quake2 source distribution
-char *ParseString2 (char *data)
+// ParseCommandLine
+//
+// Parse a command line (passed in args). If argc is non-NULL, it will
+// be set to the number of arguments. If argv is non-NULL, it will be
+// filled with pointers to each argument; argv[0] should be initialized
+// to point to a buffer large enough to hold all the arguments. The
+// return value is the necessary size of this buffer.
+//
+// Special processing: Inside quoted strings, \" becomes just "
+// $<cvar> is replaced by the contents of <cvar>
+
+static long ParseCommandLine (const char *args, int *argc, char **argv)
 {
-	int c;
-	int len;
-	
-	len = 0;
-	com_token[0] = 0;
-	
-	if (!data)
-		return NULL;
-		
-// skip whitespace
-	while ( (c = *data) <= ' ')
+	int count;
+	char *buffplace;
+
+	count = 0;
+	buffplace = NULL;
+	if (argv != NULL)
 	{
-		if (c == 0)
+		buffplace = argv[0];
+	}
+
+	for (;;)
+	{
+		while (*args <= ' ' && *args)
+		{ // skip white space
+			args++;
+		}
+		if (*args == 0)
 		{
-			return NULL;			// end of string encountered
+			break;
 		}
-		data++;
-	}
-	
-// handle quoted strings specially
-	if (c == '\"')
-	{
-		data++;
-		while (1) {
-			c = *data++;
-			if (c == '\"' || c == '\0')
+		else if (*args == '\"')
+		{ // read quoted string
+			char stuff;
+			if (argv != NULL)
 			{
-				if (c == '\0')
-					data--;
-				com_token[len] = 0;
-				return data;
+				argv[count] = buffplace;
 			}
-			com_token[len] = c;
-			len++;
-		}
-	}
-
-// parse a regular word
-	do {
-		com_token[len] = c;
-		data++;
-		len++;
-		c = *data;
-	} while (c>32);
-	
-	com_token[len] = 0;
-	return data;
-}
-
-// ParseString calls ParseString2 to remove the first
-// token from an input string. If this token is of
-// the form $<cvar>, it will be replaced by the
-// contents of <cvar>.
-char *ParseString (char *data) 
-{
-	cvar_t *var, *dummy;
-
-	if ( (data = ParseString2 (data)) )
-	{
-		if (com_token[0] == '$')
-		{
-			if ( (var = FindCVar (&com_token[1], &dummy)) )
+			count++;
+			args++;
+			do
 			{
-				strcpy (com_token, var->string);
+				stuff = *args++;
+				if (stuff == '\\' && *args == '\"')
+				{
+					stuff = '\"', args++;
+				}
+				else if (stuff == '\"')
+				{
+					stuff = 0;
+				}
+				if (argv != NULL)
+				{
+					*buffplace = stuff;
+				}
+				buffplace++;
+			} while (stuff);
+		}
+		else
+		{ // read unquoted string
+			const char *start = args++, *end;
+			FBaseCVar *var;
+			UCVarValue val;
+
+			while (*args && *args > ' ' && *args != '\"')
+				args++;
+			if (*start == '$' && (var = FindCVar (start+1, NULL)))
+			{
+				val = var->GetGenericRep (CVAR_String);
+				start = val.String;
+				end = start + strlen (start);
 			}
+			else
+			{
+				end = args;
+			}
+			if (argv != NULL)
+			{
+				argv[count] = buffplace;
+				while (start < end)
+					*buffplace++ = *start++;
+				*buffplace++ = 0;
+			}
+			else
+			{
+				buffplace += end - start + 1;
+			}
+			count++;
 		}
 	}
-	return data;
+	if (argc != NULL)
+	{
+		*argc = count;
+	}
+	return (long)buffplace;
 }
 
 static FConsoleCommand *ScanChainForName (FConsoleCommand *start, const char *name, FConsoleCommand **prev)
@@ -377,7 +552,8 @@ bool FConsoleCommand::AddToHash (FConsoleCommand **table)
 	return true;
 }
 
-FConsoleCommand::FConsoleCommand (const char *name)
+FConsoleCommand::FConsoleCommand (const char *name, CCmdRun runFunc)
+	: m_RunFunc (runFunc)
 {
 	static bool firstTime = true;
 
@@ -419,8 +595,13 @@ FConsoleCommand::~FConsoleCommand ()
 	delete[] m_Name;
 }
 
+void FConsoleCommand::Run (int argc, char **argv, const char *args, AActor *instigator)
+{
+	m_RunFunc (argc, argv, args, instigator);
+}
+
 FConsoleAlias::FConsoleAlias (const char *name, const char *command)
-	: FConsoleCommand (name)
+	: FConsoleCommand (name, NULL)
 {
 	m_Command = copystring (command);
 }
@@ -483,13 +664,16 @@ static int DumpHash (FConsoleCommand **table, BOOL aliases)
 	return count;
 }
 
-void FConsoleAlias::Archive (FILE *f)
+void FConsoleAlias::Archive (FConfigFile *f)
 {
 	if (f != NULL)
-		fprintf (f, "alias \"%s\" \"%s\"\n", m_Name, m_Command);
+	{
+		f->SetValueForKey ("Name", m_Name, true);
+		f->SetValueForKey ("Command", m_Command, true);
+	}
 }
 
-void C_ArchiveAliases (FILE *f)
+void C_ArchiveAliases (FConfigFile *f)
 {
 	int bucket;
 	FConsoleCommand *alias;
@@ -506,7 +690,20 @@ void C_ArchiveAliases (FILE *f)
 	}
 }
 
-BEGIN_COMMAND (alias)
+void C_SetAlias (const char *name, const char *cmd)
+{
+	FConsoleCommand *prev, *alias, **chain;
+
+	chain = &Commands[MakeKey (name) % HASH_SIZE];
+	alias = ScanChainForName (*chain, name, &prev);
+	if (alias != NULL)
+	{
+		delete alias;
+	}
+	new FConsoleAlias (name, cmd);
+}
+
+CCMD (alias)
 {
 	FConsoleCommand *prev, *alias, **chain;
 
@@ -543,9 +740,8 @@ BEGIN_COMMAND (alias)
 		}
 	}
 }
-END_COMMAND (alias)
 
-BEGIN_COMMAND (cmdlist)
+CCMD (cmdlist)
 {
 	int count;
 
@@ -553,9 +749,8 @@ BEGIN_COMMAND (cmdlist)
 	count += DumpHash (Commands, false);
 	Printf (PRINT_HIGH, "%d commands\n", count);
 }
-END_COMMAND (cmdlist)
 
-BEGIN_COMMAND (key)
+CCMD (key)
 {
 	if (argc > 1)
 	{
@@ -568,29 +763,20 @@ BEGIN_COMMAND (key)
 		Printf (PRINT_HIGH, "\n");
 	}
 }
-END_COMMAND (key)
 
 // Execute any console commands specified on the command line.
 // These all begin with '+' as opposed to '-'.
-// If onlyset is true, only "set" commands will be executed,
+// If DispatchSetOnly is true, only "set" commands will be executed,
 // otherwise only non-"set" commands are executed.
-void C_ExecCmdLineParams (int onlyset)
+void C_ExecCmdLineParams ()
 {
-	int currArg, setComp, cmdlen, argstart;
-	char *cmdString;
-
-	for (currArg = 1; currArg < Args.NumArgs(); )
+	for (int currArg = 1; currArg < Args.NumArgs(); )
 	{
 		if (*Args.GetArg (currArg++) == '+')
 		{
-			setComp = stricmp (Args.GetArg (currArg - 1) + 1, "set");
-			if ((onlyset && setComp) || (!onlyset && !setComp))
-			{
-				continue;
-			}
-
-			cmdlen = 1;
-			argstart = currArg - 1;
+			char *cmdString;
+			int cmdlen = 1;
+			int argstart = currArg - 1;
 
 			while (currArg < Args.NumArgs())
 			{
@@ -607,4 +793,19 @@ void C_ExecCmdLineParams (int onlyset)
 			}
 		}
 	}
+}
+
+bool FConsoleCommand::IsAlias ()
+{
+	return false;
+}
+
+bool FConsoleAlias::IsAlias ()
+{
+	return true;
+}
+
+void FConsoleAlias::Run (int argc, char **argv, const char *args, AActor *m_Instigator)
+{
+	AddCommandString (m_Command);
 }

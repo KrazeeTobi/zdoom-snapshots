@@ -15,7 +15,7 @@
 // for more details.
 //
 // DESCRIPTION:
-//		Fixed point arithemtics, implementation.
+//		Fixed point arithmetics, implementation.
 //
 //-----------------------------------------------------------------------------
 
@@ -40,117 +40,66 @@ extern "C" fixed_t STACK_ARGS FixedDiv_ASM	(fixed_t a, fixed_t b);
 fixed_t FixedMul_C				(fixed_t a, fixed_t b);
 fixed_t FixedDiv_C				(fixed_t a, fixed_t b);
 
-#ifdef ALPHA
+#if defined(ALPHA)
+#include "alphainlines.h"
+#elif defined(__GNUG__)
+#include "gccinlines.h"
+#elif defined(_MSC_VER)
+#include "mscinlines.h"
+#else
+#include "basicinlines.h"
+#endif
+
+#define MAKESAFEDIVSCALE(x) \
+	inline SDWORD SafeDivScale##x (SDWORD a, SDWORD b) \
+	{ \
+		if (abs(a) >> (31-x) >= abs (b)) \
+			return (a^b)<0 ? MININT : MAXINT; \
+		return DivScale##x (a, b); \
+	}
+
+MAKESAFEDIVSCALE(1)
+MAKESAFEDIVSCALE(2)
+MAKESAFEDIVSCALE(3)
+MAKESAFEDIVSCALE(4)
+MAKESAFEDIVSCALE(5)
+MAKESAFEDIVSCALE(6)
+MAKESAFEDIVSCALE(7)
+MAKESAFEDIVSCALE(8)
+MAKESAFEDIVSCALE(9)
+MAKESAFEDIVSCALE(10)
+MAKESAFEDIVSCALE(11)
+MAKESAFEDIVSCALE(12)
+MAKESAFEDIVSCALE(13)
+MAKESAFEDIVSCALE(14)
+MAKESAFEDIVSCALE(15)
+MAKESAFEDIVSCALE(16)
+MAKESAFEDIVSCALE(17)
+MAKESAFEDIVSCALE(18)
+MAKESAFEDIVSCALE(19)
+MAKESAFEDIVSCALE(20)
+MAKESAFEDIVSCALE(21)
+MAKESAFEDIVSCALE(22)
+MAKESAFEDIVSCALE(23)
+MAKESAFEDIVSCALE(24)
+MAKESAFEDIVSCALE(25)
+MAKESAFEDIVSCALE(26)
+MAKESAFEDIVSCALE(27)
+MAKESAFEDIVSCALE(28)
+MAKESAFEDIVSCALE(29)
+MAKESAFEDIVSCALE(30)
+MAKESAFEDIVSCALE(31)
+MAKESAFEDIVSCALE(32)
+#undef MAKESAFEDIVSCALE
+
 inline fixed_t FixedMul (fixed_t a, fixed_t b)
 {
-    return (fixed_t)(((long)a * (long)b) >> 16);
+	return MulScale16 (a, b);
 }
 
 inline fixed_t FixedDiv (fixed_t a, fixed_t b)
 {
-    if (abs(a) >> 14 >= abs(b))
-	    return (a^b)<0 ? MININT : MAXINT;
-	return (fixed_t)((((long)a) << 16) / b);
+	return SafeDivScale16 (a, b);
 }
-
-#else
-
-#ifdef USEASM
-#if defined(__GNUG__)
-
-// killough 5/10/98: In djgpp, use inlined assembly for performance
-
-__inline__ static fixed_t FixedMul(fixed_t a, fixed_t b)
-{
-  fixed_t result;
-
-  asm("\timull %2\n"
-      "\tshrdl $16,%%edx,%0"
-      : "=a,a" (result)           // eax is always the result
-      : "0,0" (a),                 // eax is also first operand
-        "m,r" (b)                  // second operand can be mem or reg
-      : "%edx", "%cc"              // edx and condition codes clobbered
-      );
-
-  return result;
-}
-
-__inline__ static fixed_t FixedDiv(fixed_t a, fixed_t b)
-{
-  fixed_t result;
-
-  if (abs(a) >> 14 >= abs(b))
-    return (a^b)<0 ? MININT : MAXINT;
-
-  asm(" movl %0, %%edx ;"
-      " sall $16,%%eax ;"
-      " sarl $16,%%edx ;"
-      " idivl %2 ;"
-      : "=a,a" (result)     // eax is always the result
-      : "0,0" (a),          // eax is also the first operand
-        "m,r" (b)           // second operand can be mem or reg (not imm)
-      : "%edx", "%cc"       // edx and condition codes are clobbered
-      );
-
-  return result;
-}
-
-#elif defined(_MSC_VER)
-
-__inline fixed_t FixedMul (fixed_t a, fixed_t b)
-{
-	fixed_t result;
-	__asm {
-		mov		eax,[a]
-		imul	[b]
-		shrd	eax,edx,16
-		mov		[result],eax
-	}
-	return result;
-}
-
-#if 1
-// Inlining FixedDiv with VC++ generates too many bad optimizations.
-#define FixedDiv(a,b)			FixedDiv_ASM(a,b)
-#else
-__inline fixed_t FixedDiv (fixed_t a, fixed_t b)
-{
-	if (abs(a) >> 14 >= abs(b))
-		return (a^b)<0 ? MININT : MAXINT;
-	else
-	{
-		fixed_t result;
-
-		__asm {
-			mov		eax,[a]
-			mov		edx,[a]
-			sar		edx,16
-			shl		eax,16
-			idiv	[b]
-			mov		[result],eax
-		}
-		return result;
-	}
-}
-#endif
-
-#else
-
-#define FixedMul(a,b)			FixedMul_ASM(a,b)
-#define FixedDiv(a,b)			FixedDiv_ASM(a,b)
 
 #endif
-
-#else // !USEASM
-#define FixedMul(a,b)			FixedMul_C(a,b)
-#define FixedDiv(a,b)			FixedDiv_C(a,b)
-#endif
-
-#endif // !ALPHA
-
-#endif
-//-----------------------------------------------------------------------------
-//
-// $Log:$
-//
-//-----------------------------------------------------------------------------

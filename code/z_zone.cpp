@@ -519,7 +519,7 @@ size_t Z_FreeMemory (void)
 	return pfree + efree;
 }
 
-BEGIN_COMMAND (mem)
+CCMD (mem)
 {
 	Z_FreeMemory ();
 
@@ -540,4 +540,3 @@ BEGIN_COMMAND (mem)
 			largestpfree > largestefree ? largestpfree : largestefree
 			);
 }
-END_COMMAND (mem)

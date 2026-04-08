@@ -69,10 +69,12 @@ typedef struct {
 
 class DSeqActorNode : public DSeqNode
 {
-	DECLARE_SERIAL (DSeqActorNode, DSeqNode)
+	DECLARE_CLASS (DSeqActorNode, DSeqNode)
+	HAS_OBJECT_POINTERS
 public:
 	DSeqActorNode (AActor *actor, int sequence);
 	~DSeqActorNode ();
+	void Serialize (FArchive &arc);
 	void MakeSound () { S_SoundID (m_Actor, CHAN_BODY, m_CurrentSoundID, m_Volume, m_Atten); }
 	void MakeLoopedSound () { S_LoopedSoundID (m_Actor, CHAN_BODY, m_CurrentSoundID, m_Volume, m_Atten); }
 	bool IsPlaying () { return S_GetSoundPlayingInfo (m_Actor, m_CurrentSoundID); }
@@ -84,10 +86,11 @@ private:
 
 class DSeqPolyNode : public DSeqNode
 {
-	DECLARE_SERIAL (DSeqPolyNode, DSeqNode)
+	DECLARE_CLASS (DSeqPolyNode, DSeqNode)
 public:
 	DSeqPolyNode (polyobj_t *poly, int sequence);
 	~DSeqPolyNode ();
+	void Serialize (FArchive &arc);
 	void MakeSound () { S_SoundID (&m_Poly->startSpot[0], CHAN_BODY, m_CurrentSoundID, m_Volume, m_Atten); }
 	void MakeLoopedSound () { S_LoopedSoundID (&m_Poly->startSpot[0], CHAN_BODY, m_CurrentSoundID, m_Volume, m_Atten); }
 	bool IsPlaying () { return S_GetSoundPlayingInfo (&m_Poly->startSpot[0], m_CurrentSoundID); }
@@ -99,10 +102,11 @@ private:
 
 class DSeqSectorNode : public DSeqNode
 {
-	DECLARE_SERIAL (DSeqSectorNode, DSeqNode)
+	DECLARE_CLASS (DSeqSectorNode, DSeqNode)
 public:
 	DSeqSectorNode (sector_t *sec, int sequence);
 	~DSeqSectorNode ();
+	void Serialize (FArchive &arc);
 	void MakeSound () { S_SoundID (&m_Sector->soundorg[0], CHAN_BODY, m_CurrentSoundID, m_Volume, m_Atten); }
 	void MakeLoopedSound () { S_LoopedSoundID (&m_Sector->soundorg[0], CHAN_BODY, m_CurrentSoundID, m_Volume, m_Atten); }
 	bool IsPlaying () { return S_GetSoundPlayingInfo (m_Sector->soundorg, m_CurrentSoundID); }
@@ -117,6 +121,14 @@ private:
 static void VerifySeqPtr (int pos, int need);
 static void AssignTranslations (int seq, seqtype_t type);
 static void AssignHexenTranslations (void);
+
+// PUBLIC DATA DEFINITIONS -------------------------------------------------
+
+sndseq_t **Sequences;
+int NumSequences;
+int MaxSequences;
+int ActiveSequences;
+DSeqNode *DSeqNode::SequenceListHead;
 
 // PRIVATE DATA DEFINITIONS ------------------------------------------------
 
@@ -168,12 +180,6 @@ static int SeqTrans[64*3];
 static unsigned int *ScriptTemp;
 static int ScriptTempSize;
 
-sndseq_t **Sequences;
-int NumSequences;
-int MaxSequences;
-int ActiveSequences;
-DSeqNode *DSeqNode::SequenceListHead;
-
 
 // CODE --------------------------------------------------------------------
 
@@ -186,7 +192,7 @@ void DSeqNode::SerializeSequences (FArchive &arc)
 	arc << SequenceListHead;
 }
 
-IMPLEMENT_SERIAL (DSeqNode, DObject)
+IMPLEMENT_CLASS (DSeqNode)
 
 DSeqNode::DSeqNode ()
 {
@@ -247,7 +253,7 @@ void DSeqNode::Serialize (FArchive &arc)
 }
 
 
-IMPLEMENT_POINTY_SERIAL (DSeqActorNode, DSeqNode)
+IMPLEMENT_POINTY_CLASS (DSeqActorNode)
  DECLARE_POINTER (m_Actor)
 END_POINTERS
 
@@ -257,7 +263,7 @@ void DSeqActorNode::Serialize (FArchive &arc)
 	arc << m_Actor;
 }
 
-IMPLEMENT_SERIAL (DSeqPolyNode, DSeqNode)
+IMPLEMENT_CLASS (DSeqPolyNode)
 
 void DSeqPolyNode::Serialize (FArchive &arc)
 {
@@ -265,7 +271,7 @@ void DSeqPolyNode::Serialize (FArchive &arc)
 	arc.SerializePointer (polyobjs, (BYTE **)&m_Poly, sizeof(*polyobjs));
 }
 
-IMPLEMENT_SERIAL (DSeqSectorNode, DSeqNode)
+IMPLEMENT_CLASS (DSeqSectorNode)
 
 void DSeqSectorNode::Serialize (FArchive &arc)
 {

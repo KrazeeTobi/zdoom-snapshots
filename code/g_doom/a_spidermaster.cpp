@@ -4,7 +4,7 @@
 #include "s_sound.h"
 #include "p_local.h"
 #include "p_enemy.h"
-#include "dstrings.h"
+#include "gstrings.h"
 #include "a_action.h"
 
 void A_SpidRefire (AActor *);
@@ -13,14 +13,11 @@ void A_SPosAttack (AActor *);
 
 class ASpiderMastermind : public AActor
 {
-	DECLARE_ACTOR (ASpiderMastermind, AActor);
+	DECLARE_ACTOR (ASpiderMastermind, AActor)
 public:
 	bool SuggestMissileAttack (fixed_t dist);
-	const char *GetObituary () { return OB_SPIDER; }
+	const char *GetObituary () { return GStrings(OB_SPIDER); }
 };
-
-IMPLEMENT_DEF_SERIAL (ASpiderMastermind, AActor);
-REGISTER_ACTOR (ASpiderMastermind, Doom);
 
 FState ASpiderMastermind::States[] =
 {
@@ -66,31 +63,29 @@ FState ASpiderMastermind::States[] =
 	S_NORMAL (SPID, 'S',   -1, A_BossDeath					, NULL)
 };
 
-void ASpiderMastermind::SetDefaults (FActorInfo *info)
-{
-	INHERIT_DEFS (info);
-	info->doomednum = 7;
-	info->spawnid = 7;
-	info->spawnstate = &States[S_SPID_STND];
-	info->spawnhealth = 3000;
-	info->seestate = &States[S_SPID_RUN];
-	info->seesound = "spider/sight";
-	info->attacksound = "spider/attack";
-	info->painstate = &States[S_SPID_PAIN];
-	info->painchance = 40;
-	info->painsound = "spider/pain";
-	info->missilestate = &States[S_SPID_ATK];
-	info->deathstate = &States[S_SPID_DIE];
-	info->deathsound = "spider/death";
-	info->speed = 12;
-	info->radius = 128 * FRACUNIT;
-	info->height = 100 * FRACUNIT;
-	info->mass = 1000;
-	info->activesound = "spider/active";
-	info->flags = MF_SOLID|MF_SHOOTABLE|MF_COUNTKILL;
-	info->flags2 = MF2_MCROSS|MF2_PASSMOBJ|MF2_PUSHWALL|MF2_BOSS;
-	info->flags3 = MF3_NORADIUSDMG;
-}
+IMPLEMENT_ACTOR (ASpiderMastermind, Doom, 7, 7)
+	PROP_SpawnHealth (3000)
+	PROP_RadiusFixed (128)
+	PROP_HeightFixed (100)
+	PROP_Mass (1000)
+	PROP_SpeedFixed (12)
+	PROP_PainChance (40)
+	PROP_Flags (MF_SOLID|MF_SHOOTABLE|MF_COUNTKILL)
+	PROP_Flags2 (MF2_MCROSS|MF2_PASSMOBJ|MF2_PUSHWALL|MF2_BOSS)
+	PROP_Flags3 (MF3_NORADIUSDMG)
+
+	PROP_SpawnState (S_SPID_STND)
+	PROP_SeeState (S_SPID_RUN)
+	PROP_PainState (S_SPID_PAIN)
+	PROP_MissileState (S_SPID_ATK)
+	PROP_DeathState (S_SPID_DIE)
+
+	PROP_SeeSound ("spider/sight")
+	PROP_AttackSound ("spider/attack")
+	PROP_PainSound ("spider/pain")
+	PROP_DeathSound ("spider/death")
+	PROP_ActiveSound ("spider/active")
+END_DEFAULTS
 
 bool ASpiderMastermind::SuggestMissileAttack (fixed_t dist)
 {
@@ -109,7 +104,7 @@ void A_SpidRefire (AActor *self)
 		|| self->target->health <= 0
 		|| !P_CheckSight (self, self->target, false) )
 	{
-		self->SetState (GetInfo (self)->seestate);
+		self->SetState (self->SeeState);
 	}
 }
 

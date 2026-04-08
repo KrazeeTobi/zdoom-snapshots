@@ -242,6 +242,8 @@ void P_InitTerrainTypes ()
 		ParseOuter ();
 		SC_Close ();
 	}
+	Splashes.ShrinkToFit ();
+	Terrains.ShrinkToFit ();
 }
 
 //==========================================================================

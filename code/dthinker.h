@@ -26,6 +26,7 @@
 
 #include <stdlib.h>
 #include "dobject.h"
+#include "lists.h"
 
 class AActor;
 class player_s;
@@ -49,30 +50,33 @@ typedef actionf_t  think_t;
 
 class FThinkerIterator;
 
+enum { MAX_STATNUM = 255 };
+
 // Doubly linked list of thinkers
-class DThinker : public DObject
+class DThinker : public DObject, protected Node
 {
-	DECLARE_SERIAL (DThinker, DObject)
+	DECLARE_CLASS (DThinker, DObject)
 
 public:
-	DThinker ();
+	DThinker (int statnum = MAX_STATNUM);
 	void Destroy ();
 	virtual ~DThinker ();
-	virtual void RunThink () {}
+	virtual void RunThink ();
 
 	void *operator new (size_t size);
 	void operator delete (void *block);
 
-	// Both the head and tail of the thinker list.
-	static DThinker *FirstThinker;
-	static DThinker *LastThinker;
+	void ChangeStatNum (int statnum);
+
 	static void RunThinkers ();
+	static void RunThinkers (int statnum);
 	static void DestroyAllThinkers ();
 	static void DestroyMostThinkers ();
 	static void SerializeAll (FArchive &arc, bool keepPlayers);
 
 private:
-	DThinker *m_Next, *m_Prev;
+	static List Thinkers[MAX_STATNUM+1];
+	static bool bSerialOverride;
 
 	friend class FThinkerIterator;
 };
@@ -81,35 +85,20 @@ class FThinkerIterator
 {
 private:
 	TypeInfo *m_ParentType;
-	DThinker *m_CurrThinker;
+	Node *m_CurrThinker;
+	BYTE m_Stat;
+	bool m_SearchStats;
 
 public:
-	FThinkerIterator (TypeInfo *type)
-	{
-		m_ParentType = type;
-		m_CurrThinker = DThinker::FirstThinker;
-	}
-	DThinker *Next ()
-	{
-		while (m_CurrThinker)
-		{
-			if (m_CurrThinker->IsKindOf (m_ParentType))
-			{
-				DThinker *res = m_CurrThinker;
-				m_CurrThinker = m_CurrThinker->m_Next;
-				return res;
-			}
-			m_CurrThinker = m_CurrThinker->m_Next;
-		}
-		m_CurrThinker = DThinker::FirstThinker;
-		return NULL;
-	}
+	FThinkerIterator (TypeInfo *type, int statnum=MAX_STATNUM+1);
+	DThinker *Next ();
+	void Reinit ();
 };
 
 template <class T> class TThinkerIterator : public FThinkerIterator
 {
 public:
-	TThinkerIterator () : FThinkerIterator (RUNTIME_CLASS(T))
+	TThinkerIterator (int statnum=MAX_STATNUM+1) : FThinkerIterator (RUNTIME_CLASS(T), statnum)
 	{
 	}
 	T *Next ()

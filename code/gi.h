@@ -26,6 +26,8 @@ enum EGameType
 };
 #endif
 
+extern const char *GameNames[5];
+
 typedef struct
 {
 	byte offset;

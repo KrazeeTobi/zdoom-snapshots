@@ -41,6 +41,7 @@
 #include "p_enemy.h"
 #include "a_sharedglobal.h"
 #include "a_doomglobal.h"
+#include "a_action.h"
 
 #include "gi.h"
 
@@ -97,22 +98,30 @@ void P_RecursiveSound (sector_t *sec, int soundblocks)
 	sec->validcount = validcount;
 	sec->soundtraversed = soundblocks+1;
 	sec->soundtarget = soundtarget;
-		
-	for (i=0 ;i<sec->linecount ; i++)
+
+	for (i = 0; i < sec->linecount; i++)
 	{
 		check = sec->lines[i];
 		if (! (check->flags & ML_TWOSIDED) )
 			continue;
-		
-		P_LineOpening (check);
 
-		if (openrange <= 0)
-			continue;	// closed door
-		
 		if ( sides[ check->sidenum[0] ].sector == sec)
-			other = sides[ check->sidenum[1] ] .sector;
+			other = sides[ check->sidenum[1] ].sector;
 		else
 			other = sides[ check->sidenum[0] ].sector;
+
+		// check for closed door
+		if ((sec->floorplane.ZatPoint (check->v1->x, check->v1->y) >=
+			 other->ceilingplane.ZatPoint (check->v1->x, check->v1->y) &&
+			 sec->floorplane.ZatPoint (check->v2->x, check->v2->y) >=
+			 other->ceilingplane.ZatPoint (check->v2->x, check->v2->y))
+		 || (other->floorplane.ZatPoint (check->v1->x, check->v1->y) >=
+			 sec->ceilingplane.ZatPoint (check->v1->x, check->v1->y) &&
+			 other->floorplane.ZatPoint (check->v2->x, check->v2->y) >=
+			 sec->ceilingplane.ZatPoint (check->v2->x, check->v2->y)))
+		{
+			continue;
+		}
 		
 		if (check->flags & ML_SOUNDBLOCK)
 		{
@@ -202,7 +211,7 @@ BOOL P_CheckMissileRange (AActor *actor)
 	dist = P_AproxDistance ( actor->x-actor->target->x,
 							 actor->y-actor->target->y) - 64*FRACUNIT;
 	
-	if (GetInfo (actor)->meleestate == NULL)
+	if (actor->MeleeState == NULL)
 		dist -= 128*FRACUNIT;	// no melee attack, so fire more
 
 	return actor->SuggestMissileAttack (dist);
@@ -251,7 +260,7 @@ BOOL P_Move (AActor *actor)
 	if ((unsigned)actor->movedir >= 8)
 		I_Error ("Weird actor->movedir!");
 
-	speed = GetInfo (actor)->speed;
+	speed = actor->GetDefault()->Speed;
 
 #if 0	// [RH] I'm not so sure this is such a good idea
 	// killough 10/98: make monsters get affected by ice and sludge too:
@@ -263,8 +272,8 @@ BOOL P_Move (AActor *actor)
 		speed = 1;	// always give the monster a little bit of speed
 #endif
 
-	tryx = (origx = actor->x) + (deltax = speed * xspeed[actor->movedir]);
-	tryy = (origy = actor->y) + (deltay = speed * yspeed[actor->movedir]);
+	tryx = (origx = actor->x) + (deltax = FixedMul (speed, xspeed[actor->movedir]));
+	tryy = (origy = actor->y) + (deltay = FixedMul (speed, yspeed[actor->movedir]));
 
 	// killough 3/15/98: don't jump over dropoffs:
 	try_ok = P_TryMove (actor, tryx, tryy, false);
@@ -378,7 +387,7 @@ void P_NewChaseDir (AActor *actor)
 	int			tdir;
 	dirtype_t	olddir, turnaround;
 
-	if (!actor->target)
+	if (actor->target == NULL)
 		I_Error ("P_NewChaseDir: called with no target");
 				
 	olddir = (dirtype_t)actor->movedir;
@@ -386,6 +395,14 @@ void P_NewChaseDir (AActor *actor)
 
 	deltax = actor->target->x - actor->x;
 	deltay = actor->target->y - actor->y;
+
+	// [RH] Make monsters run away from frightening players
+	if (actor->target->player != NULL &&
+		(actor->target->player->cheats & CF_FRIGHTENING))
+	{
+		deltax = -deltax;
+		deltay = -deltay;
+	}
 
 	if (deltax>10*FRACUNIT)
 		d[1]= DI_EAST;
@@ -412,9 +429,7 @@ void P_NewChaseDir (AActor *actor)
 	// try other directions
 	if (P_Random (pr_newchasedir) > 200 || abs(deltay) > abs(deltax))
 	{
-		tdir = d[1];
-		d[1] = d[2];
-		d[2] = (dirtype_t)tdir;
+		swap (d[1], d[2]);
 	}
 
 	if (d[1] == turnaround)
@@ -440,8 +455,7 @@ void P_NewChaseDir (AActor *actor)
 			return;
 	}
 
-	// there is no direct path to the player,
-	// so pick another direction.
+	// there is no direct path to the player, so pick another direction.
 	if (olddir != DI_NODIR)
 	{
 		actor->movedir = olddir;
@@ -664,7 +678,7 @@ void A_Look (AActor *actor)
 	// [RH] Set goal now if appropriate
 	if (actor->special == Thing_SetGoal && actor->args[0] == 0) 
 	{
-		TActorIterator<AWayPoint> iterator (actor->args[1]);
+		TActorIterator<APatrolPoint> iterator (actor->args[1]);
 		actor->special = 0;
 		actor->goal = iterator.Next ();
 		actor->reactiontime = actor->args[2] * TICRATE + level.time;
@@ -679,7 +693,7 @@ void A_Look (AActor *actor)
 	// [RH] Andy Baker's stealth monsters
 	if (actor->flags & MF_STEALTH)
 	{
-		actor->visdir = 1;
+		actor->visdir = -1;
 	}
 
 	if (targ && (targ->flags & MF_SHOOTABLE))
@@ -707,11 +721,11 @@ void A_Look (AActor *actor)
 		if (actor->reactiontime > level.time)
 			actor->target = NULL;
 	}
-	else if (GetInfo (actor)->seesound)
+	else if (actor->SeeSound)
 	{
 		char sound[MAX_SNDNAME];
 
-		strcpy (sound, GetInfo (actor)->seesound);
+		strcpy (sound, actor->SeeSound);
 
 		if (sound[strlen(sound)-1] == '1')
 		{
@@ -729,7 +743,7 @@ void A_Look (AActor *actor)
 	}
 
 	if (actor->target)
-		actor->SetState (GetInfo (actor)->seestate);
+		actor->SetState (actor->SeeState);
 }
 
 
@@ -759,7 +773,7 @@ void A_Chase (AActor *actor)
 	}
 
 	// [RH] Don't chase invisible targets
-	if (actor->target != NULL && actor->target->flags2 & MF2_DONTDRAW)
+	if (actor->target != NULL && actor->target->renderflags & RF_INVISIBLE)
 	{
 		actor->target = NULL;
 	}
@@ -778,7 +792,7 @@ void A_Chase (AActor *actor)
 	}
 
 	if (gameinfo.gametype == GAME_Heretic &&
-		(gameskill.value == sk_nightmare || (dmflags & DF_FAST_MONSTERS)))
+		(*gameskill == sk_nightmare || (*dmflags & DF_FAST_MONSTERS)))
 	{ // Monsters move faster in nightmare mode
 		actor->tics -= actor->tics / 2;
 		if (actor->tics < 3)
@@ -814,7 +828,7 @@ void A_Chase (AActor *actor)
 		}
 		if (actor->target == NULL)
 		{
-			actor->SetState (GetInfo (actor)->spawnstate);
+			actor->SetState (actor->SpawnState);
 			return;
 		}
 	}
@@ -823,7 +837,7 @@ void A_Chase (AActor *actor)
 	if (actor->flags & MF_JUSTATTACKED)
 	{
 		actor->flags &= ~MF_JUSTATTACKED;
-		if ((gameskill.value != sk_nightmare) && !(dmflags & DF_FAST_MONSTERS))
+		if ((*gameskill != sk_nightmare) && !(*dmflags & DF_FAST_MONSTERS))
 			P_NewChaseDir (actor);
 		return;
 	}
@@ -834,41 +848,48 @@ void A_Chase (AActor *actor)
 		if (P_CheckMeleeRange (actor))
 		{
 			// reached the goal
-			TActorIterator<AWayPoint> iterator (actor->goal->args[0]);
+			TActorIterator<APatrolPoint> iterator (actor->goal->args[0]);
 			actor->reactiontime = actor->goal->args[1] * TICRATE + level.time;
 			actor->goal = iterator.Next ();
 			actor->target = NULL;
-			actor->SetState (GetInfo (actor)->spawnstate);
+			actor->flags |= MF_JUSTATTACKED;
+			actor->SetState (actor->SpawnState);
 			return;
 		}
 		goto nomissile;
 	}
 
-	// check for melee attack
-	if (GetInfo (actor)->meleestate && P_CheckMeleeRange (actor))
+	// [RH] Scared monsters attack less frequently
+	if (actor->target->player == NULL ||
+		!(actor->target->player->cheats & CF_FRIGHTENING) ||
+		P_Random (pr_scaredycat) < 43)
 	{
-		if (GetInfo (actor)->attacksound)
-			S_Sound (actor, CHAN_WEAPON, GetInfo (actor)->attacksound, 1, ATTN_NORM);
-
-		actor->SetState (GetInfo (actor)->meleestate);
-		return;
-	}
-	
-	// check for missile attack
-	if (GetInfo (actor)->missilestate)
-	{
-		if (gameskill.value < sk_nightmare
-			&& actor->movecount && !(dmflags & DF_FAST_MONSTERS))
+		// check for melee attack
+		if (actor->MeleeState && P_CheckMeleeRange (actor))
 		{
-			goto nomissile;
+			if (actor->AttackSound)
+				S_Sound (actor, CHAN_WEAPON, actor->AttackSound, 1, ATTN_NORM);
+
+			actor->SetState (actor->MeleeState);
+			return;
 		}
 		
-		if (!P_CheckMissileRange (actor))
-			goto nomissile;
-		
-		actor->SetState (GetInfo (actor)->missilestate);
-		actor->flags |= MF_JUSTATTACKED;
-		return;
+		// check for missile attack
+		if (actor->MissileState)
+		{
+			if (*gameskill < sk_nightmare
+				&& actor->movecount && !(*dmflags & DF_FAST_MONSTERS))
+			{
+				goto nomissile;
+			}
+			
+			if (!P_CheckMissileRange (actor))
+				goto nomissile;
+			
+			actor->SetState (actor->MissileState);
+			actor->flags |= MF_JUSTATTACKED;
+			return;
+		}
 	}
 
  nomissile:
@@ -888,17 +909,17 @@ void A_Chase (AActor *actor)
 	}
 	
 	// make active sound
-	if (GetInfo (actor)->activesound && P_Random (pr_chase) < 3)
+	if (actor->ActiveSound && P_Random (pr_chase) < 3)
 	{
 		const char *sound;
 
 		if ((actor->flags3 & MF3_SEEISALSOACTIVE) && P_Random (pr_chase) < 128)
 		{
-			sound = GetInfo (actor)->seesound;
+			sound = actor->SeeSound;
 		}
 		else
 		{
-			sound = GetInfo (actor)->activesound;
+			sound = actor->ActiveSound;
 		}
 		if (S_CheckSound (sound))
 		{ // [RH] Only play this sound if it won't cut out another of the same type.
@@ -956,8 +977,7 @@ void A_MonsterRail (AActor *actor)
 									actor->target->x,
 									actor->target->y);
 
-	//actor->pitch = tantoangle[P_AimLineAttack (actor, actor->angle, MISSILERANGE) >> DBITS];
-	actor->pitch = -(int)(tan ((float)P_AimLineAttack (actor, actor->angle, MISSILERANGE)/65536.0f)*ANGLE_180/PI);
+	actor->pitch = P_AimLineAttack (actor, actor->angle, MISSILERANGE);
 
 	// Let the aim trail behind the player
 	actor->angle = R_PointToAngle2 (actor->x,
@@ -967,20 +987,19 @@ void A_MonsterRail (AActor *actor)
 
 	if (actor->target->flags & MF_SHADOW)
     {
-		int t = P_Random(pr_facetarget);
-		actor->angle += (t-P_Random(pr_facetarget))<<21;
+		actor->angle += PS_Random(pr_facetarget) << 21;
     }
 
-	P_RailAttack (actor, GetInfo (actor)->damage, 0);
+	P_RailAttack (actor, actor->damage, 0);
 }
 
 void A_Scream (AActor *actor)
 {
-	if (GetInfo (actor)->deathsound)
+	if (actor->DeathSound)
 	{
 		char sound[MAX_SNDNAME];
 
-		strcpy (sound, GetInfo (actor)->deathsound);
+		strcpy (sound, actor->DeathSound);
 
 		if (sound[strlen(sound)-1] == '1')
 		{
@@ -1024,7 +1043,10 @@ void P_DropItem (AActor *source, const TypeInfo *type, int special, int chance)
 		mo->momy = PS_Random() << 8;
 		mo->momz = FRACUNIT*5 + (P_Random() << 10);
 		mo->flags |= MF_DROPPED;
-		mo->health = special;
+		if (special >= 0)
+		{
+			mo->health = special;
+		}
 	}
 }
 
@@ -1048,9 +1070,9 @@ void A_Pain (AActor *actor)
 		sprintf (nametemp, "*pain%d_%d", l, r);
 		S_Sound (actor, CHAN_VOICE, nametemp, 1, ATTN_NORM);
 	}
-	else if (GetInfo (actor)->painsound)
+	else if (actor->PainSound)
 	{
-		S_Sound (actor, CHAN_VOICE, GetInfo (actor)->painsound, 1, ATTN_NORM);
+		S_Sound (actor, CHAN_VOICE, actor->PainSound, 1, ATTN_NORM);
 	}
 }
 
@@ -1067,7 +1089,7 @@ void A_Die (AActor *actor)
 
 void A_Detonate (AActor *mo)
 {
-	P_RadiusAttack (mo, mo->target, GetInfo (mo)->damage, GetInfo (mo)->damage, true, MOD_UNKNOWN);
+	P_RadiusAttack (mo, mo->target, mo->damage, mo->damage, true, MOD_UNKNOWN);
 }
 
 //
@@ -1206,7 +1228,7 @@ void A_BossDeath (AActor *actor)
 	}
 
 	// [RH] If noexit, then don't end the level.
-	if ((deathmatch.value || alwaysapplydmflags.value) && (dmflags & DF_NO_EXIT))
+	if ((*deathmatch || *alwaysapplydmflags) && (*dmflags & DF_NO_EXIT))
 		return;
 
 	G_ExitLevel (0);
@@ -1219,8 +1241,6 @@ void A_BossDeath (AActor *actor)
 // Kills all monsters.
 //
 //----------------------------------------------------------------------------
-
-extern void A_PainDie (AActor *);
 
 int P_Massacre ()
 {
@@ -1236,8 +1256,8 @@ int P_Massacre ()
 
 	while ( (actor = iterator.Next ()) )
 	{
-		if (actor->flags & MF_COUNTKILL ||
-			(gameinfo.gametype == GAME_Doom && actor->IsKindOf (RUNTIME_CLASS(ALostSoul))))
+		if ((actor->flags & MF_SHOOTABLE) && (actor->flags & MF_COUNTKILL ||
+			(gameinfo.gametype == GAME_Doom && actor->IsKindOf (RUNTIME_CLASS(ALostSoul)))))
 		{
 			// killough 3/6/98: kill even if PE is dead
 			if (actor->health > 0)
@@ -1246,14 +1266,17 @@ int P_Massacre ()
 				actor->flags2 &= ~(MF2_DORMANT|MF2_INVULNERABLE);
 				P_DamageMobj (actor, NULL, NULL, 10000, MOD_UNKNOWN);
 			}
-			if (actor->IsKindOf (RUNTIME_CLASS(ALostSoul)))
+			if (actor->IsKindOf (RUNTIME_CLASS(APainElemental)))
 			{
 				FState *deadstate;
-				A_PainDie (actor);    // killough 2/8/98
-				deadstate = GetInfo(actor)->deathstate;
-				while (deadstate->nextstate)
-					deadstate = deadstate->nextstate;
-				actor->SetState (deadstate);
+				A_NoBlocking (actor);	// [RH] Use this instead of A_PainDie
+				deadstate = actor->DeathState;
+				if (deadstate != NULL)
+				{
+					while (deadstate->nextstate != NULL)
+						deadstate = deadstate->nextstate;
+					actor->SetState (deadstate);
+				}
 			}
 		}
 	}
@@ -1267,7 +1290,7 @@ int P_Massacre ()
 
 bool A_SinkMobj (AActor *actor)
 {
-	if (actor->floorclip < GetInfo (actor)->height)
+	if (actor->floorclip < actor->height)
 	{
 		actor->floorclip += actor->GetSinkSpeed ();
 		return false;

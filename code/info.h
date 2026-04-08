@@ -35,13 +35,15 @@ struct FState
 		char name[4];
 		int index;
 	} sprite;
-	int			frame;
-	int			tics;
+	BYTE		frame;
+	WORD		fullbright;
+	SWORD		tics;
 	actionf_t 	action;
 	FState		*nextstate;
 	int			misc1, misc2;
 };
 
+FArchive &operator<< (FArchive &arc, FState *&state);
 
 #if _MSC_VER
 #define _S__COMMON_(spr) \
@@ -52,10 +54,10 @@ struct FState
 #endif
 
 #define _S_N_COMMON_(spr,frm,tic,cmd,next) \
-	_S__COMMON_(spr), (frm) - 'A', tic, {cmd}, next
+	_S__COMMON_(spr), (frm) - 'A', 0, tic, {cmd}, next
 
 #define _S_B_COMMON_(spr,frm,tic,cmd,next) \
-	_S__COMMON_(spr), 0x8000 | ((frm) - 'A'), tic, {cmd}, next
+	_S__COMMON_(spr), (frm) - 'A', RF_FULLBRIGHT, tic, {cmd}, next
 
 /* <winbase.h> #defines its own, completely unrelated S_NORMAL.
  * Since winbase.h will only be included in Win32-specific files that
@@ -89,93 +91,103 @@ enum EGameType
 };
 #endif
 
+enum
+{
+	ADEFTYPE_Byte		= 0,
+	ADEFTYPE_FixedMul	= 64,		// one byte, multiplied by FRACUNIT
+	ADEFTYPE_Word		= 128,
+	ADEFTYPE_Long		= 192,
+	ADEFTYPE_MASK		= 192,
+
+	// These first properties are always strings
+	ADEF_SeeSound = 1,
+	ADEF_AttackSound,
+	ADEF_PainSound,
+	ADEF_DeathSound,
+	ADEF_ActiveSound,
+	ADEF_LastString = ADEF_ActiveSound,
+
+	// The rest of the properties use their type field (upper 2 bits)
+	ADEF_XScale,
+	ADEF_YScale,
+	ADEF_SpawnHealth,
+	ADEF_ReactionTime,
+	ADEF_PainChance,
+	ADEF_Speed,
+	ADEF_Radius,
+	ADEF_Height,
+	ADEF_Mass,
+	ADEF_Damage,
+	ADEF_Flags,			// Use these flags exactly
+	ADEF_Flags2,		// "
+	ADEF_Flags3,		// "
+	ADEF_FlagsSet,		// Or these flags with previous
+	ADEF_Flags2Set,		// "
+	ADEF_Flags3Set,		// "
+	ADEF_FlagsClear,	// Clear these flags from previous
+	ADEF_Flags2Clear,	// "
+	ADEF_Flags3Clear,	// "
+	ADEF_Alpha,
+	ADEF_RenderStyle,
+	ADEF_RenderFlags,
+
+	ADEF_SpawnState,
+	ADEF_SeeState,
+	ADEF_PainState,
+	ADEF_MeleeState,
+	ADEF_MissileState,
+	ADEF_CrashState,
+	ADEF_DeathState,
+	ADEF_XDeathState,
+	ADEF_BDeathState,
+	ADEF_IDeathState,
+	ADEF_RaiseState,
+
+	// The following are not properties but effect how the list is parsed
+	ADEF_FirstCommand,
+	ADEF_LimitGame = ADEF_FirstCommand,
+	ADEF_SkipSuper,		// Take defaults from AActor instead of superclass(es)
+	ADEF_StateBase,		// Use states not owned by this actor
+
+	ADEF_EOL = 0		// End Of List
+};
+
+#if _MSC_VER
+#pragma warning(disable:4200)	// nonstandard extension used : zero-sized array in struct/union
+#endif
+
 struct FActorInfo
 {
-	int doomednum;
-	FState *spawnstate;
-	int spawnhealth;
-	FState *seestate;
-	char *seesound;
-	int reactiontime;
-	char *attacksound;
-	FState *painstate;
-	int painchance;
-	char *painsound;
-	FState *meleestate;
-	FState *missilestate;
-	FState *crashstate;
-	FState *deathstate;
-	FState *xdeathstate;
-	FState *bdeathstate;
-	FState *ideathstate;
-	char *deathsound;
-	int speed;
-	int radius;
-	int height;
-	int mass;
-	int damage;
-	char *activesound;
-	int flags;
-	int flags2;
-	int flags3;
-	FState *raisestate;
-	int translucency;
-	int spawnid;
+	static void StaticInit ();
+	static void StaticGameSet ();
+	static void StaticSpeedSet ();
 
+	void BuildDefaults ();
+	void ApplyDefaults (BYTE *defaults);
+
+	TypeInfo *Class;
 	FState *OwnedStates;
+	BYTE *Defaults;
 	int NumOwnedStates;
+	BYTE GameFilter;
+	BYTE SpawnID;
+	SWORD DoomEdNum;
+
+	// Followed by a 0-terminated list of default properties
+	BYTE DefaultList[];
 };
 
-class FActorInfoInitializer
-{
-public:
-	FActorInfoInitializer (EGameType game, const TypeInfo *actorinfo, void (*setdefs)(FActorInfo *))
-		: gamemode (game),
-		  active (0),
-		  info (actorinfo),
-		  setdefaults (setdefs)
-	{
-		next = StaticInitList;
-		StaticInitList = this;
-	}
-	static void StaticInit (EGameType game);
-	static void StaticSetDefaults (EGameType game);
-
-private:
-	DWORD gamemode:31;
-	DWORD active:1;
-	const TypeInfo *info;
-	void (*setdefaults)(FActorInfo *);
-	FActorInfoInitializer *next;
-
-	static FActorInfoInitializer *StaticInitList;
-
-	friend FArchive &operator<< (FArchive &arc, FState *&state);
-};
-
-#define REGISTER_ACTOR(spawnclass, game) \
-	static FActorInfoInitializer info_##spawnclass##_init (GAME_##game, RUNTIME_CLASS(spawnclass), &spawnclass::SetDefaults);
-
-#define DECLARE_STATELESS_ACTOR(cls,parent) \
-		DECLARE_SERIAL(cls,parent); \
-	public: \
-		cls () {} \
-		static void SetDefaults (FActorInfo *info);
-
-#define DECLARE_ACTOR(cls,parent) \
-	DECLARE_STATELESS_ACTOR(cls,parent); \
-	static FState States[];
-
-#define __INHERIT__				Super::SetDefaults (info); info->doomednum = -1; info->spawnid = 0;
-#define INHERIT_DEFS			{__INHERIT__ info->OwnedStates = &States[0]; info->NumOwnedStates = sizeof(States)/sizeof(States[0]);}
-#define INHERIT_DEFS_STATELESS	{__INHERIT__ info->OwnedStates = NULL; info->NumOwnedStates = 0;}
-#define ACTOR_DEFS_STATELESS	{INHERIT_DEFS_STATELESS info->spawnstate = &AActor::States[0];}
+#if _MSC_VER
+#pragma warning(default:4200)
+#endif
 
 class FDoomEdMap
 {
 public:
-	const TypeInfo *FindType (int doomednum);
+	const TypeInfo *FindType (int doomednum) const;
 	void AddType (int doomednum, const TypeInfo *type);
+	void DelType (int doomednum);
+	void Empty ();
 
 private:
 	enum { DOOMED_HASHSIZE = 256 };
@@ -183,13 +195,15 @@ private:
 	struct FDoomEdEntry
 	{
 		FDoomEdEntry *HashNext;
-		int DoomEdNum;
 		const TypeInfo *Type;
+		int DoomEdNum;
 	};
 
 	static FDoomEdEntry *DoomEdHash[DOOMED_HASHSIZE];
 };
 
 extern FDoomEdMap DoomEdMap;
+
+#include "infomacros.h"
 
 #endif	// __INFO_H__

@@ -25,8 +25,20 @@
 
 #include <io.h>
 
+#include "d_main.h"
 #include "d_ticcmd.h"
 #include "d_event.h"
+
+// Index values into the LanguageIDs array
+enum
+{
+	LANGIDX_UserPreferred,
+	LANGIDX_UserDefault,
+	LANGIDX_SysPreferred,
+	LANGIDX_SysDefault
+};
+extern DWORD LanguageIDs[4];
+extern void SetLanguageIDs ();
 
 // [RH] Detects the OS the game is running under.
 void I_DetectOS (void);
@@ -35,6 +47,7 @@ typedef enum {
 	os_unknown,
 	os_Win95,
 	os_WinNT,
+	os_Win2k,
 	os_Win32s
 } os_t;
 
@@ -121,6 +134,8 @@ void I_PrintStr (int x, const char *str, int count, BOOL scroll);
 // Set the title string of the startup window
 void I_SetTitleString (const char *title);
 
+// Pick from multiple IWADs to use
+int I_PickIWad (WadStuff *wads, int numwads);
 
 // In i_input.c. Used to release control of the
 // mouse to the user when the game is paused in

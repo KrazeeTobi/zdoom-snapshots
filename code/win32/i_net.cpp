@@ -391,6 +391,16 @@ void HostGame (int i)
 		numplayers = 2;
 	}
 
+	if (numplayers == 1)
+	{ // Special case: Only 1 player, so don't bother starting the network
+		netgame = false;
+		multiplayer = true;
+		doomcom->id = DOOMCOM_ID;
+		doomcom->numplayers = doomcom->numnodes = 1;
+		doomcom->consoleplayer = 0;
+		return;
+	}
+
 	StartNetwork (false);
 
 	// [JC] - this computer is starting the game, therefore it should

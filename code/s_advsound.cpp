@@ -15,7 +15,7 @@
 #include "w_wad.h"
 #include "sc_man.h"
 #include "g_level.h"
-#include "dstrings.h"
+#include "cmdlib.h"
 #include "gi.h"
 #include "doomstat.h"
 #include "i_sound.h"
@@ -55,7 +55,7 @@ enum SICommands
 
 // EXTERNAL FUNCTION PROTOTYPES --------------------------------------------
 
-void S_StartNamedSound (AActor *ent, fixed_t *pt, fixed_t x, fixed_t y, int channel, 
+void S_StartNamedSound (AActor *ent, fixed_t *pt, int channel, 
 						const char *name, float volume, float attenuation, BOOL looping);
 
 // PUBLIC FUNCTION PROTOTYPES ----------------------------------------------
@@ -102,6 +102,7 @@ void S_HashSounds ()
 	unsigned int j;
 	unsigned int size;
 
+	S_sfx.ShrinkToFit ();
 	size = S_sfx.Size ();
 
 	// Mark all buckets as empty
@@ -363,6 +364,13 @@ void S_ParseSndInfo ()
 						SC_MustGetString ();
 						ambient->attenuation = -1;
 					}
+					else
+					{ // World is an optional keyword
+						if (SC_Compare ("world"))
+						{
+							SC_MustGetString ();
+						}
+					}
 
 					if (SC_Compare ("continuous"))
 					{
@@ -485,11 +493,11 @@ void S_ParseSndInfo ()
 
 //==========================================================================
 //
-// CMD soundlist
+// CCMD soundlist
 //
 //==========================================================================
 
-BEGIN_COMMAND (soundlist)
+CCMD (soundlist)
 {
 	char lumpname[9];
 	unsigned int i;
@@ -508,15 +516,14 @@ BEGIN_COMMAND (soundlist)
 		}
 	}
 }
-END_COMMAND (soundlist)
 
 //==========================================================================
 //
-// CMD soundlinks
+// CCMD soundlinks
 //
 //==========================================================================
 
-BEGIN_COMMAND (soundlinks)
+CCMD (soundlinks)
 {
 	unsigned int i;
 
@@ -529,19 +536,12 @@ BEGIN_COMMAND (soundlinks)
 		}
 	}
 }
-END_COMMAND (soundlinks)
 
 // AAmbientSound implementation ---------------------------------------------
 
-IMPLEMENT_SERIAL (AAmbientSound, AActor);
-REGISTER_ACTOR (AAmbientSound, Any);
-
-void AAmbientSound::SetDefaults (FActorInfo *info)
-{
-	ACTOR_DEFS_STATELESS;
-	info->doomednum = 14065;
-	info->flags = MF_NOBLOCKMAP|MF_NOSECTOR;
-}
+IMPLEMENT_STATELESS_ACTOR (AAmbientSound, Any, 14065, 0)
+	PROP_Flags (MF_NOBLOCKMAP|MF_NOSECTOR)
+END_DEFAULTS
 
 void AAmbientSound::Serialize (FArchive &arc)
 {
@@ -565,7 +565,7 @@ void AAmbientSound::RunThink ()
 
 		if (ambient->sound[0])
 		{
-			S_StartNamedSound (this, NULL, 0, 0, CHAN_BODY, ambient->sound,
+			S_StartNamedSound (this, NULL, CHAN_BODY, ambient->sound,
 				ambient->volume, ambient->attenuation, true);
 			SetTicker (ambient);
 		}
@@ -578,7 +578,7 @@ void AAmbientSound::RunThink ()
 	{
 		if (ambient->sound[0])
 		{
-			S_StartNamedSound (this, NULL, 0, 0, CHAN_BODY, ambient->sound,
+			S_StartNamedSound (this, NULL, CHAN_BODY, ambient->sound,
 				ambient->volume, ambient->attenuation, false);
 			SetTicker (ambient);
 		}
@@ -621,7 +621,13 @@ void AAmbientSound::Activate (AActor *activator)
 
 	if (!(amb->type & 3) && !amb->periodmin)
 	{
-		sfxinfo_t *sfx = &S_sfx[S_FindSound (amb->sound)];
+		int sndnum = S_FindSound (amb->sound);
+		if (sndnum == -1)
+		{
+			Destroy ();
+			return;
+		}
+		sfxinfo_t *sfx = &S_sfx[sndnum];
 
 		// Make sure the sound has been loaded so we know how long it is
 		if (!sfx->data)

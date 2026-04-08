@@ -26,7 +26,7 @@
 
 #include "m_bbox.h"
 
-IMPLEMENT_CLASS (DBoundingBox, DObject)
+IMPLEMENT_CLASS (DBoundingBox)
 
 DBoundingBox::DBoundingBox ()
 {

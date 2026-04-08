@@ -5,7 +5,7 @@
 ** This is a much cleaner solution than the one I was using previously,
 ** which was to use the qmus2mid code to convert the MUS lump into a
 ** temporary MIDI file on disk and then use MCI calls to play that file.
-** (The switch even shrank the executable by 3K. Woo!)
+** (The switch even shrank the executable by 3K. Woohoo!)
 */
 
 #include <ctype.h>
@@ -49,7 +49,7 @@ typedef struct
 
 
 static INFILESTATE ifs;
-static byte MUS2MIDcontrol[15] = {
+static const byte MUS2MIDcontrol[15] = {
 	0,			/* Program change - not a MIDI control change */
 	0x00,		/* Bank select */
 	0x01,		/* Modulation pot */

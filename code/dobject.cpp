@@ -10,15 +10,33 @@
 #include "i_system.h"
 #include "r_state.h"
 
-ClassInit::ClassInit (TypeInfo *type)
-{
-	type->RegisterType ();
-}
-
 TypeInfo **TypeInfo::m_Types;
 unsigned short TypeInfo::m_NumTypes;
 unsigned short TypeInfo::m_MaxTypes;
 unsigned int TypeInfo::TypeHash[256];	// Why can't I use TypeInfo::HASH_SIZE?
+
+#if defined(_MSC_VER) || defined(__GNUC__)
+#include "autosegs.h"
+
+TypeInfo DObject::_StaticType =
+{
+	"DObject",
+	NULL,
+	sizeof(DObject),
+};
+
+void TypeInfo::StaticInit ()
+{
+	TAutoSegIterator<TypeInfo *, &CRegHead, &CRegTail> probe;
+
+	while (++probe != NULL)
+	{
+		probe->RegisterType ();
+	}
+}
+#else
+TypeInfo DObject::_StaticType(NULL, "DObject", NULL, sizeof(DObject));
+#endif
 
 void TypeInfo::RegisterType ()
 {
@@ -96,7 +114,7 @@ const TypeInfo *TypeInfo::IFindType (const char *name)
 	return NULL;
 }
 
-BEGIN_COMMAND (dumpclasses)
+CCMD (dumpclasses)
 {
 	const TypeInfo *root;
 	int i;
@@ -142,9 +160,6 @@ BEGIN_COMMAND (dumpclasses)
 	}
 	Printf (PRINT_HIGH, "%d classes shown, %d omitted\n", shown, omitted);
 }
-END_COMMAND (dumpclasses)
-
-TypeInfo DObject::_StaticType(NULL, "DObject", NULL, sizeof(DObject));
 
 TArray<DObject *> DObject::Objects;
 TArray<size_t> DObject::FreeIndices;
@@ -363,4 +378,21 @@ void DObject::DestroyScan ()
 void STACK_ARGS DObject::StaticShutdown ()
 {
 	Inactive = true;
+}
+
+void DObject::Serialize (FArchive &arc)
+{
+	ObjectFlags |= OF_SerialSuccess;
+}
+
+void DObject::CheckIfSerialized () const
+{
+	if (!(ObjectFlags & OF_SerialSuccess))
+	{
+		I_Error (
+			"BUG: %s::Serialize\n"
+			"(or one of its superclasses) needs to call\n"
+			"Super::Serialize\n",
+			StaticType ()->Name);
+	}
 }

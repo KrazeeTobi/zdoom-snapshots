@@ -43,7 +43,7 @@
 
 // PUBLIC DATA DEFINITIONS -------------------------------------------------
 
-fixed_t bulletslope;
+angle_t bulletpitch;
 
 // PRIVATE DATA DEFINITIONS ------------------------------------------------
 
@@ -263,7 +263,7 @@ bool P_CheckAmmo (player_t *player)
 	FWeaponInfo **wpinfo;
 	int count;
 
-	if (player->powers[pw_weaponlevel2] && !deathmatch.value)
+	if (player->powers[pw_weaponlevel2] && !*deathmatch)
 	{
 		wpinfo = wpnlev2info;
 	}
@@ -422,8 +422,8 @@ void A_WeaponReady(player_t *player, pspdef_t *psp)
 		wpnlev2info[player->readyweapon] : wpnlev1info[player->readyweapon];
 
 	// Change player from attack state
-	if (player->mo->state >= GetInfo(player->mo)->missilestate &&
-		player->mo->state < GetInfo(player->mo)->painstate)
+	if (player->mo->state >= player->mo->MissileState &&
+		player->mo->state < player->mo->PainState)
 	{
 		player->mo->PlayIdle ();
 	}
@@ -576,41 +576,17 @@ void A_GunFlash (player_t *player, pspdef_t *psp)
 
 void P_BulletSlope (AActor *mo)
 {
-	angle_t 	an;
-	fixed_t		pitchslope;
+	static const int angdiff[3] = { -1<<26, 1<<26, 0 };
+	int i;
+	angle_t an;
 
-	pitchslope = finetangent[FINEANGLES/4-(mo->pitch>>ANGLETOFINESHIFT)];
-	
 	// see which target is to be aimed at
-	an = mo->angle;
-	bulletslope = P_AimLineAttack (mo, an, 16*64*FRACUNIT);
-
-	if (!linetarget)
+	i = 2;
+	do
 	{
-		an += 1<<26;
-		bulletslope = P_AimLineAttack (mo, an, 16*64*FRACUNIT);
-		if (!linetarget)
-		{
-			an -= 2<<26;
-			bulletslope = P_AimLineAttack (mo, an, 16*64*FRACUNIT);
-			// [RH] If we never found a target, use actor's pitch to
-			// determine bulletslope
-			if (!linetarget)
-			{
-				an = mo->angle;
-				bulletslope = pitchslope;
-			}
-		}
-	}
-	if (linetarget && mo->player)
-	{
-		if (!(dmflags & DF_NO_FREELOOK)
-			&& abs(bulletslope - pitchslope) > mo->player->userinfo.aimdist)
-		{
-			bulletslope = pitchslope;
-			an = mo->angle;
-		}
-	}
+		an = mo->angle + angdiff[i];
+		bulletpitch = P_AimLineAttack (mo, an, 16*64*FRACUNIT);
+	} while (linetarget == NULL && --i >= 0);
 }
 
 
@@ -630,7 +606,7 @@ void P_GunShot (AActor *mo, BOOL accurate)
 		angle += PS_Random (pr_gunshot) << 18;
 	}
 
-	P_LineAttack (mo, angle, MISSILERANGE, bulletslope, damage);
+	P_LineAttack (mo, angle, MISSILERANGE, bulletpitch, damage);
 }
 
 void A_Light0 (player_t *player, pspdef_t *psp)

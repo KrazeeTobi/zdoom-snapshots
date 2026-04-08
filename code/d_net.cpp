@@ -216,6 +216,16 @@ static struct TicSpecial
 		return *this;
 	}
 
+	TicSpecial &operator << (float it)
+	{
+		if (streamptr)
+		{
+			CheckSpace (4);
+			WriteFloat (it, &streamptr);
+		}
+		return *this;
+	}
+
 	TicSpecial &operator << (const char *it)
 	{
 		if (streamptr)
@@ -471,7 +481,7 @@ void GetPackets (void)
 			nodeingame[netnode] = false;
 			playeringame[netconsole] = false;
 
-			if (deathmatch.value)
+			if (*deathmatch)
 			{
 				Printf (PRINT_HIGH, "%s left the game with %d frags\n",
 						 players[netconsole].userinfo.netname,
@@ -762,7 +772,7 @@ BOOL CheckAbort (void)
 		  ; eventtail = (++eventtail)&(MAXEVENTS-1) ) 
 	{ 
 		ev = &events[eventtail]; 
-		if (ev->type == ev_keydown && ev->data1 == KEY_ESCAPE)
+		if (ev->type == EV_KeyDown && ev->data1 == KEY_ESCAPE)
 			return true;
 	}
 	return false;
@@ -868,7 +878,7 @@ void D_ArbitrateNetStart (void)
 			HSendPacket (i, NCMD_SETUP|NCMD_KILL, (ptrdiff_t)stream - (ptrdiff_t)netbuffer);
 		}
 
-		// If we're the key player, also send the game info packet
+		// If we're the arbitrator, also send the game info packet
 		if (consoleplayer == Net_Arbitrator)
 		{
 			for (i = 1; i < doomcom->numnodes; i++)
@@ -1127,9 +1137,20 @@ void Net_WriteLong (int it)
 	specials << it;
 }
 
+void Net_WriteFloat (float it)
+{
+	specials << it;
+}
+
 void Net_WriteString (const char *it)
 {
 	specials << it;
+}
+
+void Net_WriteBytes (const byte *block, int len)
+{
+	while (len--)
+		specials << *block++;
 }
 
 //==========================================================================
@@ -1194,13 +1215,12 @@ void Net_DoCommand (int type, byte **stream, int player)
 			byte who = ReadByte (stream);
 
 			s = ReadString (stream);
-			if ((who == 0) || players[player].userinfo.team[0] == 0)
+			if ((who == 0) || players[player].userinfo.team == TEAM_None)
 			{ // Said to everyone
 				Printf (PRINT_CHAT, "%s: %s\n", players[player].userinfo.netname, s);
 				S_Sound (CHAN_VOICE, gameinfo.chatSound, 1, ATTN_NONE);
 			}
-			else if (!stricmp (players[player].userinfo.team,
-								 players[consoleplayer].userinfo.team))
+			else if (players[player].userinfo.team == players[consoleplayer].userinfo.team)
 			{ // Said only to members of the player's team
 				Printf (PRINT_TEAMCHAT, "(%s): %s\n", players[player].userinfo.netname, s);
 				S_Sound (CHAN_VOICE, gameinfo.chatSound, 1, ATTN_NONE);
@@ -1210,7 +1230,7 @@ void Net_DoCommand (int type, byte **stream, int player)
 
 	case DEM_MUSICCHANGE:
 		s = ReadString (stream);
-		S_ChangeMusic (s, true);
+		S_ChangeMusic (s);
 		break;
 
 	case DEM_PRINT:
@@ -1311,7 +1331,7 @@ void Net_DoCommand (int type, byte **stream, int player)
 		{
 			byte which = ReadByte (stream);
 			FWeaponInfo **infos = (players[player].powers[pw_weaponlevel2]
-				&& deathmatch.value) ? wpnlev2info : wpnlev1info;
+				&& *deathmatch) ? wpnlev2info : wpnlev1info;
 
 			if (which < NUMWEAPONS
 				&& which != players[player].readyweapon
@@ -1388,7 +1408,7 @@ void Net_DoCommand (int type, byte **stream, int player)
 			S_PauseSound ();
 			I_PauseMouse ();
 		}
-		BorderNeedRefresh = true;
+		BorderNeedRefresh = screen->GetPageCount ();
 		break;
 
 	case DEM_SAVEGAME:
@@ -1409,6 +1429,7 @@ void Net_DoCommand (int type, byte **stream, int player)
 
 void Net_SkipCommand (int type, byte **stream)
 {
+	BYTE t;
 	int skip;
 
 	switch (type)
@@ -1422,7 +1443,6 @@ void Net_SkipCommand (int type, byte **stream)
 		case DEM_PRINT:
 		case DEM_CENTERPRINT:
 		case DEM_UINFCHANGED:
-		case DEM_SINFCHANGED:
 		case DEM_GIVECHEAT:
 		case DEM_CHANGEMAP:
 		case DEM_SUMMON:
@@ -1439,15 +1459,32 @@ void Net_SkipCommand (int type, byte **stream)
 			skip = 1;
 			break;
 
+		case DEM_SINFCHANGED:
+			t = **stream;
+			skip = 1 + (t & 63);
+			switch (t >> 6)
+			{
+			case CVAR_Bool:
+				skip += 1;
+				break;
+			case CVAR_Int: case CVAR_Float:
+				skip += 4;
+				break;
+			case CVAR_String:
+				skip += strlen ((char *)(*stream + skip));
+				break;
+			}
+			break;
+
 		default:
-			return;;
+			return;
 	}
 
 	*stream += skip;
 }
 
 // [RH] List "ping" times
-BEGIN_COMMAND (pings)
+CCMD (pings)
 {
 	int i;
 
@@ -1456,4 +1493,3 @@ BEGIN_COMMAND (pings)
 			Printf (PRINT_HIGH, "% 4u %s\n", currrecvtime[i] - lastrecvtime[i],
 					players[i].userinfo.netname);
 }
-END_COMMAND (pings)

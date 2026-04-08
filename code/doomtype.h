@@ -46,6 +46,12 @@ typedef unsigned char byte;
 #define STACK_ARGS
 #endif
 
+#if defined(_MSC_VER)
+#define NOVTABLE __declspec(novtable)
+#else
+#define NOVTABLE
+#endif
+
 // Predefined with some OS.
 #ifndef _MSC_VER
 #include <values.h>
@@ -143,5 +149,15 @@ int STACK_ARGS DPrintf (const char *, ...);
 
 #define MIN(a,b)	((a)<(b)?(a):(b))
 #define MAX(a,b)	((a)>(b)?(a):(b))
+
+template<class T> T clamp (const T in, const T min, const T max)
+{
+	return in <= min ? min : in >= max ? max : in;
+}
+
+template<class T> void swap (T &a, T &b)
+{
+	T temp = a; a = b; b = temp;
+}
 
 #endif

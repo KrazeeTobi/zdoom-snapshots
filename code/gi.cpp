@@ -5,6 +5,11 @@
 
 gameinfo_t gameinfo;
 
+const char *GameNames[5] =
+{
+	NULL, "Doom", "Heretic", NULL, "Hexen"
+};
+
 static char *quitsounds[8] =
 {
 	"player/male/death1",
