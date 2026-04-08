@@ -66,16 +66,15 @@ typedef int SOCKET;
 #define INVALID_SOCKET -1
 #define closesocket close
 #define ioctlsocket ioctl
+#define Sleep(x)	usleep (x * 1000)
 #endif
 
 #ifdef __WIN32__
-#	define IPPORT_USERRESERVED 5000
+#define IPPORT_USERRESERVED 5000
+typedef int socklen_t;
 #endif
 
 extern BOOL CheckAbort (void);
-
-static void	NetSend (void);
-static bool	NetListen (void);
 
 
 //
@@ -193,7 +192,8 @@ void PacketSend (void)
 //
 void PacketGet (void)
 {
-	int c, fromlen;
+	int c;
+	socklen_t fromlen;
 	sockaddr_in fromaddress;
 
 	fromlen = sizeof(fromaddress);
@@ -220,7 +220,7 @@ void PacketGet (void)
 sockaddr_in *PreGet (void *buffer, int bufferlen)
 {
 	static sockaddr_in fromaddress;
-	int fromlen;
+	socklen_t fromlen;
 	int c;
 
 	fromlen = sizeof(fromaddress);
@@ -243,7 +243,7 @@ sockaddr_in *PreGet (void *buffer, int bufferlen)
 
 void PreSend (const void *buffer, int bufferlen, sockaddr_in *to)
 {
-	sendto (mysocket, (const char *)buffer, bufferlen, 0, (SOCKADDR *)to, sizeof(*to));
+	sendto (mysocket, (const char *)buffer, bufferlen, 0, (sockaddr *)to, sizeof(*to));
 }
 
 void BuildAddress (sockaddr_in *address, char *name)
@@ -257,7 +257,7 @@ void BuildAddress (sockaddr_in *address, char *name)
 
 	address->sin_family = AF_INET;
 
-	if (portpart = strchr (name, ':'))
+	if ( (portpart = strchr (name, ':')) )
 	{
 		*portpart = 0;
 		port = atoi (portpart + 1);
@@ -273,7 +273,7 @@ void BuildAddress (sockaddr_in *address, char *name)
 	}
 	address->sin_port = htons(port);
 
-	for (curchar = 0; c = name[curchar]; curchar++)
+	for (curchar = 0; (c = name[curchar]) ; curchar++)
 	{
 		if ((c < '0' || c > '9') && c != '.')
 		{
@@ -414,7 +414,7 @@ void HostGame (int i)
 				I_FatalError ("Network game synchronization aborted.");
 			}
 
-			while (from = PreGet (&packet, sizeof(packet)))
+			while ( (from = PreGet (&packet, sizeof(packet))) )
 			{
 				switch (ntohs (packet.message))
 				{
@@ -506,7 +506,7 @@ void HostGame (int i)
 			I_FatalError ("Network game synchronization aborted.");
 		}
 
-		while (from = PreGet (&packet, sizeof(packet)))
+		while ( (from = PreGet (&packet, sizeof(packet))) )
 		{
 			if (ntohs (packet.message) == PRE_ALLHEREACK)
 			{
@@ -653,7 +653,7 @@ void JoinGame (int i)
 	popterm ();
 
 	// Clear out any waiting packets
-	while (PreGet (&packet, sizeof(packet)))
+	while (PreGet (&doomcom->data, sizeof(doomcom->data)))
 		;
 
 	Printf (PRINT_HIGH, "Total players: %d\n", doomcom->numnodes);

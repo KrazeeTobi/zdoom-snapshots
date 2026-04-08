@@ -50,7 +50,7 @@ void I_Init (void);
 // Called by startup code
 // to get the ammount of memory to malloc
 // for the zone management.
-byte *I_ZoneBase (unsigned int *size);
+byte *I_ZoneBase (size_t *size);
 
 
 // Called by D_DoomLoop,
@@ -104,9 +104,10 @@ byte* I_AllocLow (int length);
 
 void I_Tactile (int on, int off, int total);
 
-
+extern "C" {
 void STACK_ARGS I_Error (const char *error, ...);
 void STACK_ARGS I_FatalError (const char *error, ...);
+}
 
 void atterm (void (STACK_ARGS *func)(void));
 void popterm ();
