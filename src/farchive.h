@@ -146,7 +146,7 @@ inline	FArchive& operator<< (unsigned int i) { return operator<< ((DWORD)i); }
 		FArchive& operator>> (QWORD &i);
 		FArchive& operator>> (float &f);
 		FArchive& operator>> (double &d);
-		FArchive& operator>> (const char *&str);
+		FArchive& operator>> (char *&str);
 		FArchive& ReadObject (DObject *&obj, TypeInfo *wanttype);
 
 inline	FArchive& operator>> (char &c) { return operator>> ((BYTE &)c); }
@@ -154,8 +154,8 @@ inline	FArchive& operator>> (SBYTE &c) { return operator>> ((BYTE &)c); }
 inline	FArchive& operator>> (SWORD &s) { return operator>> ((WORD &)s); }
 inline	FArchive& operator>> (SDWORD &i) { return operator>> ((DWORD &)i); }
 inline	FArchive& operator>> (SQWORD &i) { return operator>> ((QWORD &)i); }
-inline	FArchive& operator>> (const unsigned char *&str) { return operator>> ((const char *&)str); }
-inline	FArchive& operator>> (const signed char *&str) { return operator>> ((const char *&)str); }
+inline	FArchive& operator>> (unsigned char *&str) { return operator>> ((char *&)str); }
+inline	FArchive& operator>> (signed char *&str) { return operator>> ((char *&)str); }
 inline	FArchive& operator>> (bool &b) { return operator>> ((BYTE &)b); }
 inline	FArchive& operator>> (int &i) { return operator>> ((DWORD &)i); }
 inline	FArchive& operator>> (unsigned int &i) { return operator>> ((DWORD &)i); }

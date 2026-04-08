@@ -768,7 +768,7 @@ void S_ResumeSound (void)
 //
 void S_UpdateSounds (void *listener_p)
 {
-	fixed_t *listener = &((AActor *)listener_p)->x;
+	fixed_t *listener = listener_p ? &((AActor *)listener_p)->x : NULL;
 	fixed_t x, y;
 	int i, dist, vol;
 	angle_t angle;
@@ -1001,7 +1001,7 @@ void S_HashSounds (void)
 
 	// Mark all buckets as empty
 	for (i = 0; i < numsfx; i++)
-		S_sfx[i].index = -1;
+		S_sfx[i].index = ~0;
 
 	// Now set up the chains
 	for (i = 0; i < numsfx; i++) {
@@ -1264,7 +1264,7 @@ void A_Ambient (AActor *actor)
 		}
 		else
 		{
-			delete actor;
+			actor->Destroy ();
 		}
 	}
 	else
@@ -1278,7 +1278,7 @@ void A_Ambient (AActor *actor)
 		}
 		else
 		{
-			delete actor;
+			actor->Destroy ();
 		}
 	}
 }

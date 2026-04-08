@@ -40,6 +40,7 @@
 #include "c_cvars.h"
 #include "v_video.h"
 #include "stats.h"
+#include "z_zone.h"
 
 // MACROS ------------------------------------------------------------------
 
@@ -1060,7 +1061,7 @@ void R_RenderPlayerView (player_t *player)
 	
 	clock (WallCycles);
 	// Never draw the player unless in chasecam mode
-	if (camera->player && !(camera->player->cheats & CF_CHASECAM))
+	if (camera->player && !(player->cheats & CF_CHASECAM))
 	{
 		camera->flags2 |= MF2_DONTDRAW;
 		R_RenderBSPNode (numnodes - 1);

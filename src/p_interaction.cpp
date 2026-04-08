@@ -686,7 +686,7 @@ void P_TouchSpecialThing (AActor *special, AActor *toucher)
 		player->itemcount++;
 		level.found_items++;
 	}
-	delete special;
+	special->Destroy ();
 	player->bonuscount = BONUSADD;
 
 	{
@@ -959,7 +959,7 @@ void ClientObituary (AActor *self, AActor *inflictor, AActor *attacker)
 			int rnum = P_Random (pr_obituary);
 
 			attacker->player->fragcount -= 2;
-			attacker->player->frags[attacker->player-players]++;
+			attacker->player->frags[attacker->player - players]++;
 			self = attacker;
 			gender = self->player->userinfo.gender;
 
@@ -1125,7 +1125,7 @@ void P_KillMobj (AActor *source, AActor *target, AActor *inflictor)
 		// count environment kills against you
 		if (!source)
 		{
-			target->player->frags[target->player-players]++;
+			target->player->frags[target->player - players]++;
 			target->player->fragcount--;	// [RH] Cumulative frag count
 		}
 						
