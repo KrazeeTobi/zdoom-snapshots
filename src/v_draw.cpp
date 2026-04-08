@@ -689,26 +689,29 @@ typedef void (STACK_ARGS *ScaleAlphaFn)  (const byte *src, byte *dest, int srcpi
 // 4th char: R = Remapped, U = Unmapped
 // 5th char: P = Palettized output
 
-extern "C" struct
+extern "C" 
 {
-	DrawRemapFn DMPRP;
-	DrawNomapFn DMPUP;
-	ScaleRemapFn SMPRP;
-	ScaleNomapFn SMPUP;
+	extern struct
+	{
+		DrawRemapFn DMPRP;
+		DrawNomapFn DMPUP;
+		ScaleRemapFn SMPRP;
+		ScaleNomapFn SMPUP;
 
-	DrawTRemapFn DMTRP;
-	DrawTNomapFn DMTUP;
-	ScaleTRemapFn SMTRP;
-	ScaleTNomapFn SMTUP;
+		DrawTRemapFn DMTRP;
+		DrawTNomapFn DMTUP;
+		ScaleTRemapFn SMTRP;
+		ScaleTNomapFn SMTUP;
 
-	DrawSRemapFn DMSRP;
-	DrawSNomapFn DMSUP;
-	ScaleSRemapFn SMSRP;
-	ScaleSNomapFn SMSUP;
+		DrawSRemapFn DMSRP;
+		DrawSNomapFn DMSUP;
+		ScaleSRemapFn SMSRP;
+		ScaleSNomapFn SMSUP;
 
-	DrawAlphaFn DMAUP;
-	ScaleAlphaFn SMAUP;
-} MaskedBlockFunctions;
+		DrawAlphaFn DMAUP;
+		ScaleAlphaFn SMAUP;
+	} MaskedBlockFunctions;
+}
 
 //
 // 

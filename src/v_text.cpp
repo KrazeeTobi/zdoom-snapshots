@@ -10,6 +10,7 @@
 #include "m_swap.h"
 
 #include "doomstat.h"
+#include "templates.h"
 
 fixed_t V_TextTrans;
 
@@ -21,6 +22,72 @@ fixed_t V_TextTrans;
 void DCanvas::SetFont (FFont *font)
 {
 	Font = font;
+}
+
+void DCanvas::CharWrapper (EWrapperCode drawer, int normalcolor, int x, int y, byte character) const
+{
+	if (Font == NULL)
+		return;
+
+	if (normalcolor >= NUM_TEXT_COLORS)
+		normalcolor = CR_UNTRANSLATED;
+
+	const byte *data;
+	int w, h, xo, yo;
+	const byte *range = Font->GetColorTranslation ((EColorRange)normalcolor);
+
+	if ((data = Font->GetChar (character, &w, &h, &xo, &yo)))
+	{
+		x -= xo;
+		y -= yo;
+		switch (drawer)
+		{
+		default:
+		case ETWrapper_Normal:
+			DrawMaskedBlock (x, y, w, h, data, range);
+			break;
+		case ETWrapper_Translucent:
+			DrawTranslucentMaskedBlock (x, y, w, h, data, range, V_TextTrans);
+			break;
+		case ETWrapper_Shadow:
+			DrawShadowedMaskedBlock (x, y, w, h, data, range, TRANSLUC50);
+			break;
+		}
+	}
+}
+
+void DCanvas::CharSWrapper (EWrapperCode drawer, int normalcolor, int x, int y, byte character) const
+{
+	if (Font == NULL)
+		return;
+
+	if (normalcolor >= NUM_TEXT_COLORS)
+		normalcolor = CR_UNTRANSLATED;
+
+	const byte *data;
+	int w, h, xo, yo;
+	const byte *range = Font->GetColorTranslation ((EColorRange)normalcolor);
+
+	if ((data = Font->GetChar (character, &w, &h, &xo, &yo)))
+	{
+		int sw = w * CleanXfac;
+		int sh = h * CleanYfac;
+		x -= xo * CleanXfac;
+		y -= yo * CleanYfac;
+		switch (drawer)
+		{
+		default:
+			case ETWrapper_Normal:
+				ScaleMaskedBlock (x, y, w, h, sw, sh, data, range);
+				break;
+			case ETWrapper_Translucent:
+				ScaleTranslucentMaskedBlock (x, y, w, h, sw, sh, data, range, V_TextTrans);
+				break;
+			case ETWrapper_Shadow:
+				ScaleShadowedMaskedBlock (x, y, w, h, sw, sh, data, range, TRANSLUC50);
+				break;
+		}
+	}
 }
 
 //
@@ -60,7 +127,7 @@ void DCanvas::TextWrapper (EWrapperCode drawer, int normalcolor, int x, int y, c
 		if (!c)
 			break;
 
-		if (c == 0x81)
+		if (c == TEXTCOLOR_ESCAPE)
 		{
 			int newcolor = toupper(*ch++);
 
@@ -151,7 +218,7 @@ void DCanvas::TextSWrapper (EWrapperCode drawer, int normalcolor, int x, int y, 
 		if (!c)
 			break;
 
-		if (c == 0x81)
+		if (c == TEXTCOLOR_ESCAPE)
 		{
 			int newcolor = toupper(*ch++);
 
@@ -221,17 +288,25 @@ void DCanvas::TextSWrapper (EWrapperCode drawer, int normalcolor, int x, int y, 
 //
 // Find string width using current font
 //
-int DCanvas::StringWidth (const char *string) const
+int DCanvas::StringWidth (const BYTE *string) const
 {
 	int w = 0;
+	int maxw = 0;
 		
 	while (*string)
 	{
-		if (*string == '\x81')
+		if (*string == TEXTCOLOR_ESCAPE)
 		{
 			if (*(++string))
-				string++;
+				++string;
 			continue;
+		}
+		else if (*string == '\n')
+		{
+			if (w > maxw)
+				maxw = w;
+			w = 0;
+			++string;
 		}
 		else
 		{
@@ -239,7 +314,7 @@ int DCanvas::StringWidth (const char *string) const
 		}
 	}
 				
-	return w;
+	return MAX (maxw, w);
 }
 
 //
@@ -272,7 +347,7 @@ brokenlines_t *V_BreakLines (int maxwidth, const byte *string, bool keepspace)
 
 	while ( (c = *string++) )
 	{
-		if (c == 0x81)
+		if (c == TEXTCOLOR_ESCAPE)
 		{
 			if (*string)
 				string++;

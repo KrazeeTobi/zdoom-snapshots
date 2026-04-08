@@ -280,7 +280,7 @@ static void SubsetLanguageIDs (LCID id, LCTYPE type, int idx)
 //
 void SetLanguageIDs ()
 {
-	int langlen = strlen (*language);
+	int langlen = strlen (language);
 
 	if (langlen < 2 || langlen > 3)
 	{
@@ -294,9 +294,9 @@ void SetLanguageIDs ()
 	{
 		DWORD lang = 0;
 
-		((BYTE *)&lang)[0] = (*language)[0];
-		((BYTE *)&lang)[1] = (*language)[1];
-		((BYTE *)&lang)[2] = (*language)[2];
+		((BYTE *)&lang)[0] = (language)[0];
+		((BYTE *)&lang)[1] = (language)[1];
+		((BYTE *)&lang)[2] = (language)[2];
 		LanguageIDs[0] = lang;
 		LanguageIDs[1] = lang;
 		LanguageIDs[2] = lang;

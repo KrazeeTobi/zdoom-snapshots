@@ -16,6 +16,8 @@ void C_NameKeys (char *str, int first, int second);
 void C_UnbindACommand (char *str);
 void C_ChangeBinding (const char *str, int newone);
 void C_DoBind (const char *key, const char *bind, bool doublebind);
+void C_SetDefaultBindings ();
+void C_UnbindAll ();
 
 // Returns string bound to given key (NULL if none)
 char *C_GetBinding (int key);

@@ -52,7 +52,7 @@ public:
 		FBaseStatusBar::Images.GetImage (imgBNumbers+3, &BigWidth, &BigHeight,
 			&dummy, &dummy);
 
-		if (!*deathmatch)
+		if (!deathmatch)
 		{
 			DrawToSBar ("STARMS", 104, 0);
 		}
@@ -184,7 +184,7 @@ private:
 		DrawAmmoStats ();
 		DrawFace ();
 		DrawKeys ();
-		if (!*deathmatch)
+		if (!deathmatch)
 		{
 			DrawArms ();
 		}
@@ -363,7 +363,8 @@ private:
 		{
 			FaceRefresh--;
 			DrawPartialImage (Images, imgSBAR, 142, 0, 142, 0, 37, 32);
-			DrawImage (Faces, FaceIndex, 143, 0);
+			DrawImageNoUpdate (Faces, FaceIndex, 143, 0);
+			UpdateRect (142, 0, 37, 32);
 		}
 	}
 
@@ -445,7 +446,7 @@ private:
 			DrBNumberOuter (CPlayer->ammo[i], -67, -20);
 		}
 
-		if (*deathmatch)
+		if (deathmatch)
 		{ // Draw frags (in DM)
 			DrBNumberOuter (CPlayer->fragcount, -44, 1);
 		}

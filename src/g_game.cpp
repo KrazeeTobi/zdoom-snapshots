@@ -93,6 +93,7 @@ FIntCVar gameskill ("skill", 2, CVAR_SERVERINFO|CVAR_LATCH);
 CVAR (Int, deathmatch, 0, CVAR_SERVERINFO|CVAR_LATCH);
 CVAR (Bool, teamplay, false, CVAR_SERVERINFO);
 CVAR (Bool, chasedemo, false, 0);
+CVAR (Bool, storesavepic, true, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 
 gameaction_t	gameaction;
 gamestate_t 	gamestate = GS_STARTUP;
@@ -202,17 +203,17 @@ artitype_t LocalSelectedItem;
 // [RH] Allow turbo setting anytime during game
 CUSTOM_CVAR (Float, turbo, 100.f, 0)
 {
-	if (*var < 10.f)
+	if (self < 10.f)
 	{
-		var = 10.f;
+		self = 10.f;
 	}
-	else if (*var > 256.f)
+	else if (self > 256.f)
 	{
-		var = 256.f;
+		self = 256.f;
 	}
 	else
 	{
-		float scale = *var * 0.01f;
+		float scale = self * 0.01f;
 
 		forwardmove[0] = (int)(normforwardmove[0]*scale);
 		forwardmove[1] = (int)(normforwardmove[1]*scale);
@@ -223,7 +224,7 @@ CUSTOM_CVAR (Float, turbo, 100.f, 0)
 
 CCMD (slot)
 {
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		SendWeaponSlot = atoi (argv[1]);
 	}
@@ -231,7 +232,7 @@ CCMD (slot)
 
 CCMD (weapon)
 {
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		SendWeaponChoice = atoi (argv[1]);
 	}
@@ -270,13 +271,13 @@ CCMD (weapprev)
 CCMD (invnext)
 {
 	LocalSelectedItem = P_NextInventory (m_Instigator->player, LocalSelectedItem);
-	SendItemSelect = (argc == 1) ? 2 : 1;
+	SendItemSelect = (argv.argc() == 1) ? 2 : 1;
 }
 
 CCMD (invprev)
 {
 	LocalSelectedItem = P_PrevInventory (m_Instigator->player, LocalSelectedItem);
-	SendItemSelect = (argc == 1) ? 2 : 1;
+	SendItemSelect = (argv.argc() == 1) ? 2 : 1;
 }
 
 CCMD (invuse)
@@ -291,7 +292,7 @@ CCMD (invuseall)
 
 CCMD (use)
 {
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		SendItemUse = P_FindNamedInventory (argv[1]);
 	}
@@ -299,7 +300,7 @@ CCMD (use)
 
 CCMD (select)
 {
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		LocalSelectedItem = P_FindNamedInventory (argv[1]);
 	}
@@ -325,21 +326,19 @@ void G_BuildTiccmd (ticcmd_t *cmd)
 	ticcmd_t	*base;
 
 	base = I_BaseTiccmd (); 			// empty, or external driver
-	memcpy (cmd,base,sizeof(*cmd));
+	*cmd = *base;
 
 	cmd->consistancy = consistancy[consoleplayer][maketic%BACKUPTICS];
 
-	strafe = Actions[ACTION_STRAFE];
-	speed = Actions[ACTION_SPEED];
-	if (*cl_run)
-		speed ^= 1;
+	strafe = Button_Strafe.bDown;
+	speed = Button_Speed.bDown ^ (int)cl_run;
 
 	forward = side = look = fly = 0;
 
 	// [RH] only use two stage accelerative turning on the keyboard
 	//		and not the joystick, since we treat the joystick as
 	//		the analog device it is.
-	if ((Actions[ACTION_LEFT]) || (Actions[ACTION_RIGHT]))
+	if (Button_Left.bDown || Button_Right.bDown)
 		turnheld += ticdup;
 	else
 		turnheld = 0;
@@ -352,69 +351,69 @@ void G_BuildTiccmd (ticcmd_t *cmd)
 	// let movement keys cancel each other out
 	if (strafe)
 	{
-		if (Actions[ACTION_RIGHT])
+		if (Button_Right.bDown)
 			side += sidemove[speed];
-		if (Actions[ACTION_LEFT])
+		if (Button_Left.bDown)
 			side -= sidemove[speed];
 	}
 	else
 	{
-		if (Actions[ACTION_RIGHT])
+		if (Button_Right.bDown)
 			cmd->ucmd.yaw -= angleturn[tspeed];
-		if (Actions[ACTION_LEFT])
+		if (Button_Left.bDown)
 			cmd->ucmd.yaw += angleturn[tspeed];
 	}
 
-	if (Actions[ACTION_LOOKUP])
+	if (Button_LookUp.bDown)
 		look += lookspeed[speed];
-	if (Actions[ACTION_LOOKDOWN])
+	if (Button_LookDown.bDown)
 		look -= lookspeed[speed];
 
-	if (Actions[ACTION_MOVEUP])
+	if (Button_MoveUp.bDown)
 		fly += flyspeed[speed];
-	if (Actions[ACTION_MOVEDOWN])
+	if (Button_MoveDown.bDown)
 		fly -= flyspeed[speed];
 
-	if (Actions[ACTION_KLOOK])
+	if (Button_Klook.bDown)
 	{
-		if (Actions[ACTION_FORWARD])
+		if (Button_Forward.bDown)
 			look += lookspeed[speed];
-		if (Actions[ACTION_BACK])
+		if (Button_Back.bDown)
 			look -= lookspeed[speed];
 	}
 	else
 	{
-		if (Actions[ACTION_FORWARD])
+		if (Button_Forward.bDown)
 			forward += forwardmove[speed];
-		if (Actions[ACTION_BACK])
+		if (Button_Back.bDown)
 			forward -= forwardmove[speed];
 	}
 
-	if (Actions[ACTION_MOVERIGHT])
+	if (Button_MoveRight.bDown)
 		side += sidemove[speed];
-	if (Actions[ACTION_MOVELEFT])
+	if (Button_MoveLeft.bDown)
 		side -= sidemove[speed];
 
 	// buttons
-	if (Actions[ACTION_ATTACK])
+	if (Button_Attack.bDown)
 		cmd->ucmd.buttons |= BT_ATTACK;
 
-	if (Actions[ACTION_USE])
+	if (Button_Use.bDown)
 		cmd->ucmd.buttons |= BT_USE;
 
-	if (Actions[ACTION_JUMP])
+	if (Button_Jump.bDown)
 		cmd->ucmd.buttons |= BT_JUMP;
 
 	// [RH] Scale joystick moves to full range of allowed speeds
-	if (strafe || *lookstrafe)
+	if (strafe || lookstrafe)
 		side += (MAXPLMOVE * joyxmove) / 256;
 	else 
 		cmd->ucmd.yaw -= (angleturn[1] * joyxmove) / 256; 
 
 	// [RH] Scale joystick moves over full range
-	if (Actions[ACTION_MLOOK])
+	if (Button_Mlook.bDown)
 	{
-		if (*invertmouse)
+		if (invertmouse)
 			look -= (joyymove * 32767) / 256;
 		else
 			look += (joyymove * 32767) / 256;
@@ -424,19 +423,19 @@ void G_BuildTiccmd (ticcmd_t *cmd)
 		forward += (MAXPLMOVE * joyymove) / 256;
 	}
 
-	if ((Actions[ACTION_MLOOK]) || *freelook)
+	if (Button_Mlook.bDown || freelook)
 	{
 		int val;
 
-		val = (int)((float)(mousey * 16) * *m_pitch) / ticdup;
-		if (*invertmouse)
+		val = (int)((float)(mousey * 16) * m_pitch) / ticdup;
+		if (invertmouse)
 			look -= val;
 		else
 			look += val;
 	}
 	else
 	{
-		forward += (int)((float)mousey * *m_forward);
+		forward += (int)((float)mousey * m_forward);
 	}
 
 	if (sendcenterview)
@@ -458,10 +457,10 @@ void G_BuildTiccmd (ticcmd_t *cmd)
 		fly = -32768;
 	}
 
-	if (strafe || *lookstrafe)
-		side += (int)((float)mousex * *m_side);
+	if (strafe || lookstrafe)
+		side += (int)((float)mousex * m_side);
 	else
-		cmd->ucmd.yaw -= (int)((float)(mousex*0x8) * *m_yaw) / ticdup;
+		cmd->ucmd.yaw -= (int)((float)(mousex*0x8) * m_yaw) / ticdup;
 
 	mousex = mousey = 0;
 
@@ -553,9 +552,9 @@ CVAR (Bool, bot_allowspy, false, 0)
 CCMD (spynext)
 {
 	// allow spy mode changes even during the demo
-	if (gamestate == GS_LEVEL && (demoplayback || !netgame || !*deathmatch))
+	if (gamestate == GS_LEVEL && (demoplayback || !netgame || !deathmatch))
 	{
-		if (*deathmatch && bglobal.botnum && !*bot_allowspy)
+		if (deathmatch && bglobal.botnum && !bot_allowspy)
 			return;
 		do
 		{
@@ -571,9 +570,9 @@ CCMD (spynext)
 CCMD (spyprev)
 {
 	// allow spy mode changes even during the demo
-	if (gamestate == GS_LEVEL && (demoplayback || !netgame || !*deathmatch))
+	if (gamestate == GS_LEVEL && (demoplayback || !netgame || !deathmatch))
 	{
-		if (*deathmatch && bglobal.botnum && !*bot_allowspy)
+		if (deathmatch && bglobal.botnum && !bot_allowspy)
 			return;
 		do 
 		{ 
@@ -658,8 +657,8 @@ BOOL G_Responder (event_t *ev)
 
 	// [RH] mouse buttons are sent as key up/down events
 	case EV_Mouse: 
-		mousex = (int)(ev->x * *mouse_sensitivity);
-		mousey = (int)(ev->y * *mouse_sensitivity);
+		mousex = (int)(ev->x * mouse_sensitivity);
+		mousey = (int)(ev->y * mouse_sensitivity);
 		break;
 
 	case EV_Joystick:
@@ -855,7 +854,7 @@ void G_PlayerFinishLevel (int player, EFinishLevelType mode)
 	// Strip all current powers
 	flightPower = p->powers[pw_flight];
 	memset (p->powers, 0, sizeof (p->powers));
-	if (!*deathmatch && mode == FINISH_SameHub)
+	if (!deathmatch && mode == FINISH_SameHub)
 	{ // Keep flight if moving to another level in same hub
 		p->powers[pw_flight] = flightPower;
 	}
@@ -878,7 +877,7 @@ void G_PlayerFinishLevel (int player, EFinishLevelType mode)
 	}
 
 	if (mode == FINISH_NoHub)
-	{ // Reduce all owned inventory to 1 item
+	{ // Reduce all owned inventory to 1 item each
 		for (i = 0; i < NUMINVENTORYSLOTS; i++)
 		{
 			if (p->inventory[i])
@@ -952,8 +951,8 @@ void G_PlayerReborn (int player)
 		p->isbot = false;
 
 	// [BC] Handle temporary invulnerability when respawned
-	if ((*dmflags2 & DF2_YES_INVUL) &&
-		(*deathmatch || *alwaysapplydmflags))
+	if ((dmflags2 & DF2_YES_INVUL) &&
+		(deathmatch || alwaysapplydmflags))
 	{
 		p->powers[pw_invulnerability] = 2*TICRATE;
 		actor->effects |= FX_RESPAWNINVUL;	// [RH] special effect
@@ -1090,7 +1089,7 @@ void G_DeathMatchSpawnPlayer (int playernum)
 	// At level start, none of the players have mobjs attached to them,
 	// so we always use the random deathmatch spawn. During the game,
 	// though, we use whatever dmflags specifies.
-	if (*dmflags & DF_SPAWN_FARTHEST && players[playernum].mo)
+	if (dmflags & DF_SPAWN_FARTHEST && players[playernum].mo)
 		spot = SelectFarthestDeathmatchSpot (selections);
 	else
 		spot = SelectRandomDeathmatchSpot (playernum, selections);
@@ -1153,7 +1152,7 @@ void G_DoReborn (int playernum, bool freshbot)
 		}
 
 		// spawn at random spot if in death match
-		if (*deathmatch)
+		if (deathmatch)
 		{
 			G_DeathMatchSpawnPlayer (playernum);
 			return;
@@ -1162,7 +1161,7 @@ void G_DoReborn (int playernum, bool freshbot)
 		// Cooperative net-play, retain keys and weapons
 		bool oldweapons[NUMWEAPONS];
 		bool oldkeys[NUMKEYS];
-		int oldpieces;
+		int oldpieces = 0;
 
 		if (!freshbot)
 		{
@@ -1238,7 +1237,7 @@ void G_LoadGame (char* name)
 // Return false if not all the needed wads have been loaded.
 static bool G_CheckSaveGameWads (FILE *file)
 {
-	char wadbuff[_MAX_PATH];
+	char wadbuff[PATH_MAX];
 	int i, c;
 	bool printRequires = false;
 
@@ -1326,7 +1325,7 @@ void G_DoLoadGame (void)
 		{
 			t3 = SHORT(t1) * SHORT(t2);
 		}
-		fseek (stdfile, t3, SEEK_CUR);
+		fseek (stdfile, t3, SEEK_CUR);		// skip (compressed) pic
 	}
 
 	bglobal.RemoveAllBots (true);
@@ -1348,6 +1347,8 @@ void G_DoLoadGame (void)
 	}
 
 	// dearchive all the modifications
+	arc << level.time;
+
 	G_SerializeSnapshots (arc);
 	P_SerializeRNGState (arc);
 	P_SerializeACSDefereds (arc);
@@ -1356,8 +1357,6 @@ void G_DoLoadGame (void)
 	savegamerestore = true;		// Use the player actors in the savegame
 	G_InitNew (text);
 	savegamerestore = false;
-
-	arc << level.time;
 
 	for (i = 0; i < NUM_WORLDVARS; i++)
 		arc << ACS_WorldVars[i];
@@ -1395,7 +1394,7 @@ void G_SaveGame (const char *filename, const char *description)
 
 void G_BuildSaveName (char *name, int slot)
 {
-#ifndef UNIX
+#ifndef unix
 	if (Args.CheckParm ("-cdrom"))
 		sprintf(name, "c:\\zdoomdat\\%s%d.zds", GStrings(SAVEGAMENAME), slot);
 	else
@@ -1469,7 +1468,7 @@ static void PutSavePic (FILE *file, int width, int height)
 {
 	const uLong picArea = width * height;
 
-	if (picArea == 0)
+	if (picArea == 0 || !storesavepic)
 	{
 		DWORD zero = 0;
 		fwrite (&zero, 4, 1, file);
@@ -1563,11 +1562,12 @@ void G_DoSaveGame ()
 		arc.Write (vars, vars_p - vars);
 	}
 
+	arc << level.time;
+
 	G_SerializeSnapshots (arc);
 	P_SerializeRNGState (arc);
 	P_SerializeACSDefereds (arc);
 
-	arc << level.time;
 	for (i = 0; i < NUM_WORLDVARS; i++)
 		arc << ACS_WorldVars[i];
 
@@ -1767,7 +1767,8 @@ void G_DeferedPlayDemo (char *name)
 
 CCMD (playdemo)
 {
-	if (argc > 1) {
+	if (argv.argc() > 1)
+	{
 		G_DeferedPlayDemo (argv[1]);
 		singledemo = true;
 	}
@@ -1775,7 +1776,7 @@ CCMD (playdemo)
 
 CCMD (timedemo)
 {
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		G_TimeDemo (argv[1]);
 		singledemo = true;
@@ -1976,7 +1977,7 @@ BOOL G_CheckDemoStatus (void)
 	if (demoplayback)
 	{
 		extern int starttime;
-		int endtime;
+		int endtime = 0;
 
 		if (timingdemo)
 			endtime = I_GetTimePolled () - starttime;
@@ -1997,19 +1998,27 @@ BOOL G_CheckDemoStatus (void)
 		}
 		consoleplayer = 0;
 
-		if (singledemo || timingdemo) {
+		if (singledemo || timingdemo)
+		{
 			if (timingdemo)
+			{
 				// Trying to get back to a stable state after timing a demo
 				// seems to cause problems. I don't feel like fixing that
 				// right now.
-				I_FatalError ("timed %i gametics in %i realtics (%.1f fps)", gametic,
+				I_FatalError ("timed %i gametics in %i realtics (%.1f fps)\n"
+							  "(This is not really an error.)", gametic,
 							  endtime, (float)gametic/(float)endtime*(float)TICRATE);
+			}
 			else
+			{
 				Printf ("Demo ended.\n");
+			}
 			gameaction = ga_fullconsole;
 			timingdemo = false;
 			return false;
-		} else {
+		}
+		else
+		{
 			D_AdvanceDemo (); 
 		}
 

@@ -75,7 +75,7 @@ static const FBinding DefBindings[] =
 	{ "f12", "spynext" },
 	{ "mwheeldown", "weapnext" },
 	{ "mwheelup", "weapprev" },
-	NULL
+	{ NULL }
 };
 
 static const FBinding DefRavenBindings[] =
@@ -86,7 +86,7 @@ static const FBinding DefRavenBindings[] =
 	{ "pgdn", "+lookup" },
 	{ "del", "+lookdown" },
 	{ "end", "centerview" },
-	NULL
+	{ NULL }
 };
 
 static const FBinding DefHexenBindings[] =
@@ -100,52 +100,53 @@ static const FBinding DefHexenBindings[] =
 	// 7 arti_teleportother
 	// 6 arti_egg
 	// 5 arti_invulnerability
-	NULL
+	{ NULL }
 };
 
-const char *KeyNames[NUM_KEYS] = {
+const char *KeyNames[NUM_KEYS] =
+{
 	// This array is dependant on the particular keyboard input
 	// codes generated in i_input.c. If they change there, they
 	// also need to change here. In this case, we use the
 	// DirectInput codes and assume a qwerty keyboard layout.
 	// See <dinput.h> for the DIK_* codes
 
-	NULL,  "escape","1",	"2",	"3",	"4",	"5",		"6",		//00
-	"7",	"8",	"9",	"0",	"-",	"=",	"backspace","tab",		//08
-	"q",	"w",	"e",	"r",	"t",	"y",	"u",		"i",		//10
-	"o",	"p",	"[",	"]",	"enter","ctrl",	"a",		"s",		//18
-	"d",	"f",	"g",	"h",	"j",	"k",	"l",		";",		//20
-	"'",	"`",	"shift","\\",	"z",	"x",	"c",		"v",		//28
-	"b",	"n",	"m",	",",	".",	"/",	NULL,		"kp*",		//30
-	"alt",	"space","capslock","f1","f2",	"f3",	"f4",		"f5",		//38
-	"f6",	"f7",	"f8",	"f9",	"f10",	"numlock","scroll",	"kp7",		//40
-	"kp8",	"kp9",	"kp-",	"kp4",	"kp5",	"kp6",	"kp+",		"kp1",		//48
-	"kp2",	"kp3",	"kp0",	"kp.",	NULL,	NULL,	NULL,		"f11",		//50
-	"f12",	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		NULL,		//58
-	NULL,	NULL,	NULL,	NULL,	"f13",	"f14",	"f15",		NULL,		//60
-	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		NULL,		//68
-	"kana",	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		NULL,		//70
-	NULL,	"convert",NULL,	"noconvert",NULL,"yen",	NULL,		NULL,		//78
-	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		NULL,		//80
-	NULL,	NULL,	NULL,	NULL,	NULL,	"kp=",	NULL,		NULL,		//88
-	"circumflex","@",":",	"_",	"kanji","stop",	"ax",		"unlabeled",//90
-	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		NULL,		//98
-	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		NULL,		//A0
-	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		NULL,		//A8
-	NULL,	NULL,	NULL,	"kp,",	NULL,	"kp/",	NULL,		"sysrq",	//B0
-	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		NULL,		//B8
-	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		"home",		//C0
-	"uparrow","pgup",NULL,	"leftarrow",NULL,"rightarrow",NULL,	"end",		//C8
-	"downarrow","pgdn","ins","del",	NULL,	NULL,	NULL,		NULL,		//D0
-	NULL,	NULL,	NULL,	"lwin",	"rwin",	"apps",	NULL,		NULL,		//D8
-	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		NULL,		//E0
-	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		NULL,		//E8
-	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		NULL,		//F0
-	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,		"pause",	//F8
+	NULL,		"escape",	"1",		"2",		"3",		"4",		"5",		"6",		//00
+	"7",		"8",		"9",		"0",		"-",		"=",		"backspace","tab",		//08
+	"q",		"w",		"e",		"r",		"t",		"y",		"u",		"i",		//10
+	"o",		"p",		"[",		"]",		"enter",	"ctrl",		"a",		"s",		//18
+	"d",		"f",		"g",		"h",		"j",		"k",		"l",		";",		//20
+	"'",		"`",		"shift",	"\\",		"z",		"x",		"c",		"v",		//28
+	"b",		"n",		"m",		",",		".",		"/",		NULL,		"kp*",		//30
+	"alt",		"space",	"capslock",	"f1",		"f2",		"f3",		"f4",		"f5",		//38
+	"f6",		"f7",		"f8",		"f9",		"f10",		"numlock",	"scroll",	"kp7",		//40
+	"kp8",		"kp9",		"kp-",		"kp4",		"kp5",		"kp6",		"kp+",		"kp1",		//48
+	"kp2",		"kp3",		"kp0",		"kp.",		NULL,		NULL,		"oem102",	"f11",		//50
+	"f12",		NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		//58
+	NULL,		NULL,		NULL,		NULL,		"f13",		"f14",		"f15",		NULL,		//60
+	NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		//68
+	"kana",		NULL,		NULL,		"abnt_c1",	NULL,		NULL,		NULL,		NULL,		//70
+	NULL,		"convert",	NULL,		"noconvert",NULL,		"yen",		"abnt_c2",	NULL,		//78
+	NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		//80
+	NULL,		NULL,		NULL,		NULL,		NULL,		"kp=",		NULL,		NULL,		//88
+	"circumflex","@",		":",		"_",		"kanji",	"stop",		"ax",		"unlabeled",//90
+	NULL,		"prevtrack",NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		//98
+	"mute",		"calculator","play",	NULL,		"stop",		NULL,		NULL,		NULL,		//A0
+	NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		"voldown",	NULL,		//A8
+	"volup",	NULL,		"webhome",	"kp,",		NULL,		"kp/",		NULL,		"sysrq",	//B0
+	NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		//B8
+	NULL,		NULL,		NULL,		NULL,		NULL,		"pause",	NULL,		"home",		//C0
+	"uparrow",	"pgup",		NULL,		"leftarrow",NULL,		"rightarrow",NULL,		"end",		//C8
+	"downarrow","pgdn",		"ins",		"del",		NULL,		NULL,		NULL,		NULL,		//D0
+	NULL,		NULL,		NULL,		"lwin",		"rwin",		"apps",		"power",	"sleep",	//D8
+	NULL,		NULL,		NULL,		"wake",		NULL,		"search",	"favorites","refresh",	//E0
+	"webstop",	"webforward","webback",	"mycomputer","mail",	"mediaselect",NULL,		NULL,		//E8
+	NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		//F0
+	NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		NULL,		//F8
 
 	// non-keyboard buttons that can be bound
-	"mouse1",	"mouse2",	"mouse3",	"mouse4",		// 4 mouse buttons
-	"mwheelup",	"mwheeldown",NULL,		NULL,			// the wheel and some extra space
+	"mouse1",	"mouse2",	"mouse3",	"mouse4",		// 6 mouse buttons
+	"mouse5",	"mouse6",	"mwheelup",	"mwheeldown",	// and the wheel
 	"joy1",		"joy2",		"joy3",		"joy4",			// 32 joystick buttons
 	"joy5",		"joy6",		"joy7",		"joy8",
 	"joy9",		"joy10",	"joy11",	"joy12",
@@ -157,6 +158,7 @@ const char *KeyNames[NUM_KEYS] = {
 };
 
 static char *Bindings[NUM_KEYS];
+
 static char *DoubleBindings[NUM_KEYS];
 static int DClickTime[NUM_KEYS];
 static byte DClicked[(NUM_KEYS+7)/8];
@@ -166,12 +168,14 @@ static int GetKeyFromName (const char *name)
 	int i;
 
 	// Names of the form #xxx are translated to key xxx automatically
-	if (name[0] == '#' && name[1] != 0) {
+	if (name[0] == '#' && name[1] != 0)
+	{
 		return atoi (name + 1);
 	}
 
 	// Otherwise, we scan the KeyNames[] array for a matching name
-	for (i = 0; i < NUM_KEYS; i++) {
+	for (i = 0; i < NUM_KEYS; i++)
+	{
 		if (KeyNames[i] && !stricmp (KeyNames[i], name))
 			return i;
 	}
@@ -189,30 +193,33 @@ static const char *KeyName (int key)
 	return name;
 }
 
-CCMD (unbindall)
+void C_UnbindAll ()
 {
-	int i;
-
-	for (i = 0; i < NUM_KEYS; i++)
+	for (int i = 0; i < NUM_KEYS; ++i)
+	{
 		if (Bindings[i])
 		{
 			free (Bindings[i]);
 			Bindings[i] = NULL;
 		}
-
-	for (i = 0; i < NUM_KEYS; i++)
 		if (DoubleBindings[i])
 		{
 			free (DoubleBindings[i]);
 			DoubleBindings[i] = NULL;
 		}
+	}
+}
+
+CCMD (unbindall)
+{
+	C_UnbindAll ();
 }
 
 CCMD (unbind)
 {
 	int i;
 
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		if ( (i = GetKeyFromName (argv[1])) )
 		{
@@ -235,21 +242,29 @@ CCMD (bind)
 {
 	int i;
 
-	if (argc > 1) {
+	if (argv.argc() > 1)
+	{
 		i = GetKeyFromName (argv[1]);
-		if (!i) {
+		if (!i)
+		{
 			Printf ("Unknown key \"%s\"\n", argv[1]);
 			return;
 		}
-		if (argc == 2) {
+		if (argv.argc() == 2)
+		{
 			Printf ("\"%s\" = \"%s\"\n", argv[1], (Bindings[i] ? Bindings[i] : ""));
-		} else {
-			ReplaceString (&Bindings[i], argv[2]);
 		}
-	} else {
+		else
+		{
+			ReplaceString (&Bindings[i], argv.AllButFirstArg (2));
+		}
+	}
+	else
+	{
 		Printf ("Current key bindings:\n");
 		
-		for (i = 0; i < NUM_KEYS; i++) {
+		for (i = 0; i < NUM_KEYS; i++)
+		{
 			if (Bindings[i])
 				Printf ("%s \"%s\"\n", KeyName (i), Bindings[i]);
 		}
@@ -260,7 +275,7 @@ CCMD (undoublebind)
 {
 	int i;
 
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		if ( (i = GetKeyFromName (argv[1])) )
 		{
@@ -283,7 +298,7 @@ CCMD (doublebind)
 {
 	int i;
 
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		i = GetKeyFromName (argv[1]);
 		if (!i)
@@ -291,13 +306,13 @@ CCMD (doublebind)
 			Printf ("Unknown key \"%s\"\n", argv[1]);
 			return;
 		}
-		if (argc == 2)
+		if (argv.argc() == 2)
 		{
 			Printf ("\"%s\" = \"%s\"\n", argv[1], (DoubleBindings[i] ? DoubleBindings[i] : ""));
 		}
 		else
 		{
-			ReplaceString (&DoubleBindings[i], argv[2]);
+			ReplaceString (&DoubleBindings[i], argv.AllButFirstArg (2));
 		}
 	}
 	else
@@ -312,6 +327,32 @@ CCMD (doublebind)
 	}
 }
 
+CCMD (rebind)
+{
+	char **bindings;
+
+	if (key == 0)
+	{
+		Printf ("Rebind cannot be used from the console\n");
+		return;
+	}
+
+	if (key & KEY_DBLCLICKED)
+	{
+		bindings = DoubleBindings;
+		key &= KEY_DBLCLICKED-1;
+	}
+	else
+	{
+		bindings = Bindings;
+	}
+
+	if (argv.argc() > 1)
+	{
+		ReplaceString (&bindings[key], argv.AllButFirstArg (1));
+	}
+}
+
 static void SetBinds (const FBinding *array)
 {
 	while (array->Key)
@@ -321,7 +362,7 @@ static void SetBinds (const FBinding *array)
 	}
 }
 
-CCMD(binddefaults)
+void C_BindDefaults ()
 {
 	SetBinds (DefBindings);
 
@@ -336,9 +377,21 @@ CCMD(binddefaults)
 	}
 }
 
+CCMD(binddefaults)
+{
+	C_BindDefaults ();
+}
+
+void C_SetDefaultBindings ()
+{
+	C_UnbindAll ();
+	C_BindDefaults ();
+}
+
 BOOL C_DoKey (event_t *ev)
 {
 	char *binding = NULL;
+	bool dclick;
 	int dclickspot;
 	byte dclickmask;
 
@@ -347,61 +400,61 @@ BOOL C_DoKey (event_t *ev)
 
 	dclickspot = ev->data1 >> 3;
 	dclickmask = 1 << (ev->data1 & 7);
+	dclick = false;
 
 	if (DClickTime[ev->data1] > level.time && ev->type == EV_KeyDown)
 	{
 		// Key pressed for a double click
 		binding = DoubleBindings[ev->data1];
 		DClicked[dclickspot] |= dclickmask;
+		dclick = true;
 	}
 	else
 	{
 		if (ev->type == EV_KeyDown)
-		{
-			// Key pressed for a normal press
+		{ // Key pressed for a normal press
 			binding = Bindings[ev->data1];
 			DClickTime[ev->data1] = level.time + 20;
 		}
 		else if (DClicked[dclickspot] & dclickmask)
-		{
-			// Key released from a double click
+		{ // Key released from a double click
 			binding = DoubleBindings[ev->data1];
 			DClicked[dclickspot] &= ~dclickmask;
 			DClickTime[ev->data1] = 0;
+			dclick = true;
 		}
 		else
-		{
-			// Key released from a normal press
+		{ // Key released from a normal press
 			binding = Bindings[ev->data1];
 		}
 	}
 
-	if (!binding)
-		binding = Bindings[ev->data1];
-
-	if (binding && (chatmodeon == 0 || ev->data1 < 256))
+	if (binding == NULL)
 	{
-		if (ev->type == EV_KeyDown)
-		{
-			char copy[1024];
-			// Copy the command in case the binding rebinds the key
-			strcpy (copy, binding);
-			AddCommandString (copy);
-		}
-		else
-		{
-			char *achar;
-		
-			achar = strchr (binding, '+');
-			if (!achar)
-				return false;
+		binding = Bindings[ev->data1];
+		dclick = false;
+	}
 
-			if ((achar == binding) || (*(achar - 1) <= ' '))
+	if (binding != NULL && (chatmodeon == 0 || ev->data1 < 256))
+	{
+		if (ev->type == EV_KeyUp)
+		{
+			if (binding[0] != '+')
 			{
-				*achar = '-';
-				AddCommandString (binding);
-				*achar = '+';
+				return false;
 			}
+			binding[0] = '-';
+		}
+
+		// Copy the command in case it rebinds the key
+		char copy[1024];
+		strncpy (copy, binding, 1023);
+		copy[1023] = 0;
+		AddCommandString (copy, dclick ? ev->data1 | KEY_DBLCLICKED : ev->data1);
+
+		if (ev->type == EV_KeyUp)
+		{
+			binding[0] = '+';
 		}
 		return true;
 	}
@@ -429,6 +482,8 @@ void C_ArchiveBindings (FConfigFile *f, bool dodouble)
 					name = "RightBracket";
 				else if (name[0] == '=')
 					name = "Equals";
+				else if (strcmp (name, "kp=") == 0)
+					name = "KP-Equals";
 			}
 			f->SetValueForKey (name, bindings[i]);
 		}
@@ -452,6 +507,10 @@ void C_DoBind (const char *key, const char *bind, bool dodouble)
 		{
 			keynum = GetKeyFromName ("=");
 		}
+		else if (stricmp (key, "KP-Equals") == 0)
+		{
+			keynum = GetKeyFromName ("kp=");
+		}
 	}
 	if (keynum != 0)
 	{
@@ -465,8 +524,10 @@ int C_GetKeysForCommand (char *cmd, int *first, int *second)
 
 	*first = *second = c = i = 0;
 
-	while (i < NUM_KEYS && c < 2) {
-		if (Bindings[i] && !stricmp (cmd, Bindings[i])) {
+	while (i < NUM_KEYS && c < 2)
+	{
+		if (Bindings[i] && stricmp (cmd, Bindings[i]) == 0)
+		{
 			if (c++ == 0)
 				*first = i;
 			else
@@ -482,14 +543,16 @@ void C_NameKeys (char *str, int first, int second)
 	int c = 0;
 
 	*str = 0;
-	if (first) {
+	if (first)
+	{
 		c++;
 		strcpy (str, KeyName (first));
 		if (second)
 			strcat (str, " or ");
 	}
 
-	if (second) {
+	if (second)
+	{
 		c++;
 		strcat (str, KeyName (second));
 	}
@@ -502,8 +565,10 @@ void C_UnbindACommand (char *str)
 {
 	int i;
 
-	for (i = 0; i < NUM_KEYS; i++) {
-		if (Bindings[i] && !stricmp (str, Bindings[i])) {
+	for (i = 0; i < NUM_KEYS; i++)
+	{
+		if (Bindings[i] && !stricmp (str, Bindings[i]))
+		{
 			delete[] Bindings[i];
 			Bindings[i] = NULL;
 		}

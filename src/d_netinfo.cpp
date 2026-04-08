@@ -75,17 +75,17 @@ void D_SetupUserInfo (void)
 	for (i = 0; i < MAXPLAYERS; i++)
 		memset (&players[i].userinfo, 0, sizeof(userinfo_t));
 
-	strncpy (coninfo->netname, *name, MAXPLAYERNAME);
-	coninfo->team = *team;
-	coninfo->aimdist = abs ((int)(*autoaim * (float)ANGLE_1));
+	strncpy (coninfo->netname, name, MAXPLAYERNAME);
+	coninfo->team = team;
+	coninfo->aimdist = abs ((int)(autoaim * (float)ANGLE_1));
 	if (coninfo->aimdist > ANGLE_1*32)
 	{
 		coninfo->aimdist = ANGLE_1*32;
 	}
-	coninfo->color = *color;
-	coninfo->skin = R_FindSkin (*skin);
-	coninfo->gender = D_GenderToInt (*gender);
-	coninfo->neverswitch = *neverswitchonpickup;
+	coninfo->color = color;
+	coninfo->skin = R_FindSkin (skin);
+	coninfo->gender = D_GenderToInt (gender);
+	coninfo->neverswitch = neverswitchonpickup;
 	R_BuildPlayerTranslation (consoleplayer, coninfo->color);
 }
 
@@ -96,12 +96,12 @@ void D_UserInfoChanged (FBaseCVar *cvar)
 
 	if (cvar == &autoaim)
 	{
-		if (*autoaim < 0.0f)
+		if (autoaim < 0.0f)
 		{
 			autoaim = 0.0f;
 			return;
 		}
-		else if (*autoaim > 5000.0f)
+		else if (autoaim > 5000.0f)
 		{
 			autoaim = 5000.f;
 			return;
@@ -403,7 +403,7 @@ FArchive &operator<< (FArchive &arc, userinfo_t &info)
 
 CCMD (playerinfo)
 {
-	if (argc < 2)
+	if (argv.argc() < 2)
 	{
 		int i;
 

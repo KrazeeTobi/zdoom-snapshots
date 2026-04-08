@@ -273,7 +273,8 @@ void P_LineOpening (const line_t *linedef, fixed_t x, fixed_t y, fixed_t refx, f
 	// that imprecisions in the plane equation mean there is a
 	// good chance that even if a slope and non-slope look like
 	// they line up, they won't be perfectly aligned.
-	if (refx == FIXED_MIN || abs (ff-bf) > 256)
+	if (refx == FIXED_MIN ||
+		abs (ff-bf) > 256)
 	{
 		usefront = (ff > bf);
 	}

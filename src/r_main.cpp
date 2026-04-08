@@ -86,12 +86,12 @@ CVAR (String, r_viewsize, "", CVAR_NOSET)
 
 CUSTOM_CVAR (Float, r_visibility, 8, CVAR_NOINITCALL)
 {
-	r_BaseVisibility = toint (*var * 65536.f);
+	r_BaseVisibility = toint (self * 65536.f);
 
-	r_WallVisibility = FixedMul (Scale (InvZtoScale, SCREENWIDTH*(200>>detailyshift),
+	r_WallVisibility = FixedMul (Scale (InvZtoScale, SCREENWIDTH*(200<<detailyshift),
 		(viewwidth<<detailxshift)*SCREENHEIGHT), FixedMul (r_BaseVisibility, FocalTangent));
 	r_FloorVisibility = FixedDiv (160*r_BaseVisibility, FocalLengthY);
-	r_TiltVisibility = *var * 16.f * 320.f
+	r_TiltVisibility = self * 16.f * 320.f
 		* (float)FocalTangent / (float)viewwidth;
 	r_SpriteVisibility = r_WallVisibility;
 	
@@ -402,6 +402,8 @@ void R_InitTables (void)
 	{
 		finesine[i+FINEANGLES/2] = -finesine[i];
 	}
+	finesine[FINEANGLES/4] = FRACUNIT;
+	finesine[FINEANGLES*3/4] = -FRACUNIT;
 	memcpy (&finesine[FINEANGLES], &finesine[0], sizeof(angle_t)*FINEANGLES/4);
 }
 
@@ -428,7 +430,7 @@ void R_InitTextureMapping ()
 	// Now generate xtoviewangle for sky texture mapping.
 	// [RH] Do not generate viewangletox, because texture mapping is no
 	// longer done with trig, so it's not needed.
-	const int t = MIN ((FocalLengthX >> FRACBITS) + centerx, viewwidth);
+	const int t = MIN<int> ((FocalLengthX >> FRACBITS) + centerx, viewwidth);
 	const fixed_t slopestep = hitan / centerx;
 	const fixed_t dfocus = FocalLengthX >> DBITS;
 
@@ -514,15 +516,15 @@ CUSTOM_CVAR (Int, r_detail, 0, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 		return;
 	}
 
-	if (*var < 0 || *var > 3.0)
+	if (self < 0 || self > 3)
 	{
 		Printf ("Bad detail mode. (Use 0-3)\n");
 		badrecovery = true;
-		var = (detailyshift << 1) | detailxshift;
+		self = (detailyshift << 1) | detailxshift;
 		return;
 	}
 
-	setdetail = *var;
+	setdetail = self;
 	setsizeneeded = true;
 }
 
@@ -534,22 +536,9 @@ CUSTOM_CVAR (Int, r_detail, 0, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 
 void R_SetDetail (int detail)
 {
-	if (!*r_columnmethod)
-	{
-		R_RenderSegLoop = R_RenderSegLoop1;
-		// [RH] x-doubling only works with the standard column drawer
-		detailxshift = detail & 1;
-	}
-	else
-	{
-		R_RenderSegLoop = R_RenderSegLoop2;
-		detailxshift = 0;
-	}
+	R_RenderSegLoop = r_columnmethod ? R_RenderSegLoop2 : R_RenderSegLoop1;
+	detailxshift = detail & 1;
 	detailyshift = (detail >> 1) & 1;
-	ds_colsize = 1 << detailxshift;
-#ifdef USEASM
-	ASM_PatchColSize ();
-#endif
 }
 
 //==========================================================================
@@ -627,7 +616,7 @@ void R_SetWindow (int windowSize, int fullWidth, int fullHeight, int stHeight)
 	R_InitTextureMapping ();
 
 	// Reset r_*Visibility vars
-	r_visibility = *r_visibility;
+	r_visibility.Callback ();
 }
 
 //==========================================================================
@@ -656,8 +645,6 @@ void R_ExecuteSetViewSize ()
 	viewwindowy = ((viewwidth<<detailxshift) == screen->GetWidth()) ?
 		0 : (ST_Y-(viewheight<<detailyshift)) >> 1;
 
-	R_InitBuffer (viewwidth, viewheight);
-
 	colfunc = basecolfunc = R_DrawColumn;
 	fuzzcolfunc = R_DrawFuzzColumn;
 	transcolfunc = R_DrawTranslatedColumn;
@@ -680,12 +667,12 @@ void R_ExecuteSetViewSize ()
 
 CUSTOM_CVAR (Int, screenblocks, 10, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 {
-	if (*var > 12)
-		var = 12;
-	else if (*var < 3)
-		var = 3;
+	if (self > 12)
+		self = 12;
+	else if (self < 3)
+		self = 3;
 	else
-		R_SetViewSize (*var);
+		R_SetViewSize (self);
 }
 
 //==========================================================================
@@ -698,11 +685,14 @@ CUSTOM_CVAR (Int, screenblocks, 10, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 
 CUSTOM_CVAR (Int, r_columnmethod, 1, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 {
-	if (*var != 0 && *var != 1)
-		var = 1;
+	if (self != 0 && self != 1)
+	{
+		self = 1;
+	}
 	else
-		// Trigger the change
+	{ // Trigger the change
 		r_detail.Callback ();
+	}
 }
 
 //==========================================================================
@@ -718,7 +708,7 @@ void R_Init (void)
 	R_InitTables ();
 	// viewwidth / viewheight are set by the defaults
 
-	R_SetViewSize (*screenblocks);
+	R_SetViewSize (screenblocks);
 	R_InitPlanes ();
 	R_InitTranslationTables ();
 
@@ -780,6 +770,15 @@ void R_SetupFrame (player_t *player)
 		viewx = camera->x;
 		viewy = camera->y;
 		viewz = camera->player ? camera->player->viewz : camera->z;
+	}
+
+	if (viewz > camera->ceilingz - 4*FRACUNIT)
+	{
+		viewz = camera->ceilingz - 4*FRACUNIT;
+	}
+	if (viewz < camera->floorz + 4*FRACUNIT)
+	{
+		viewz = camera->floorz + 4*FRACUNIT;
 	}
 
 	viewangle = camera->angle + viewangleoffset;
@@ -1058,7 +1057,7 @@ void R_EnterMirror (drawseg_t *ds, int depth)
 
 	R_RenderBSPNode (numnodes - 1);
 
-	if (*r_particles)
+	if (r_particles)
 	{
 		// [RH] add all the particles
 		int i = ActiveParticles;
@@ -1104,8 +1103,14 @@ static void R_SetupBuffer ()
 {
 	static BYTE *lastbuff = NULL;
 
-	int pitch = RenderTarget->GetPitch() << detailyshift;
-	BYTE *lineptr = RenderTarget->GetBuffer() + viewwindowy*pitch;
+	int pitch = RenderTarget->GetPitch();
+	BYTE *lineptr = RenderTarget->GetBuffer() + viewwindowy*pitch + viewwindowx;
+
+	pitch <<= detailyshift;
+	if (detailxshift)
+	{
+		lineptr += viewwidth;
+	}
 
 	if (dc_pitch != pitch || lineptr != lastbuff)
 	{
@@ -1146,7 +1151,7 @@ void R_RenderPlayerView (player_t *player, void (*lengthyCallback)())
 	if (lengthyCallback != NULL)	lengthyCallback ();
 
 	// [RH] Show off segs if r_drawflat is 1
-	if (*r_drawflat)
+	if (r_drawflat)
 	{
 		hcolfunc_pre = R_FillColumnHorizP;
 		hcolfunc_post1 = rt_copy1col;
@@ -1184,7 +1189,7 @@ void R_RenderPlayerView (player_t *player, void (*lengthyCallback)())
 	}
 	unclock (WallCycles);
 
-	if (*r_particles)
+	if (r_particles)
 	{
 		// [RH] add all the particles
 		int i = ActiveParticles;
@@ -1235,7 +1240,7 @@ void R_RenderViewToCanvas (player_t *player, DCanvas *canvas,
 	const int saveddetail = detailxshift | (detailyshift << 1);
 
 	detailxshift = detailyshift = 0;
-	R_RenderSegLoop = *r_columnmethod ? R_RenderSegLoop2 : R_RenderSegLoop1;
+	R_RenderSegLoop = r_columnmethod ? R_RenderSegLoop2 : R_RenderSegLoop1;
 	realviewwidth = viewwidth = width;
 
 	RenderTarget = canvas;
@@ -1245,7 +1250,6 @@ void R_RenderViewToCanvas (player_t *player, DCanvas *canvas,
 	R_SetWindow (12, width, height, height);
 	viewwindowx = x;
 	viewwindowy = y;
-	R_InitBuffer (width, height);
 
 	R_RenderPlayerView (player, NULL);
 

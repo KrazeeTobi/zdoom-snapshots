@@ -259,6 +259,8 @@ public:
 	void DelType (int doomednum);
 	void Empty ();
 
+	static void DumpMapThings ();
+
 private:
 	enum { DOOMED_HASHSIZE = 256 };
 
@@ -270,8 +272,6 @@ private:
 	};
 
 	static FDoomEdEntry *DoomEdHash[DOOMED_HASHSIZE];
-
-	friend void Cmd_dumpmapthings (int,char **,const char *,AActor *);
 };
 
 extern FDoomEdMap DoomEdMap;

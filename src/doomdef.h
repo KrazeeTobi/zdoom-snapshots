@@ -116,9 +116,8 @@ enum ESkillLevels
 #define TELEFOGHEIGHT			(gameinfo.telefogheight)
 
 //
-// DOOM keyboard definition.
-// This is the stuff configured by Setup.Exe.
-// Most key data are simple ascii (uppercased).
+// DOOM keyboard definition. Everything below 0x100 matches
+// a DirectInput key code.
 //
 #define KEY_RIGHTARROW			0xcd	// DIK_RIGHT
 #define KEY_LEFTARROW			0xcb	// DIK_LEFT
@@ -142,7 +141,7 @@ enum ESkillLevels
 #define KEY_F12 				0x58	// DIK_F12
 
 #define KEY_BACKSPACE			0x0e	// DIK_BACK
-#define KEY_PAUSE				0xff
+#define KEY_PAUSE				0xc5	// DIK_PAUSE
 
 #define KEY_EQUALS				0x0d	// DIK_EQUALS
 #define KEY_MINUS				0x0c	// DIK_MINUS
@@ -166,8 +165,10 @@ enum ESkillLevels
 #define KEY_MOUSE2				0x101
 #define KEY_MOUSE3				0x102
 #define KEY_MOUSE4				0x103
-#define KEY_MWHEELUP			0x104
-#define KEY_MWHEELDOWN			0x105
+#define KEY_MOUSE5				0x104
+#define KEY_MOUSE6				0x105
+#define KEY_MWHEELUP			0x106
+#define KEY_MWHEELDOWN			0x107
 
 #define KEY_JOY1				0x108
 #define KEY_JOY2				0x109
@@ -208,7 +209,8 @@ enum ESkillLevels
 #define	DF_NO_HEALTH		1		// Do not spawn health items (DM)
 #define	DF_NO_ITEMS			2		// Do not spawn powerups (DM)
 #define	DF_WEAPONS_STAY		4		// Leave weapons around after pickup (DM)
-#define	DF_YES_FALLING		8		// Falling too far hurts
+#define	DF_FORCE_FALLINGZD	8		// Falling too far hurts (old ZDoom style)
+#define DF_FORCE_FALLINGHX	16		// Falling too far hurts (Hexen style)
 //#define	DF_INVENTORY_ITEMS	32		// Wait for player to use powerups when picked up
 #define	DF_SAME_LEVEL		64		// Stay on the same map when someone exits (DM)
 #define	DF_SPAWN_FARTHEST	128		// Spawn players as far as possible from other players (DM)
@@ -223,6 +225,7 @@ enum ESkillLevels
 #define DF_NO_JUMP			65536	// Don't allow jumping
 #define DF_NO_FREELOOK		131072	// Don't allow freelook
 #define DF_RESPAWN_SUPER	262144	// Respawn invulnerability and invisibility
+#define DF_NO_PASSMOBJ		524288	// Pretend every actor is infinitely tall
 
 // [BC] More dmflags. w00p!
 //#define	DF2_YES_IMPALING		1		// Player gets implaed on MF2_IMPALE items

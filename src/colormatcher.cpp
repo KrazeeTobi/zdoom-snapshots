@@ -60,7 +60,7 @@ void FColorMatcher::SetPalette (const DWORD *palette)
 
 #ifdef BEFAST
 	Seed seeds[255];
-	byte seedspread[HISIZE+1][HISIZE+1][HISIZE+1];
+	byte seedspread[CHISIZE+1][CHISIZE+1][CHISIZE+1];
 	int numseeds;
 	int i, radius;
 
@@ -70,9 +70,9 @@ void FColorMatcher::SetPalette (const DWORD *palette)
 	// Plant each color from the palette as seeds in the color cube
 	for (i = 1; i < 256; i++)
 	{
-		int r = (Pal[i].r + LOSIZE/2) >> LOBITS;
-		int g = (Pal[i].g + LOSIZE/2) >> LOBITS;
-		int b = (Pal[i].b + LOSIZE/2) >> LOBITS;
+		int r = (Pal[i].r + CLOSIZE/2) >> CLOBITS;
+		int g = (Pal[i].g + CLOSIZE/2) >> CLOBITS;
+		int b = (Pal[i].b + CLOSIZE/2) >> CLOBITS;
 
 		if (FirstColor[r][g][b] == 0)
 		{
@@ -96,7 +96,7 @@ void FColorMatcher::SetPalette (const DWORD *palette)
 
 	// Grow each seed outward as a cube until no seed can
 	// grow any further.
-	for (radius = 1; radius < HISIZE; radius++)
+	for (radius = 1; radius < CHISIZE; radius++)
 	{
 		int seedsused = 0;
 		for (i = numseeds - 1; i >= 0; i--)
@@ -120,11 +120,11 @@ void FColorMatcher::SetPalette (const DWORD *palette)
 			// Check to see which planes are acceptable
 			byte bad = 0;
 			if (r1 < 0)			bad |= 1,  r1 = 0;
-			if (r2 > HISIZE)	bad |= 2,  r2 = HISIZE;
+			if (r2 > CHISIZE)	bad |= 2,  r2 = CHISIZE;
 			if (g1 < 0)			bad |= 4,  g1 = 0;
-			if (g2 > HISIZE)	bad |= 8,  g2 = HISIZE;
+			if (g2 > CHISIZE)	bad |= 8,  g2 = CHISIZE;
 			if (b1 < 0)			bad |= 16, b1 = 0;
-			if (b2 > HISIZE)	bad |= 32, b2 = HISIZE;
+			if (b2 > CHISIZE)	bad |= 32, b2 = CHISIZE;
 
 			bad |= seeds[i].bad;
 
@@ -187,7 +187,7 @@ void FColorMatcher::SetPalette (const DWORD *palette)
 }
 
 int FColorMatcher::FillPlane (int r1, int r2, int g1, int g2, int b1, int b2,
-	byte seedspread[HISIZE+1][HISIZE+1][HISIZE+1],
+	byte seedspread[CHISIZE+1][CHISIZE+1][CHISIZE+1],
 	Seed *seeds, int thisseed)
 {
 	const Seed *secnd = seeds + thisseed;
@@ -239,7 +239,7 @@ byte FColorMatcher::Pick (int r, int g, int b)
 	byte bestcolor;
 	int bestdist;
 
-	byte color = FirstColor[(r+LOSIZE/2)>>LOBITS][(g+LOSIZE/2)>>LOBITS][(b+LOSIZE/2)>>LOBITS];
+	byte color = FirstColor[(r+CLOSIZE/2)>>CLOBITS][(g+CLOSIZE/2)>>CLOBITS][(b+CLOSIZE/2)>>CLOBITS];
 	if (NextColor[color] == 0)
 		return color;
 

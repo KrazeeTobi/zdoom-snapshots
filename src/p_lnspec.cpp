@@ -6,11 +6,13 @@
 #include "doomstat.h"
 #include "p_local.h"
 #include "p_lnspec.h"
+#include "p_enemy.h"
 #include "g_level.h"
 #include "v_palette.h"
 #include "tables.h"
 #include "i_system.h"
 #include "a_sharedglobal.h"
+#include "a_lightning.h"
 #include "statnums.h"
 
 #define FUNC(a) static bool a (line_t *ln, AActor *it, int arg0, int arg1, \
@@ -798,8 +800,8 @@ FUNC(LS_Thing_Activate)
 	actor = iterator.Next ();
 	while (actor)
 	{
-		// Actor might removes itself as part of activation, so get next
-		// one before we activate it.
+		// Actor might remove itself as part of activation, so get next
+		// one before activating it.
 		AActor *temp = iterator.Next ();
 		actor->Activate (it);
 		actor = temp;
@@ -850,18 +852,24 @@ FUNC(LS_Thing_Remove)
 FUNC(LS_Thing_Destroy)
 // Thing_Destroy (tid)
 {
-	FActorIterator iterator (arg0);
-	AActor *actor;
-
-	actor = iterator.Next ();
-	while (actor)
+	if (arg0 == 0)
 	{
-		AActor *temp = iterator.Next ();
-		if (actor->flags & MF_SHOOTABLE)
-			P_DamageMobj (actor, NULL, it, actor->health, MOD_UNKNOWN);
-		actor = temp;
+		P_Massacre ();
 	}
+	else
+	{
+		FActorIterator iterator (arg0);
+		AActor *actor;
 
+		actor = iterator.Next ();
+		while (actor)
+		{
+			AActor *temp = iterator.Next ();
+			if (actor->flags & MF_SHOOTABLE)
+				P_DamageMobj (actor, NULL, it, 10000, MOD_UNKNOWN);
+			actor = temp;
+		}
+	}
 	return true;
 }
 
@@ -1016,7 +1024,8 @@ FUNC(LS_Elevator_LowerToNearest)
 FUNC(LS_Light_ForceLightning)
 // Light_ForceLightning (tag)
 {
-	return false;
+	P_ForceLightning ();
+	return true;
 }
 
 FUNC(LS_Light_RaiseByValue)

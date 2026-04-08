@@ -361,8 +361,8 @@ bool FBehavior::IsGood ()
 
 int *FBehavior::FindScript (int script) const
 {
-	const ScriptPtr *ptr = BinarySearch ((ScriptPtr *)Scripts, NumScripts,
-		&ScriptPtr::Number, (WORD)script);
+	const ScriptPtr *ptr = BinarySearch<ScriptPtr, WORD>
+		((ScriptPtr *)Scripts, NumScripts, &ScriptPtr::Number, (WORD)script);
 
 	return ptr ? (int *)(ptr->Address + Data) : NULL;
 }
@@ -1606,23 +1606,24 @@ void DLevelScript::RunScript ()
 				{
 					workwhere += sprintf (workwhere, "%s", lookup);
 				}
-				sp--;
+				--sp;
 				break;
 
 			case PCD_PRINTNUMBER:
 				workwhere += sprintf (workwhere, "%d", STACK(1));
+				--sp;
 				break;
 
 			case PCD_PRINTCHARACTER:
 				workwhere[0] = STACK(1);
 				workwhere[1] = 0;
 				workwhere++;
-				sp--;
+				--sp;
 				break;
 
 			case PCD_PRINTFIXED:
 				workwhere += sprintf (workwhere, "%g", FIXED2FLOAT(STACK(1)));
-				sp--;
+				--sp;
 				break;
 
 			// [BC] Print activator's name
@@ -1739,7 +1740,7 @@ void DLevelScript::RunScript ()
 				break;
 
 			case PCD_GAMETYPE:
-				if (*deathmatch)
+				if (deathmatch)
 					PushToStack (GAME_NET_DEATHMATCH);
 				else if (multiplayer)
 					PushToStack (GAME_NET_COOPERATIVE);
@@ -1748,7 +1749,7 @@ void DLevelScript::RunScript ()
 				break;
 
 			case PCD_GAMESKILL:
-				PushToStack (*gameskill);
+				PushToStack (gameskill);
 				break;
 
 // [BC] Start ST PCD's
@@ -1979,11 +1980,13 @@ void DLevelScript::RunScript ()
 			case PCD_SETAIRCONTROL:
 				level.aircontrol = STACK(1);
 				sp--;
+				G_AirControlChanged ();
 				break;
 
 			case PCD_SETAIRCONTROLDIRECT:
 				level.aircontrol = pc[0];
 				pc++;
+				G_AirControlChanged ();
 				break;
 
 			case PCD_SPAWN:
@@ -2262,7 +2265,7 @@ void strbin (char *str)
 		} else {
 			switch (*p) {
 				case 'c':
-					*str++ = '\x81';
+					*str++ = TEXTCOLOR_ESCAPE;
 					break;
 				case 'n':
 					*str++ = '\n';

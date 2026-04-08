@@ -9,6 +9,7 @@
 #include "m_argv.h"
 #include "cmdlib.h"
 #include "version.h"
+#include "m_misc.h"
 
 EXTERN_CVAR (Bool, con_centernotify);
 EXTERN_CVAR (Int, msg0color);
@@ -37,7 +38,7 @@ FGameConfigFile::FGameConfigFile ()
 		SetSection ("IWADSearch.Directories", true);
 		SetValueForKey ("Path", ".", true);
 		SetValueForKey ("Path", "$DOOMWADDIR", true);
-#ifndef UNIX
+#ifndef unix
 		SetValueForKey ("Path", "$HOME", true);
 		SetValueForKey ("Path", "$PROGDIR", true);
 #else
@@ -63,13 +64,13 @@ void FGameConfigFile::MigrateStub (const char *pathname, FConfigFile *config, vo
 
 void FGameConfigFile::MigrateOldConfig ()
 {
-	int i;
-	char *execcommand;
-
 	// Set default key bindings. These will be overridden
 	// by the bindings in the config file if it exists.
-	AddCommandString ("unbindall");
-	AddCommandString ("binddefaults");
+	C_SetDefaultBindings ();
+
+#if 0	// Disabled for now, maybe forever.
+	int i;
+	char *execcommand;
 
 	i = strlen (GetPathName ()) + 8;
 	execcommand = new char[i];
@@ -78,7 +79,7 @@ void FGameConfigFile::MigrateOldConfig ()
 	execcommand[i-4] = 'f';
 	execcommand[i-3] = 'g';
 	cvar_defflags = CVAR_ARCHIVE;
-	AddCommandString (execcommand);
+	C_DoCommand (execcommand);
 	cvar_defflags = 0;
 	delete[] execcommand;
 
@@ -89,16 +90,16 @@ void FGameConfigFile::MigrateOldConfig ()
 
 		if (oldver.Float < 118.f)
 		{
-			AddCommandString ("alias idclip noclip");
-			AddCommandString ("alias idspispopd noclip");
+			C_DoCommand ("alias idclip noclip");
+			C_DoCommand ("alias idspispopd noclip");
 
 			if (oldver.Float < 117.2f)
 			{
 				dimamount = *dimamount * 0.25f;
 				if (oldver.Float <= 113.f)
 				{
-					AddCommandString ("bind t messagemode; bind \\ +showscores;"
-									  "bind f12 spynext; bind sysrq screenshot");
+					C_DoCommand ("bind t messagemode; bind \\ +showscores;"
+								 "bind f12 spynext; bind sysrq screenshot");
 					if (C_GetBinding (KEY_F5) && !stricmp (C_GetBinding (KEY_F5), "menu_video"))
 					{
 						C_ChangeBinding ("menu_display", KEY_F5);
@@ -159,6 +160,7 @@ void FGameConfigFile::MigrateOldConfig ()
 	{
 		delete oldvar;
 	}
+#endif
 }
 
 void FGameConfigFile::DoGlobalSetup ()
@@ -224,13 +226,12 @@ void FGameConfigFile::DoGameSetup (const char *gamename)
 	{ // Config has no bindings for the given game
 		if (!bMigrating)
 		{
-			AddCommandString ("unbindall");
-			AddCommandString ("binddefaults");
+			C_SetDefaultBindings ();
 		}
 	}
 	else
 	{
-		AddCommandString ("unbindall");
+		C_UnbindAll ();
 		while (NextInSection (key, value))
 		{
 			C_DoBind (key, value, false);
@@ -356,7 +357,7 @@ char *FGameConfigFile::GetConfigPath ()
 	if (path)
 		return copystring (path);
 
-#ifndef UNIX
+#ifndef unix
 	if (Args.CheckParm ("-cdrom"))
 		return copystring ("c:\\zdoomdat\\zdoom.ini");
 
@@ -366,14 +367,13 @@ char *FGameConfigFile::GetConfigPath ()
 	strcat (path, "zdoom.ini");
 	return path;
 #else
-	return GetUserFile (".zdoomrc");
+	return GetUserFile (".zdoomirc");
 #endif
 }
 
 void FGameConfigFile::RunAutoexec (const char *game)
 {
 	char section[64];
-	char *path;
 	const char *key;
 	const char *value;
 
@@ -386,6 +386,7 @@ void FGameConfigFile::RunAutoexec (const char *game)
 		if (autoexec != NULL)
 		{
 			UCVarValue val;
+			char *path;
 
 			val = autoexec->GetGenericRep (CVAR_String);
 			path = copystring (val.String);
@@ -402,7 +403,9 @@ void FGameConfigFile::RunAutoexec (const char *game)
 		// with a default autoexec.cfg file present.
 		if (!SetSection (section))
 		{
-#ifndef UNIX
+			char *path;
+			
+#ifndef unix
 			if (Args.CheckParm ("-cdrom"))
 			{
 				path = copystring ("c:\\zdoomdat\\autoexec.cfg");
@@ -438,7 +441,7 @@ void FGameConfigFile::DoRunAutoexec (const char *autofile)
 {
 	char *execcommand = new char[strlen (autofile) + 8];
 	sprintf (execcommand, "exec \"%s\"", autofile);
-	AddCommandString (execcommand);
+	C_DoCommand (execcommand);
 	delete[] execcommand;
 }
 

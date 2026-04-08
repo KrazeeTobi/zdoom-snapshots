@@ -31,11 +31,11 @@ inline SDWORD Scale (SDWORD a, SDWORD b, SDWORD c)
 	asm volatile
 		("imull %3\n\t"
 		 "idivl %4"
-		 : "= a, a, a, a, a, a" (result),
-		   "=&d,&d,&d,&d, d, d" (dummy)
-		 :   "a, a, a, a, a, a" (a),
-		     "m, r, m, r, d, d" (b),
-		     "r, r, m, m, r, m" (c)
+		 : "=a,a,a,a,a,a" (result),
+		   "=&d,&d,&d,&d,d,d" (dummy)
+		 :   "a,a,a,a,a,a" (a),
+		     "m,r,m,r,d,d" (b),
+		     "r,r,m,m,r,m" (c)
 		 : "%cc"
 			);
 
@@ -121,9 +121,9 @@ inline SDWORD DMulScale (SDWORD a, SDWORD b, SDWORD c, SDWORD d, int s)
 		 "addl %%eax,%3\n\t"
 		 "adcl %%edx,%2\n\t"
 		 "shrdl %b8,%2,%3"
-		 :"= a" (dummy1),	// 0
-		  "= d" (dummy2),	// 1
-		  "= r" (dummy3),	// 2
+		 :"=a" (dummy1),	// 0
+		  "=d" (dummy2),	// 1
+		  "=r" (dummy3),	// 2
 		  "=&r" (result)	// 3
 		 :  "0" (a),		// 4
 		    "1" (b),		// 5
@@ -147,9 +147,9 @@ inline SDWORD DMulScale (SDWORD a, SDWORD b, SDWORD c, SDWORD d, int s)
 		 "addl %%eax,%3\n\t" \
 		 "adcl %%edx,%2\n\t" \
 		 "shrdl $" #s ",%2,%3" \
-		 :"= a" (dummy1), \
-		  "= d" (dummy2), \
-		  "= r" (dummy3), \
+		 :"=a" (dummy1), \
+		  "=d" (dummy2), \
+		  "=r" (dummy3), \
 		  "=&r" (result) \
 		 : "0" (a), \
 		   "1" (b), \
@@ -190,7 +190,7 @@ MAKECONSTDMulScale(28)
 MAKECONSTDMulScale(29)
 MAKECONSTDMulScale(30)
 MAKECONSTDMulScale(31)
-#undef MAKCONSTDMulScale
+#undef MAKECONSTDMulScale
 
 inline SDWORD DMulScale32 (SDWORD a, SDWORD b, SDWORD c, SDWORD d)
 {
@@ -204,8 +204,8 @@ inline SDWORD DMulScale32 (SDWORD a, SDWORD b, SDWORD c, SDWORD d)
 		 "imull %7\n\t"
 		 "addl %%eax,%3\n\t"
 		 "adcl %%edx,%2\n\t"
-		 :"= a" (dummy1),	// 0
-		  "= d" (dummy2),	// 1
+		 :"=a" (dummy1),	// 0
+		  "=d" (dummy2),	// 1
 		  "=&r" (result),	// 2
 		  "=&r" (dummy3)	// 3
 		 :  "0" (a),		// 4
@@ -232,9 +232,9 @@ inline SDWORD DMulScale32 (SDWORD a, SDWORD b, SDWORD c, SDWORD d)
 			 "imull %9\n\t" \
 			 "add %3,%%eax\n\t" \
 			 "adc %2,%%edx\n\t" \
-			 "shrd $" #s ",%2,%3" \
-			 :"= a" (dummy2), \
-			  "= d" (dummy1), \
+			 "shrd $" #s ",%%edx,%%eax" \
+			 :"=a" (dummy2), \
+			  "=d" (dummy1), \
 			  "=&r" (result), \
 			  "=&r" (dummy3) \
 			 :  "0" (a), \
@@ -244,7 +244,7 @@ inline SDWORD DMulScale32 (SDWORD a, SDWORD b, SDWORD c, SDWORD d)
 				"r" (e), \
 				"m" (f) \
 			 : "%cc"); \
-		return result; \
+		return dummy2; \
 	}
 
 MAKECONSTTMulScale(1)
@@ -295,8 +295,8 @@ inline SDWORD TMulScale32 (SDWORD a, SDWORD b, SDWORD c, SDWORD d, SDWORD e, SDW
 		 "imul %9\n\t"
 		 "add %%eax,%3\n\t"
 		 "adc %%edx,%2\n\t"
-		 :"= a" (dummy1),
-		  "= d" (dummy2),
+		 :"=a" (dummy1),
+		  "=d" (dummy2),
 		  "=&r" (result),
 		  "=&r" (dummy3)
 		 :  "0" (a),
@@ -329,9 +329,9 @@ inline SDWORD BoundMulScale (SDWORD a, SDWORD b, SDWORD c)
 		 "sarl $31,%%eax\n\t"
 		 "xorl $0x7fffffff,%%eax\n\t"
 		 "1:"
-		:"= a,a,a,a" (result),	// 0
-		 "= d,d,d,d" (dummy1),	// 1
-		 "= r,r,r,r" (dummy2)	// 2
+		: "=a,a,a,a" (result),	// 0
+		  "=d,d,d,d" (dummy1),	// 1
+		  "=r,r,r,r" (dummy2)	// 2
 		:  "a,a,a,a" (a),		// 3
 		   "r,m,r,m" (b),		// 4
 		   "c,c,I,I" (c)		// 5
@@ -512,7 +512,7 @@ inline void qinterpolatedown16short (short *out, DWORD count, SDWORD val, SDWORD
 			 "addl $4,%5\n\t"
 			 "subl $2,%6\n\t"
 			 "jnc 0b\n\t"
-			 "test $1,%b6\n\t"
+			 "testl $1,%6\n\t"
 			 "jz 2f\n\t"
 			 "1:\n\t"
 			 "sarl $16,%7\n\t"
@@ -571,7 +571,7 @@ inline SDWORD ksgn (SDWORD a)
 
 inline int toint (float v)
 {
-	QWORD result;
+	volatile QWORD result;
 
 	asm volatile
 		("fistpq %0"
@@ -583,7 +583,7 @@ inline int toint (float v)
 
 inline int quickertoint (float v)
 {
-	int result;
+	volatile int result;
 
 	asm volatile
 		("fistpl %0"

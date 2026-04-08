@@ -128,6 +128,9 @@ typedef enum {
 	pr_switchanim,				// 76
 	pr_scaredycat,				// 77
 	pr_randsound,				// 78
+	pr_decal,					// 79
+	pr_lightning,				// 80
+	pr_decalchoice,				// 81
 	// Start new entries -- add new entries below
 
 	// End of new entries

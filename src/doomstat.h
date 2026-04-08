@@ -98,17 +98,9 @@ EXTERN_CVAR (Float, teamdamage)
 		
 // -------------------------
 // Internal parameters for sound rendering.
-// These have been taken from the DOS version,
-//	but are not (yet) supported with Linux
-//	(e.g. no sound volume adjustment with menu.
 
-// These are not used, but should be (menu).
-// From m_menu.c:
-//	Sound FX volume has default, 0 - 15
-//	Music volume has default, 0 - 15
-// These are multiplied by 8.
-EXTERN_CVAR (Int, snd_sfxvolume)		// maximum volume for sound
-EXTERN_CVAR (Int, snd_musicvolume)		// maximum volume for music
+EXTERN_CVAR (Float, snd_sfxvolume)		// maximum volume for sound
+EXTERN_CVAR (Float, snd_musicvolume)	// maximum volume for music
 
 
 // -------------------------

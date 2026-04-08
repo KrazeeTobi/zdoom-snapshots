@@ -257,8 +257,7 @@ Init_Cleanup:
 // Gets the requested number of bytes of data from the input file and returns
 // a pointer to them.
 // 
-// Returns a pointer to the data or NULL if we'd read more than is
-// there.
+// Returns a pointer to the data or NULL if we'd read more than is there.
 //
 static LPBYTE		GetInFileData(DWORD cbToGet)
 {

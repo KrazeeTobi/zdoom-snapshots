@@ -43,8 +43,8 @@ END_DEFAULTS
 
 void A_BarrelDestroy (AActor *actor)
 {
-	if ((*dmflags2 & DF2_BARRELS_RESPAWN) &&
-		(*deathmatch || *alwaysapplydmflags))
+	if ((dmflags2 & DF2_BARRELS_RESPAWN) &&
+		(deathmatch || alwaysapplydmflags))
 	{
 		actor->height = actor->GetDefault()->height;
 		actor->renderflags |= RF_INVISIBLE;
@@ -57,8 +57,8 @@ void A_BarrelDestroy (AActor *actor)
 
 void A_BarrelRespawn (AActor *actor)
 {
-	fixed_t x = actor->spawnpoint.x << FRACBITS;
-	fixed_t y = actor->spawnpoint.y << FRACBITS;
+	fixed_t x = actor->SpawnPoint[0] << FRACBITS;
+	fixed_t y = actor->SpawnPoint[1] << FRACBITS;
 	sector_t *sec;
 
 	actor->flags |= MF_SOLID;
@@ -71,6 +71,7 @@ void A_BarrelRespawn (AActor *actor)
 		actor->flags = defs->flags;
 		actor->flags2 = defs->flags2;
 		actor->SetState (actor->SpawnState);
+		actor->renderflags &= ~RF_INVISIBLE;
 		Spawn<ATeleportFog> (x, y, actor->z + TELEFOGHEIGHT);
 	}
 	else

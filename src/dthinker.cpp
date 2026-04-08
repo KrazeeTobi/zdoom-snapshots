@@ -130,7 +130,7 @@ void DThinker::ChangeStatNum (int statnum)
 		statnum = MAX_STATNUM;
 	}
 	Remove ();
-	if (ObjectFlags & OF_JustSpawned)
+	if ((ObjectFlags & OF_JustSpawned) && statnum >= STAT_FIRST_THINKING)
 	{
 		FreshThinkers[statnum].AddTail (this);
 	}

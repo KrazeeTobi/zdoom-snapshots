@@ -264,8 +264,9 @@ typedef enum {
 	dDamage_LavaHefty = 83,
 	dScroll_EastLavaDamage = 84,
 
-	Light_IndoorLightning2 = 198,
-	Light_IndoorLightning1 = 199,
+	Light_OutdoorLightning = 197,
+	Light_IndoorLightning1 = 198,
+	Light_IndoorLightning2 = 199,
 
 	Sky2 = 200,
 

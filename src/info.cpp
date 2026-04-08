@@ -131,7 +131,7 @@ void FActorInfo::StaticInit ()
 		if (reg->OwnedStates &&
 			(unsigned)reg->OwnedStates->sprite.index < sprites.Size ())
 		{
-			Printf ("\x81+%s is stateless. Fix its default list.\n",
+			Printf ("\x1f+%s is stateless. Fix its default list.\n",
 				reg->Class->Name + 1);
 		}
 		ProcessStates (reg->OwnedStates, reg->NumOwnedStates);
@@ -268,14 +268,14 @@ static int STACK_ARGS sortnums (const void *a, const void *b)
 		((const EdSorting *)b)->DoomEdNum;
 }
 
-CCMD (dumpmapthings)
+void FDoomEdMap::DumpMapThings ()
 {
 	TArray<EdSorting> infos (TypeInfo::m_NumTypes);
 	int i;
 
-	for (i = 0; i < FDoomEdMap::DOOMED_HASHSIZE; ++i)
+	for (i = 0; i < DOOMED_HASHSIZE; ++i)
 	{
-		FDoomEdMap::FDoomEdEntry *probe = FDoomEdMap::DoomEdHash[i];
+		FDoomEdEntry *probe = DoomEdHash[i];
 
 		while (probe != NULL)
 		{
@@ -301,6 +301,11 @@ CCMD (dumpmapthings)
 	}
 }
 
+CCMD (dumpmapthings)
+{
+	FDoomEdMap::DumpMapThings ();
+}
+
 BOOL CheckCheatmode ();
 
 CCMD (summon)
@@ -308,7 +313,7 @@ CCMD (summon)
 	if (CheckCheatmode ())
 		return;
 
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		// Don't use FindType, because we want a case-insensitive search
 		const TypeInfo *type = TypeInfo::IFindType (argv[1]);

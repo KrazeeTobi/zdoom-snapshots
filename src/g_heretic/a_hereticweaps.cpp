@@ -128,7 +128,8 @@ FWeaponInfo AStaff::WeaponInfo1 =
 	150,
 	0,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(AStaff)
 };
 
 FWeaponInfo AStaff::WeaponInfo2 =
@@ -147,7 +148,8 @@ FWeaponInfo AStaff::WeaponInfo2 =
 	150,
 	0,
 	NULL,
-	"weapons/staffcrackle"
+	"weapons/staffcrackle",
+	RUNTIME_CLASS(AStaff)
 };
 
 IMPLEMENT_ACTOR (AStaff, Heretic, -1, 0)
@@ -387,7 +389,8 @@ FWeaponInfo AGoldWand::WeaponInfo1 =
 	150,
 	5*FRACUNIT,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(AGoldWand)
 };
 
 FWeaponInfo AGoldWand::WeaponInfo2 =
@@ -406,7 +409,8 @@ FWeaponInfo AGoldWand::WeaponInfo2 =
 	150,
 	5*FRACUNIT,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(AGoldWand)
 };
 
 IMPLEMENT_ACTOR (AGoldWand, Heretic, -1, 0)
@@ -523,7 +527,7 @@ void A_FireGoldWandPL1 (player_t *player, pspdef_t *psp)
 	int damage;
 
 	mo = player->mo;
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_goldwand] -= USE_GWND_AMMO_1;
 	P_BulletSlope(mo);
 	damage = 7+(P_Random()&7);
@@ -552,9 +556,9 @@ void A_FireGoldWandPL2 (player_t *player, pspdef_t *psp)
 	fixed_t momz;
 
 	mo = player->mo;
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_goldwand] -=
-			*deathmatch ? USE_GWND_AMMO_1 : USE_GWND_AMMO_2;
+			deathmatch ? USE_GWND_AMMO_1 : USE_GWND_AMMO_2;
 	PuffType = RUNTIME_CLASS(AGoldWandPuff2);
 	P_BulletSlope (mo);
 	momz = FixedMul (GetDefault<AGoldWandFX2>()->Speed,
@@ -647,9 +651,9 @@ class ACrossbow : public AHereticWeapon
 	DECLARE_ACTOR (ACrossbow, AHereticWeapon)
 	AT_GAME_SET_FRIEND (Crossbow)
 protected:
-	bool TryPickup (AActor *toucher)
+	weapontype_t OldStyleID () const
 	{
-		return P_GiveWeapon (toucher->player, wp_crossbow, flags & MF_DROPPED);
+		return wp_crossbow;
 	}
 	const char *PickupMessage ()
 	{
@@ -727,7 +731,8 @@ FWeaponInfo ACrossbow::WeaponInfo1 =
 	150,
 	15*FRACUNIT,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(ACrossbow)
 };
 
 FWeaponInfo ACrossbow::WeaponInfo2 =
@@ -746,7 +751,8 @@ FWeaponInfo ACrossbow::WeaponInfo2 =
 	150,
 	15*FRACUNIT,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(ACrossbow)
 };
 
 IMPLEMENT_ACTOR (ACrossbow, Heretic, 2001, 0)
@@ -876,7 +882,7 @@ void A_FireCrossbowPL1 (player_t *player, pspdef_t *psp)
 	AActor *pmo;
 
 	pmo = player->mo;
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_crossbow] -= USE_CBOW_AMMO_1;
 	P_SpawnPlayerMissile (pmo, RUNTIME_CLASS(ACrossbowFX1));
 	P_SpawnPlayerMissile (pmo, RUNTIME_CLASS(ACrossbowFX3), pmo->angle-(ANG45/10));
@@ -894,9 +900,9 @@ void A_FireCrossbowPL2(player_t *player, pspdef_t *psp)
 	AActor *pmo;
 
 	pmo = player->mo;
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_crossbow] -=
-			*deathmatch ? USE_CBOW_AMMO_1 : USE_CBOW_AMMO_2;
+			deathmatch ? USE_CBOW_AMMO_1 : USE_CBOW_AMMO_2;
 	P_SpawnPlayerMissile (pmo, RUNTIME_CLASS(ACrossbowFX2));
 	P_SpawnPlayerMissile (pmo, RUNTIME_CLASS(ACrossbowFX2), pmo->angle-(ANG45/10));
 	P_SpawnPlayerMissile (pmo, RUNTIME_CLASS(ACrossbowFX2), pmo->angle+(ANG45/10));
@@ -1003,9 +1009,9 @@ class AMace : public AHereticWeapon
 public:
 	void Serialize (FArchive &arc);
 protected:
-	bool TryPickup (AActor *toucher)
+	weapontype_t OldStyleID () const
 	{
-		return P_GiveWeapon (toucher->player, wp_mace, flags & MF_DROPPED);
+		return wp_mace;
 	}
 	const char *PickupMessage ()
 	{
@@ -1079,7 +1085,8 @@ FWeaponInfo AMace::WeaponInfo1 =
 	150,
 	15*FRACUNIT,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(AMace)
 };
 
 FWeaponInfo AMace::WeaponInfo2 =
@@ -1098,7 +1105,8 @@ FWeaponInfo AMace::WeaponInfo2 =
 	150,
 	15*FRACUNIT,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(AMace)
 };
 
 BEGIN_DEFAULTS (AMace, Heretic, -1, 0)
@@ -1315,7 +1323,7 @@ void A_SpawnMace (AActor *self)
 	{
 		return;
 	}
-	if (!*deathmatch && P_Random() < 64)
+	if (!deathmatch && P_Random() < 64)
 	{ // Sometimes doesn't show up if not in deathmatch
 		return;
 	}
@@ -1363,7 +1371,7 @@ void A_FireMacePL1B (player_t *player, pspdef_t *psp)
 	{
 		return;
 	}
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_mace] -= USE_MACE_AMMO_1;
 	pmo = player->mo;
 	ball = Spawn<AMaceFX2> (pmo->x, pmo->y, pmo->z + 28*FRACUNIT 
@@ -1400,7 +1408,7 @@ void A_FireMacePL1 (player_t *player, pspdef_t *psp)
 	{
 		return;
 	}
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_mace] -= USE_MACE_AMMO_1;
 	psp->sx = ((P_Random()&3)-2)*FRACUNIT;
 	psp->sy = WEAPONTOP+(P_Random()&3)*FRACUNIT;
@@ -1540,9 +1548,9 @@ void A_FireMacePL2 (player_t *player, pspdef_t *psp)
 {
 	AActor *mo;
 
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_mace] -=
-			*deathmatch ? USE_MACE_AMMO_1 : USE_MACE_AMMO_2;
+			deathmatch ? USE_MACE_AMMO_1 : USE_MACE_AMMO_2;
 	mo = P_SpawnPlayerMissile (player->mo, RUNTIME_CLASS(AMaceFX4));
 	if (mo)
 	{
@@ -1639,9 +1647,9 @@ class AGauntlets : public AHereticWeapon
 	DECLARE_ACTOR (AGauntlets, AHereticWeapon)
 	AT_GAME_SET_FRIEND (Gauntlets)
 protected:
-	bool TryPickup (AActor *toucher)
+	weapontype_t OldStyleID () const
 	{
-		return P_GiveWeapon (toucher->player, wp_gauntlets, flags & MF_DROPPED);
+		return wp_gauntlets;
 	}
 	const char *PickupMessage ()
 	{
@@ -1711,7 +1719,8 @@ FWeaponInfo AGauntlets::WeaponInfo1 =
 	150,
 	15*FRACUNIT,
 	"weapons/gauntletsactivate",
-	NULL
+	NULL,
+	RUNTIME_CLASS(AGauntlets)
 };
 
 FWeaponInfo AGauntlets::WeaponInfo2 =
@@ -1730,7 +1739,8 @@ FWeaponInfo AGauntlets::WeaponInfo2 =
 	150,
 	15*FRACUNIT,
 	"weapons/gauntletsactivate",
-	NULL
+	NULL,
+	RUNTIME_CLASS(AGauntlets)
 };
 
 IMPLEMENT_ACTOR (AGauntlets, Heretic, 2005, 0)
@@ -1964,9 +1974,9 @@ class ABlaster : public AHereticWeapon
 	DECLARE_ACTOR (ABlaster, AHereticWeapon)
 	AT_GAME_SET_FRIEND (Blaster)
 protected:
-	bool TryPickup (AActor *toucher)
+	weapontype_t OldStyleID () const
 	{
-		return P_GiveWeapon (toucher->player, wp_blaster, flags & MF_DROPPED);
+		return wp_blaster;
 	}
 	const char *PickupMessage ()
 	{
@@ -2023,7 +2033,8 @@ FWeaponInfo ABlaster::WeaponInfo1 =
 	150,
 	15*FRACUNIT,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(ABlaster)
 };
 
 FWeaponInfo ABlaster::WeaponInfo2 =
@@ -2042,7 +2053,8 @@ FWeaponInfo ABlaster::WeaponInfo2 =
 	150,
 	15*FRACUNIT,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(ABlaster)
 };
 
 IMPLEMENT_ACTOR (ABlaster, Heretic, 53, 0)
@@ -2249,7 +2261,7 @@ void A_FireBlasterPL1 (player_t *player, pspdef_t *psp)
 	int damage;
 
 	mo = player->mo;
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_blaster] -= USE_BLSR_AMMO_1;
 	P_BulletSlope(mo);
 	damage = HITDICE(4);
@@ -2275,9 +2287,9 @@ void A_FireBlasterPL2 (player_t *player, pspdef_t *psp)
 {
 	AActor *mo;
 
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_blaster] -=
-			*deathmatch ? USE_BLSR_AMMO_1 : USE_BLSR_AMMO_2;
+			deathmatch ? USE_BLSR_AMMO_1 : USE_BLSR_AMMO_2;
 	mo = P_SpawnPlayerMissile (player->mo, RUNTIME_CLASS(ABlasterFX1));
 	S_Sound (mo, CHAN_WEAPON, "weapons/blastershoot", 1, ATTN_NORM);
 }
@@ -2455,9 +2467,9 @@ class ASkullRod : public AHereticWeapon
 	DECLARE_ACTOR (ASkullRod, AHereticWeapon)
 	AT_GAME_SET_FRIEND (SkullRod)
 protected:
-	bool TryPickup (AActor *toucher)
+	weapontype_t OldStyleID () const
 	{
-		return P_GiveWeapon (toucher->player, wp_skullrod, flags & MF_DROPPED);
+		return wp_skullrod;
 	}
 	const char *PickupMessage ()
 	{
@@ -2514,7 +2526,8 @@ FWeaponInfo ASkullRod::WeaponInfo1 =
 	150,
 	15*FRACUNIT,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(ASkullRod)
 };
 
 FWeaponInfo ASkullRod::WeaponInfo2 =
@@ -2533,7 +2546,8 @@ FWeaponInfo ASkullRod::WeaponInfo2 =
 	150,
 	15*FRACUNIT,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(ASkullRod)
 };
 
 IMPLEMENT_ACTOR (ASkullRod, Heretic, 2004, 0)
@@ -2701,7 +2715,7 @@ void A_FireSkullRodPL1 (player_t *player, pspdef_t *psp)
 	{
 		return;
 	}
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_skullrod] -= USE_SKRD_AMMO_1;
 	mo = P_SpawnPlayerMissile (player->mo, RUNTIME_CLASS(AHornRodFX1));
 	// Randomize the first frame
@@ -2722,9 +2736,9 @@ void A_FireSkullRodPL1 (player_t *player, pspdef_t *psp)
 
 void A_FireSkullRodPL2 (player_t *player, pspdef_t *psp)
 {
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_skullrod] -=
-			*deathmatch ? USE_SKRD_AMMO_1 : USE_SKRD_AMMO_2;
+			deathmatch ? USE_SKRD_AMMO_1 : USE_SKRD_AMMO_2;
 	P_SpawnPlayerMissile (player->mo, RUNTIME_CLASS(AHornRodFX2));
 	// Use MissileActor instead of the return value from
 	// P_SpawnPlayerMissile because we need to give info to the mobj
@@ -2851,7 +2865,7 @@ void A_SkullRodStorm (AActor *actor)
 	mo->momz = -mo->Speed;
 	mo->special2 = actor->special2; // Transfer player number
 	P_CheckMissileSpawn (mo);
-	if (actor->special1 != -1 && !S_GetSoundPlayingInfo (actor, actor->special1))
+	if (actor->special1 != -1 && !S_IsActorPlayingSomething (actor, CHAN_BODY))
 	{
 		S_LoopedSoundID (actor, CHAN_BODY, actor->special1, 1, ATTN_NORM);
 	}
@@ -2966,9 +2980,9 @@ class APhoenixRod : public AHereticWeapon
 	DECLARE_ACTOR (APhoenixRod, AHereticWeapon)
 	AT_GAME_SET_FRIEND (PhoenixRod)
 protected:
-	bool TryPickup (AActor *toucher)
+	weapontype_t OldStyleID () const
 	{
-		return P_GiveWeapon (toucher->player, wp_phoenixrod, flags & MF_DROPPED);
+		return wp_phoenixrod;
 	}
 	const char *PickupMessage ()
 	{
@@ -3022,7 +3036,8 @@ FWeaponInfo APhoenixRod::WeaponInfo1 =
 	150,
 	15*FRACUNIT,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(APhoenixRod)
 };
 
 FWeaponInfo APhoenixRod::WeaponInfo2 =
@@ -3041,7 +3056,8 @@ FWeaponInfo APhoenixRod::WeaponInfo2 =
 	150,
 	15*FRACUNIT,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(APhoenixRod)
 };
 
 IMPLEMENT_ACTOR (APhoenixRod, Heretic, 2003, 0)
@@ -3184,7 +3200,7 @@ void A_FirePhoenixPL1 (player_t *player, pspdef_t *psp)
 {
 	angle_t angle;
 
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_phoenixrod] -= USE_PHRD_AMMO_1;
 	P_SpawnPlayerMissile (player->mo, RUNTIME_CLASS(APhoenixFX1));
 	angle = player->mo->angle + ANG180;
@@ -3270,7 +3286,7 @@ void A_FirePhoenixPL2 (player_t *player, pspdef_t *psp)
 	mo->momx = pmo->momx + FixedMul (mo->Speed, finecosine[angle>>ANGLETOFINESHIFT]);
 	mo->momy = pmo->momy + FixedMul (mo->Speed, finesine[angle>>ANGLETOFINESHIFT]);
 	mo->momz = FixedMul (mo->Speed, slope);
-	if (!player->refire || !S_GetSoundPlayingInfo (pmo, soundid))
+	if (!player->refire || !S_IsActorPlayingSomething (pmo, CHAN_WEAPON))
 	{
 		S_LoopedSoundID (pmo, CHAN_WEAPON, soundid, 1, ATTN_NORM);
 	}	
@@ -3286,7 +3302,7 @@ void A_FirePhoenixPL2 (player_t *player, pspdef_t *psp)
 void A_ShutdownPhoenixPL2 (player_t *player, pspdef_t *psp)
 {
 	S_StopSound (player->mo, CHAN_WEAPON);
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[am_phoenixrod] -= USE_PHRD_AMMO_2;
 }
 

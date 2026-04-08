@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /Gr /MD /W3 /GX /O2 /I "f:/fmod/api" /I "../openptc/source" /I "win32" /I "." /I "zlib-1.1.3" /I "g_shared" /I "g_doom" /I "g_raven" /I "g_heretic" /I "g_hexen" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "USEASM" /YX /FD /c
+# ADD CPP /nologo /Gr /MD /W3 /GX /O2 /I "f:/fmod/api" /I "win32" /I "fmodsound" /I "." /I "zlib-1.1.3" /I "g_shared" /I "g_doom" /I "g_raven" /I "g_heretic" /I "g_hexen" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "USEASM" /YX /FD /c
 # SUBTRACT CPP /Fr
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32
@@ -54,7 +54,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib f:/fmod/api/fmodvc.lib wsock32.lib winmm.lib zlib-1.1.3/release/zlib.lib /nologo /subsystem:windows /pdb:none /map /machine:I386 /nodefaultlib:"libc" /nodefaultlib:"libcmt" /out:"../zdoom.exe"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib f:/fmod/api/fmodvc.lib wsock32.lib winmm.lib zlib-1.1.3/release/zlib.lib /nologo /subsystem:windows /pdb:none /map /machine:I386 /nodefaultlib:"libc" /nodefaultlib:"libcmt" /out:"../../zdoom.exe"
 # SUBTRACT LINK32 /verbose /profile /debug
 
 !ELSEIF  "$(CFG)" == "zdoom - Win32 Debug"
@@ -71,8 +71,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "f:/fmod/api" /I "../openptc/source" /I "win32" /I "." /I "zlib-1.1.3" /I "g_shared" /I "g_doom" /I "g_raven" /I "g_heretic" /I "g_hexen" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FD /c
-# SUBTRACT CPP /YX /Yc /Yu
+# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "f:/fmod/api" /I "win32" /I "fmodsound" /I "." /I "zlib-1.1.3" /I "g_shared" /I "g_doom" /I "g_raven" /I "g_heretic" /I "g_hexen" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FD /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
@@ -82,7 +81,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ddraw.lib winmm.lib wsock32.lib f:/fmod/api/fmodvc.lib zlib-1.1.3/debug/zlib.lib /nologo /subsystem:windows /debug /machine:I386 /nodefaultlib:"libcmt" /out:"../doomdbg.exe"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ddraw.lib winmm.lib wsock32.lib f:/fmod/api/fmodvc.lib zlib-1.1.3/debug/zlib.lib /nologo /subsystem:windows /debug /machine:I386 /nodefaultlib:"libcmt" /out:"../../doomdbg.exe"
 # SUBTRACT LINK32 /profile
 
 !ENDIF 
@@ -288,6 +287,10 @@ SOURCE=.\m_random.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\mus2midi.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\p_acs.cpp
 # End Source File
 # Begin Source File
@@ -481,6 +484,10 @@ SOURCE=.\stringtable.cpp
 # Begin Source File
 
 SOURCE=.\tables.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\tempfiles.cpp
 # End Source File
 # Begin Source File
 
@@ -732,6 +739,10 @@ SOURCE=.\m_cheat.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\m_crc32.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\m_fixed.h
 # End Source File
 # Begin Source File
@@ -753,6 +764,10 @@ SOURCE=.\m_swap.h
 # Begin Source File
 
 SOURCE=.\mscinlines.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\mus2midi.h
 # End Source File
 # Begin Source File
 
@@ -904,6 +919,10 @@ SOURCE=.\tarray.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\tempfiles.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\templates.h
 # End Source File
 # Begin Source File
@@ -941,6 +960,10 @@ SOURCE=.\version.h
 # Begin Source File
 
 SOURCE=.\w_wad.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\weightedlist.h
 # End Source File
 # Begin Source File
 
@@ -1116,19 +1139,11 @@ SOURCE=.\win32\i_input.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\win32\I_input.h
+SOURCE=.\win32\i_input.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\win32\I_main.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\win32\i_music.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\win32\I_music.h
+SOURCE=.\win32\i_main.cpp
 # End Source File
 # Begin Source File
 
@@ -1137,14 +1152,6 @@ SOURCE=.\win32\i_net.cpp
 # Begin Source File
 
 SOURCE=.\win32\i_net.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\win32\i_sound.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\win32\I_sound.h
 # End Source File
 # Begin Source File
 
@@ -1198,17 +1205,45 @@ SOURCE=.\win32\zdoom.rc
 # Begin Group "Text Files"
 
 # PROP Default_Filter "txt"
+# Begin Group "Licenses"
+
+# PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=..\commands.txt
+SOURCE=..\docs\BUILDLIC.TXT
 # End Source File
 # Begin Source File
 
-SOURCE=.\docs\notes.txt
+SOURCE=..\docs\doomlic.txt
+# End Source File
+# End Group
+# Begin Source File
+
+SOURCE=..\docs\classes.txt
 # End Source File
 # Begin Source File
 
-SOURCE=".\docs\Rh-log.txt"
+SOURCE=..\docs\colors.txt
+# End Source File
+# Begin Source File
+
+SOURCE=..\docs\commands.txt
+# End Source File
+# Begin Source File
+
+SOURCE=..\docs\history.txt
+# End Source File
+# Begin Source File
+
+SOURCE=..\docs\notes.txt
+# End Source File
+# Begin Source File
+
+SOURCE="..\docs\rh-log.txt"
+# End Source File
+# Begin Source File
+
+SOURCE=..\docs\zdoom.txt
 # End Source File
 # End Group
 # Begin Group "Shared Game"
@@ -1245,6 +1280,14 @@ SOURCE=.\g_shared\a_decals.cpp
 # Begin Source File
 
 SOURCE=.\g_shared\a_fountain.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\g_shared\a_lightning.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\g_shared\a_lightning.h
 # End Source File
 # Begin Source File
 
@@ -1563,5 +1606,29 @@ SOURCE=.\g_hexen\a_hexenglobal.h
 SOURCE=.\g_hexen\a_hexenspecialdecs.cpp
 # End Source File
 # End Group
+# Begin Group "Audio Files"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\fmodsound\i_music.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\fmodsound\i_music.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\fmodsound\i_sound.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\fmodsound\i_sound.h
+# End Source File
+# End Group
+# Begin Source File
+
+SOURCE=.\win32\cursor1.cur
+# End Source File
 # End Target
 # End Project

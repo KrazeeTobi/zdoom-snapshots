@@ -86,7 +86,7 @@ AT_GAME_SET (Bridge)
 // Action functions for the non-Doom bridge --------------------------------
 
 #define ORBIT_RADIUS	(15*FRACUNIT)
-void GenerateOrbitTable(void)
+void GenerateOrbitTable ()
 {
 	static bool inited = false;
 	int angle;
@@ -179,6 +179,8 @@ FState AInvisibleBridge::States[] =
 IMPLEMENT_ACTOR (AInvisibleBridge, Any, 9990, 0)
 	PROP_RenderFlags (RF_INVISIBLE)
 	PROP_SpawnState (0)
+	PROP_RadiusFixed (32)
+	PROP_HeightFixed (4)
 END_DEFAULTS
 
 void AInvisibleBridge::BeginPlay ()

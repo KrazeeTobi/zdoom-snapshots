@@ -188,7 +188,7 @@ void P_RunEffect (AActor *actor, int effects)
 	particle_t *particle;
 	int i;
 
-	if ((effects & FX_ROCKET) && *cl_rockettrails)
+	if ((effects & FX_ROCKET) && cl_rockettrails)
 	{
 		// Rocket trail
 
@@ -234,7 +234,7 @@ void P_RunEffect (AActor *actor, int effects)
 				break;
 		}
 	}
-	if ((effects & FX_GRENADE) && (*cl_rockettrails))
+	if ((effects & FX_GRENADE) && (cl_rockettrails))
 	{
 		// Grenade trail
 

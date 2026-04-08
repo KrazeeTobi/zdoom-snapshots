@@ -117,7 +117,7 @@ void W_Profile (const char *fname);
 int W_FindLump (const char *name, int *lastlump);	// [RH]	Find lumps with duplication
 BOOL W_CheckLumpName (int lump, const char *name);	// [RH] True if lump's name == name
 
-unsigned W_LumpNameHash (const char *name);			// [RH] Create hash key from an 8-char name
+DWORD W_LumpNameHash (const char *name);			// [RH] Create hash key from an 8-char name
 void W_InitHashChains (void);						// [RH] Set up the lumpinfo hashing
 
 // [RH] Combine multiple marked ranges of lumps into one.

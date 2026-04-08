@@ -188,7 +188,7 @@ bool P_Teleport (AActor *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 		if (thing->player)
 		{
 			// [RH] Zoom player's field of vision
-			if (*telezoom)
+			if (telezoom)
 				thing->player->FOV = MIN (175.f, thing->player->DesiredFOV + 45.f);
 			// Freeze player for about .5 sec
 			if (!thing->player->powers[pw_speed])

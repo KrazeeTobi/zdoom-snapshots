@@ -33,7 +33,7 @@
 #include <sys/stat.h>
 #endif
 
-#ifdef UNIX
+#ifdef unix
 #include <unistd.h>
 #endif
 
@@ -254,14 +254,17 @@ CUSTOM_CVAR (Int, dmflags, 0, CVAR_SERVERINFO)
 	if (textureheight)
 		R_InitSkyMap ();
 
-	if (*var & DF_NO_FREELOOK)
-		AddCommandString ("centerview");
+	if (self & DF_NO_FREELOOK)
+	{
+		C_DoCommand ("centerview");
+	}
 }
 
 CVAR (Flag, sv_nohealth,		dmflags, DF_NO_HEALTH);
 CVAR (Flag, sv_noitems,			dmflags, DF_NO_ITEMS);
 CVAR (Flag, sv_weaponstay,		dmflags, DF_WEAPONS_STAY);
-CVAR (Flag, sv_falldamage,		dmflags, DF_YES_FALLING);
+CVAR (Flag, sv_falldamage,		dmflags, DF_FORCE_FALLINGHX);
+CVAR (Flag, sv_oldfalldamage,	dmflags, DF_FORCE_FALLINGZD);
 CVAR (Flag, sv_samelevel,		dmflags, DF_SAME_LEVEL);
 CVAR (Flag, sv_spawnfarthest,	dmflags, DF_SPAWN_FARTHEST);
 CVAR (Flag, sv_forcerespawn,	dmflags, DF_FORCE_RESPAWN);
@@ -275,13 +278,14 @@ CVAR (Flag, sv_fastmonsters,	dmflags, DF_FAST_MONSTERS);
 CVAR (Flag, sv_nojump,			dmflags, DF_NO_JUMP);
 CVAR (Flag, sv_nofreelook,		dmflags, DF_NO_FREELOOK);
 CVAR (Flag, sv_respawnsuper,	dmflags, DF_RESPAWN_SUPER);
+CVAR (Flag, sv_nopassover,		dmflags, DF_NO_PASSMOBJ);
 
 //==========================================================================
 //
 // CVAR dmflags2
 //
 // [RH] From Skull Tag. Some of these were already done as separate cvars
-// (such as bfgaiming), but I collected them here like Skull Tag did.
+// (such as bfgaiming), but I collected them here like Skull Tag does.
 //
 //==========================================================================
 
@@ -349,7 +353,7 @@ void D_Display (bool screenshot)
 			// Refresh the console.
 			C_NewModeAdjust ();
 			// Reload crosshair if transitioned to a different size
-			crosshair = *crosshair;
+			crosshair.Callback ();
 		}
 	}
 
@@ -362,7 +366,7 @@ void D_Display (bool screenshot)
 		setmodeneeded = false;
 	}
 
-	if (screen->Lock (TransArea >= *vid_bufferarea || screenshot))
+	if (screen->Lock (TransArea >= vid_bufferarea || screenshot))
 	{
 		SB_state = screen->GetPageCount ();
 		BorderNeedRefresh = screen->GetPageCount ();
@@ -595,10 +599,8 @@ void D_DoomLoop ()
 			{
 				TryRunTics (); // will run at least one tic
 			}
-
 			// [RH] Use the consoleplayer's camera to update sounds
 			S_UpdateSounds (players[consoleplayer].camera);	// move positional sounds
-
 			// Update display, next frame, with current state.
 			D_Display (false);
 		}
@@ -1183,12 +1185,13 @@ static EIWADType IdentifyVersion (void)
 							CheckIWADinEnvDir (value + 1, wads);
 						}
 					}
-#ifdef UNIX
+#ifdef unix
 					else if (*value == '~' && (*(value + 1) == 0 || *(value + 1) == '/'))
 					{
 						homepath = GetUserFile (*(value + 1) ? value + 2 : value + 1);
 						CheckIWAD (homepath, wads);
 						delete[] homepath;
+						homepath = NULL;
 					}
 #endif
 					else
@@ -1223,7 +1226,7 @@ static EIWADType IdentifyVersion (void)
 
 	pickwad = 0;
 
-	if (!iwadparmfound && numwads > 1 && *queryiwad)
+	if (!iwadparmfound && numwads > 1 && queryiwad)
 	{
 		pickwad = I_PickIWad (wads, numwads);
 	}
@@ -1256,7 +1259,7 @@ static const char *BaseFileSearch (const char *file, const char *ext)
 
 	if (!FileExists (file))
 	{
-#ifndef UNIX
+#ifndef unix
 		sprintf (wad, "%s%s", progdir, file);
 		if (!FileExists (wad))
 		{
@@ -1386,6 +1389,11 @@ void D_DoomMain (void)
 	else
 		I_FatalError ("Cannot find zdoom.wad");
 
+	M_LoadDefaults ();			// load before initing other systems
+	I_SetTitleString (IWADTypeNames[IdentifyVersion ()]);
+	GameConfig->DoGameSetup (GameNames[gameinfo.gametype]);
+	C_ExecCmdLineParams ();		// [RH] do all +set commands on the command line
+
 	// [RH] zvox.wad - A wad I had intended to be automatically generate
 	// from Q2's pak0.pak so the female and cyborg player could have
 	// voices. I never got around to writing the utility to do it, though.
@@ -1393,13 +1401,8 @@ void D_DoomMain (void)
 	if (wad)
 		D_AddFile (wad);
 
-	M_LoadDefaults ();			// load before initing other systems
-	I_SetTitleString (IWADTypeNames[IdentifyVersion ()]);
-	GameConfig->DoGameSetup (GameNames[gameinfo.gametype]);
-	C_ExecCmdLineParams ();		// [RH] do all +set commands on the command line
-
 	// [RH] Add any .wad files in the skins directory
-#ifdef UNIX
+#ifdef unix
 	sprintf (file, "%sskins", SHARE_DIR);
 #else
 	sprintf (file, "%sskins", progdir);
@@ -1436,7 +1439,7 @@ void D_DoomMain (void)
 		}
 	}
 	delete files;
-	
+
 	W_InitMultipleFiles (&wadfiles);
 
 	// [RH] Initialize localizable strings.
@@ -1513,7 +1516,7 @@ void D_DoomMain (void)
 		bglobal.wanted_botnum = bglobal.getspawned->NumArgs();
 	}
 
-	flags = *dmflags;
+	flags = dmflags;
 		
 	if (Args.CheckParm ("-nomonsters"))		flags |= DF_NO_MONSTERS;
 	if (Args.CheckParm ("-respawn"))		flags |= DF_MONSTERS_RESPAWN;
@@ -1581,7 +1584,7 @@ void D_DoomMain (void)
 	if (devparm)
 		Printf (GStrings(D_DEVSTR));
 
-#ifndef UNIX
+#ifndef unix
 	if (Args.CheckParm("-cdrom"))
 	{
 		Printf (GStrings(D_CDROM));
@@ -1620,7 +1623,7 @@ void D_DoomMain (void)
 	// Check for -file in shareware
 	if (modifiedgame && (gameinfo.flags & GI_SHAREWARE))
 		I_FatalError ("You cannot -file with the shareware version. Register!");
-	
+
 	Printf ("Init miscellaneous info.\n");
 	M_Init ();
 
@@ -1631,7 +1634,7 @@ void D_DoomMain (void)
 	P_Init ();
 
 	Printf ("Setting up sound.\n");
-	S_Init ((int)*snd_sfxvolume /* *8 */, (int)*snd_musicvolume /* *8*/ );
+	S_Init ();
 
 	I_FinishClockCalibration ();
 

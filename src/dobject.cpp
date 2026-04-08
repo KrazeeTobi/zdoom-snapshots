@@ -121,7 +121,7 @@ CCMD (dumpclasses)
 	int shown, omitted;
 	bool showall = true;
 
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		root = TypeInfo::IFindType (argv[1]);
 		if (root == NULL)
@@ -131,7 +131,7 @@ CCMD (dumpclasses)
 		}
 		if (stricmp (argv[1], "Actor") == 0)
 		{
-			if (argc < 3 || stricmp (argv[2], "all") != 0)
+			if (argv.argc() < 3 || stricmp (argv[2], "all") != 0)
 			{
 				showall = false;
 			}

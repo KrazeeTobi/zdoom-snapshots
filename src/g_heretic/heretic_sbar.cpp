@@ -37,7 +37,7 @@ public:
 			"SMALLIN7",	"SMALLIN8",	"SMALLIN9"
 		};
 
-		if (*deathmatch)
+		if (deathmatch)
 		{
 			hereticLumpNames[5] = "STATBAR";
 		}
@@ -328,7 +328,7 @@ private:
 		}
 
 		// Frags
-		if (*deathmatch)
+		if (deathmatch)
 		{
 			temp = CPlayer->fragcount;
 			if (temp != oldfrags)
@@ -503,7 +503,7 @@ private:
 		{
 			DrBNumberOuter (0, 5, -20);
 		}
-		if (*deathmatch)
+		if (deathmatch)
 		{
 			DrINumberOuter (CPlayer->fragcount, 45, -16);
 		}

@@ -49,7 +49,7 @@ const char *AInvulnerabilitySphere::PickupMessage ()
 
 bool AInvulnerabilitySphere::ShouldRespawn ()
 {
-	return Super::ShouldRespawn () && (*dmflags & DF_RESPAWN_SUPER);
+	return Super::ShouldRespawn () && (dmflags & DF_RESPAWN_SUPER);
 }
 
 // Soulsphere --------------------------------------------------------------
@@ -172,7 +172,7 @@ public:
 	}
 	virtual bool ShouldRespawn ()
 	{
-		return Super::ShouldRespawn () && (*dmflags & DF_RESPAWN_SUPER);
+		return Super::ShouldRespawn () && (dmflags & DF_RESPAWN_SUPER);
 	}
 protected:
 	virtual bool TryPickup (AActor *toucher)

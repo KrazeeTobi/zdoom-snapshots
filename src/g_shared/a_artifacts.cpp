@@ -168,12 +168,12 @@ bool P_GiveArtifact (player_t *player, artitype_t arti)
 			char cmd[32];
 
 			sprintf (cmd, "select %s", ArtifactNames[arti]);
-			AddCommandString (cmd);
+			C_DoCommand (cmd);
 		}
 	}
 	else
 	{
-		if (arti >= arti_firstpuzzitem && multiplayer && !*deathmatch)
+		if (arti >= arti_firstpuzzitem && multiplayer && !deathmatch)
 		{ // Can't carry more than 1 puzzle item in coop netplay
 			return false;
 		}
@@ -479,7 +479,7 @@ void P_TeleportOther (AActor *victim)
 {
 	if (victim->player)
 	{
-		if (*deathmatch)
+		if (deathmatch)
 			P_TeleportToDeathmatchStarts (victim);
 		else
 			P_TeleportToPlayerStarts (victim);
@@ -754,7 +754,7 @@ void P_PlayerRemoveArtifact (player_t *player, int slot)
 	{ // Used last of a type
 		if (player == &players[consoleplayer])
 		{
-			AddCommandString ("invnext -");
+			C_DoCommand ("invnext -");
 		}
 	}
 }
@@ -782,7 +782,7 @@ void P_PlayerUseArtifact (player_t *player, artitype_t arti)
 	{ // Unable to use artifact, advance pointer
 		if (player == &players[consoleplayer])
 		{
-			AddCommandString ("invnext -");
+			C_DoCommand ("invnext -");
 		}
 	}
 }

@@ -88,7 +88,7 @@ void A_PainShootSkull (AActor *self, angle_t angle)
 	int prestep;
 
 	// [RH] make the optional
-	if (*limitpainelemental)
+	if (limitpainelemental)
 	{
 		// count total number of skulls currently on the level
 		// if there are already 20 skulls on the level, don't spit another one

@@ -185,7 +185,6 @@ public:
 	int			jumpTics;				// delay the next jump for a moment
 
 	int			respawn_time;			// [RH] delay respawning until this tic
-	fixed_t		oldvelocity[3];			// [RH] Used for falling damage
 	AActor		*camera;				// [RH] Whose eyes this player sees through
 
 	int			air_finished;			// [RH] Time when you start drowning

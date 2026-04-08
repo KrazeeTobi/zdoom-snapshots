@@ -37,6 +37,7 @@
 #include "st_stuff.h"
 
 #include "gi.h"
+#include "stats.h"
 
 #undef RANGECHECK
 
@@ -64,7 +65,6 @@ int 			scaledviewwidth;
 int 			viewwindowx;
 int 			viewwindowy;
 byte*			ylookup[MAXHEIGHT];
-int 			columnofs[MAXWIDTH];
 
 extern "C" {
 int				realviewwidth;		// [RH] Physical width of view window
@@ -72,6 +72,12 @@ int				realviewheight;		// [RH] Physical height of view window
 int				detailxshift;		// [RH] X shift for horizontal detail level
 int				detailyshift;		// [RH] Y shift for vertical detail level
 }
+
+#ifdef USEASM
+extern "C" void STACK_ARGS DoubleHoriz_MMX (int height, int width, byte *dest, int pitch);
+extern "C" void STACK_ARGS DoubleHorizVert_MMX (int height, int width, byte *dest, int pitch);
+extern "C" void STACK_ARGS DoubleVert_ASM (int height, int width, byte *dest, int pitch);
+#endif
 
 // [RH] Pointers to the different column drawers.
 //		These get changed depending on the current
@@ -113,6 +119,8 @@ unsigned int	dc_mask;
 int 			dccount;
 }
 
+cycle_t			DetailDoubleCycles;
+
 /************************************/
 /*									*/
 /* Palettized drawers (C versions)	*/
@@ -145,7 +153,8 @@ void R_DrawColumnP_C (void)
 #ifdef RANGECHECK 
 	if (dc_x >= screen->width
 		|| dc_yl < 0
-		|| dc_yh >= screen->height) {
+		|| dc_yh >= screen->height)
+	{
 		Printf ("R_DrawColumnP_C: %i to %i at %i\n", dc_yl, dc_yh, dc_x);
 		return;
 	}
@@ -153,8 +162,7 @@ void R_DrawColumnP_C (void)
 
 	// Framebuffer destination address.
 	// Use ylookup LUT to avoid multiply with ScreenWidth.
-	// Use columnofs LUT for subwindows?
-	dest = ylookup[dc_yl] + columnofs[dc_x];
+	dest = ylookup[dc_yl] + dc_x;
 
 	// Determine scaling,
 	//	which is the only mapping to be done.
@@ -206,13 +214,14 @@ void R_StretchColumnP_C (void)
 #ifdef RANGECHECK 
 	if (dc_x >= screen->width
 		|| dc_yl < 0
-		|| dc_yh >= screen->height) {
+		|| dc_yh >= screen->height)
+	{
 		Printf ("R_StretchColumnP_C: %i to %i at %i\n", dc_yl, dc_yh, dc_x);
 		return;
 	}
 #endif
 
-	dest = ylookup[dc_yl] + columnofs[dc_x];
+	dest = ylookup[dc_yl] + dc_x;
 	fracstep = dc_iscale; 
 	frac = dc_texturefrac;
 
@@ -246,13 +255,14 @@ void R_FillColumnP (void)
 #ifdef RANGECHECK 
 	if (dc_x >= screen->width
 		|| dc_yl < 0
-		|| dc_yh >= screen->height) {
+		|| dc_yh >= screen->height)
+	{
 		Printf ("R_StretchColumnP_C: %i to %i at %i\n", dc_yl, dc_yh, dc_x);
 		return;
 	}
 #endif
 
-	dest = ylookup[dc_yl] + columnofs[dc_x];
+	dest = ylookup[dc_yl] + dc_x;
 
 	{
 		int pitch = dc_pitch;
@@ -344,7 +354,7 @@ void R_DrawFuzzColumnP_C (void)
 #endif
 
 
-	dest = ylookup[dc_yl] + columnofs[dc_x];
+	dest = ylookup[dc_yl] + dc_x;
 
 	// colormap #6 is used for shading (of 0-31, a bit brighter than average)
 	{
@@ -463,7 +473,7 @@ void R_DrawAddColumnP_C (void)
 	}
 #endif 
 
-	dest = ylookup[dc_yl] + columnofs[dc_x];
+	dest = ylookup[dc_yl] + dc_x;
 
 	fracstep = dc_iscale;
 	frac = dc_texturefrac;
@@ -526,7 +536,7 @@ void R_DrawTranslatedColumnP_C (void)
 	
 #endif 
 
-	dest = ylookup[dc_yl] + columnofs[dc_x];
+	dest = ylookup[dc_yl] + dc_x;
 
 	fracstep = dc_iscale;
 	frac = dc_texturefrac;
@@ -573,7 +583,7 @@ void R_DrawTlatedAddColumnP_C (void)
 	
 #endif 
 
-	dest = ylookup[dc_yl] + columnofs[dc_x];
+	dest = ylookup[dc_yl] + dc_x;
 
 	fracstep = dc_iscale;
 	frac = dc_texturefrac;
@@ -626,7 +636,7 @@ void R_DrawShadedColumnP_C (void)
 	}
 #endif
 
-	dest = ylookup[dc_yl] + columnofs[dc_x];
+	dest = ylookup[dc_yl] + dc_x;
 
 	fracstep = dc_iscale; 
 	frac = dc_texturefrac;
@@ -674,7 +684,7 @@ void R_DrawAddClampColumnP_C ()
 	}
 #endif 
 
-	dest = ylookup[dc_yl] + columnofs[dc_x];
+	dest = ylookup[dc_yl] + dc_x;
 
 	fracstep = dc_iscale;
 	frac = dc_texturefrac;
@@ -728,7 +738,7 @@ void R_DrawAddClampTranslatedColumnP_C ()
 	}
 #endif 
 
-	dest = ylookup[dc_yl] + columnofs[dc_x];
+	dest = ylookup[dc_yl] + dc_x;
 
 	fracstep = dc_iscale;
 	frac = dc_texturefrac;
@@ -775,7 +785,6 @@ void R_DrawAddClampTranslatedColumnP_C ()
 //	and the inner loop has to step in texture space u and v.
 //
 extern "C" {
-int						ds_colsize=0xdeadbeef;	// [RH] Distance between columns
 int						ds_color;				// [RH] color for non-textured spans
 
 int 					ds_y; 
@@ -825,7 +834,7 @@ void R_DrawSpanP_C (void)
 	xfrac = ds_xfrac;
 	yfrac = ds_yfrac;
 
-	dest = ylookup[ds_y] + columnofs[ds_x1];
+	dest = ylookup[ds_y] + ds_x1;
 
 	// We do not check for zero spans here?
 	count = ds_x2 - ds_x1 + 1;
@@ -839,8 +848,7 @@ void R_DrawSpanP_C (void)
 
 		// Lookup pixel from flat texture tile,
 		//  re-index using light/colormap.
-		*dest = ds_colormap[ds_source[spot]];
-		dest += ds_colsize;
+		*dest++ = ds_colormap[ds_source[spot]];
 
 		// Next step in u,v.
 		xfrac += xstep;
@@ -863,7 +871,7 @@ void R_FillSpan (void)
 //		dscount++;
 #endif
 
-	memset (ylookup[ds_y] + columnofs[ds_x1], ds_color, ds_x2 - ds_x1 + 1);
+	memset (ylookup[ds_y] + ds_x1, ds_color, ds_x2 - ds_x1 + 1);
 }
 
 /****************************************************/
@@ -1008,21 +1016,6 @@ void R_BuildPlayerTranslation (int player, int color)
 	}
 }
 
-//
-// R_InitBuffer
-//
-// Creates lookup tables that avoid multiplies and other hassles
-// for getting the framebuffer address of a pixel to draw.
-//
-void R_InitBuffer (int width, int height)
-{
-	// Column offset for windows. (This should go away.)
-	// [Row offsets are calculated in R_SetupBuffer()]
-	for (int i = 0; i < width; i++)
-		columnofs[i] = viewwindowx + (i << detailxshift);
-}
-
-
 void R_DrawBorder (int x1, int y1, int x2, int y2)
 {
 	int lump;
@@ -1128,70 +1121,96 @@ void R_DrawTopBorder ()
 //		and/or vertically (or not at all).
 void R_DetailDouble ()
 {
+	DetailDoubleCycles = 0;
+	clock (DetailDoubleCycles);
+
 	switch ((detailxshift << 1) | detailyshift)
 	{
-		case 1:		// y-double
+	case 1:		// y-double
+#ifdef USEASM
+		DoubleVert_ASM (viewheight, viewwidth, ylookup[0], RenderTarget->GetPitch());
+#else
 		{
 			int rowsize = realviewwidth;
-			int pitch = SCREENPITCH;
+			int pitch = RenderTarget->GetPitch();
 			int y;
 			byte *line;
 
-			line = screen->GetBuffer() + viewwindowy*pitch + viewwindowx;
-			for (y = 0; y < viewheight; y++, line += pitch<<1)
+			line = ylookup[0];
+			for (y = viewheight; y != 0; --y, line += pitch<<1)
 			{
 				memcpy (line+pitch, line, rowsize);
 			}
 		}
+#endif
 		break;
 
-		case 2:		// x-double
+	case 2:		// x-double
+#ifdef USEASM
+		if (UseMMX)
 		{
-			int rowsize = realviewwidth >> 2;
-			int pitch = SCREENPITCH >> (2-detailyshift);
+			DoubleHoriz_MMX (viewheight, viewwidth, ylookup[0]+viewwidth, RenderTarget->GetPitch());
+		}
+		else
+#endif
+		{
+			int rowsize = viewwidth;
+			int pitch = RenderTarget->GetPitch();
 			int y,x;
-			DWORD *line,a,b;
+			byte *linefrom, *lineto;
 
-			line = (DWORD *)(screen->GetBuffer() + viewwindowy*SCREENPITCH + viewwindowx);
-			for (y = 0; y < viewheight; y++, line += pitch)
+			linefrom = ylookup[0];
+			for (y = viewheight; y != 0; --y, linefrom += pitch)
 			{
-				for (x = 0; x < rowsize; x += 2)
+				lineto = linefrom - viewwidth;
+				for (x = 0; x < rowsize; ++x)
 				{
-					a = line[x+0];
-					b = line[x+1];
-					a &= 0x00ff00ff;
-					b &= 0x00ff00ff;
-					line[x+0] = a | (a << 8);
-					line[x+1] = b | (b << 8);
+					byte c = linefrom[x];
+					lineto[x*2] = c;
+					lineto[x*2+1] = c;
 				}
 			}
 		}
 		break;
 
-		case 3:		// x- and y-double
+	case 3:		// x- and y-double
+#ifdef USEASM
+		if (UseMMX)
 		{
-			int rowsize = realviewwidth >> 2;
-			int pitch = SCREENPITCH >> (2-detailyshift);
-			int realpitch = SCREENPITCH >> 2;
+			DoubleHorizVert_MMX (viewheight, viewwidth, ylookup[0]+viewwidth, RenderTarget->GetPitch());
+		}
+		else
+#endif
+		{
+			int rowsize = viewwidth;
+			int realpitch = RenderTarget->GetPitch();
+			int pitch = realpitch << 1;
 			int y,x;
-			DWORD *line,a,b;
+			byte *linefrom, *lineto;
 
-			line = (DWORD *)(screen->GetBuffer() + viewwindowy*SCREENPITCH + viewwindowx);
-			for (y = 0; y < viewheight; y++, line += pitch)
+			linefrom = ylookup[0];
+			for (y = viewheight; y != 0; --y, linefrom += pitch)
 			{
-				for (x = 0; x < rowsize; x += 2)
+				lineto = linefrom - viewwidth;
+				for (x = 0; x < rowsize; ++x)
 				{
-					a = line[x+0];
-					b = line[x+1];
-					a &= 0x00ff00ff;
-					b &= 0x00ff00ff;
-					line[x+0+realpitch] = line[x+0] = a | (a << 8);
-					line[x+1+realpitch] = line[x+1] = b | (b << 8);
+					byte c = linefrom[x];
+					lineto[x*2] = c;
+					lineto[x*2+1] = c;
+					lineto[x*2+realpitch] = c;
+					lineto[x*2+realpitch+1] = c;
 				}
 			}
 		}
 		break;
 	}
+
+	unclock (DetailDoubleCycles);
+}
+
+ADD_STAT(detail,out)
+{
+	sprintf (out, "doubling = %04.1f ms", (double)DetailDoubleCycles * 1000 * SecondsPerCycle);
 }
 
 // [RH] Initialize the column drawer pointers
@@ -1230,11 +1249,11 @@ static BYTE *basecolormapsave;
 #define BL_ONE				FRACUNIT
 #define BL_ZERO				0
 #define BL_SRC_ALPHA		alpha
-#define BL_INV_SRC_ALPHA	(FRACUNIT-alpha)
+#define BL_INV_SRC_ALPHA	(BL_ONE-alpha)
 
 static bool R_SetBlendFunc (fixed_t fglevel, fixed_t bglevel)
 {
-	if (!*r_drawtrans || (fglevel == BL_ONE && bglevel == BL_ZERO))
+	if (!r_drawtrans || (fglevel == BL_ONE && bglevel == BL_ZERO))
 	{
 		if (dc_translation == NULL)
 		{
@@ -1305,12 +1324,12 @@ ESPSResult R_SetPatchStyle (int style, fixed_t alpha, BYTE *translation, DWORD c
 
 	if (style == STYLE_OptFuzzy)
 	{
-		style = (*r_drawfuzz || !*r_drawtrans) ? STYLE_Fuzzy : STYLE_Translucent;
+		style = (r_drawfuzz || !r_drawtrans) ? STYLE_Fuzzy : STYLE_Translucent;
 	}
 	else if (style == STYLE_SoulTrans)
 	{
 		style = STYLE_Translucent;
-		alpha = (fixed_t)(FRACUNIT * *transsouls);
+		alpha = (fixed_t)(FRACUNIT * transsouls);
 	}
 
 	alpha = clamp<fixed_t> (alpha, 0, FRACUNIT);
@@ -1334,7 +1353,7 @@ ESPSResult R_SetPatchStyle (int style, fixed_t alpha, BYTE *translation, DWORD c
 		hcolfunc_post2 = rt_shaded2cols;
 		hcolfunc_post4 = rt_shaded4cols;
 		r_MarkTrans = true;
-		return *r_columnmethod ? DoDraw1 : DoDraw0;
+		return r_columnmethod ? DoDraw1 : DoDraw0;
 
 		// Standard modes
 	case STYLE_Normal:
@@ -1356,7 +1375,7 @@ ESPSResult R_SetPatchStyle (int style, fixed_t alpha, BYTE *translation, DWORD c
 		return DontDraw;
 	}
 	return R_SetBlendFunc (fglevel, bglevel) ?
-		(*r_columnmethod ? DoDraw1 : DoDraw0) : DontDraw;
+		(r_columnmethod ? DoDraw1 : DoDraw0) : DontDraw;
 }
 
 void R_FinishSetPatchStyle ()

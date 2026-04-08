@@ -63,16 +63,15 @@ void FActorInfo::ApplyDefaults (BYTE *defaults)
 
 	TypeInfo *classtype;
 	const char *datastr;
-	int dataint;
-	FState *datastate;
+	int GCCNOWARN dataint;
+	FState GCCNOWARN *datastate;
+	int GCCNOWARN datasound;
 	BYTE defnum;
-	int datasound;
 
 	while ((defnum = *parser) != ADEF_EOL)
 	{
 		BYTE type = defnum >> 6;
 		defnum &= 63;
-
 		if (defnum <= ADEF_LastString)
 		{
 			datastr = (const char *)(parser + 1);
@@ -89,9 +88,15 @@ void FActorInfo::ApplyDefaults (BYTE *defaults)
 			case ADEF_SkipSuper:
 				parser += 2;
 				break;
+
 			case ADEF_StateBase:
+#ifdef __GNUC__
+				classtype = const_cast<TypeInfo *>(TypeInfo::FindType ((const char *)(parser + 2)));
+				parser += 2 + strlen ((const char *)(parser + 1));
+#else
 				classtype = *((TypeInfo **)(parser + 1));
 				parser += 5;
+#endif
 				if (classtype == NULL)
 				{
 					classtype = Class;

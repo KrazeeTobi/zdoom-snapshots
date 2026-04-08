@@ -35,7 +35,7 @@
 #include "p_acs.h"
 #include "s_sndseq.h"
 #include "v_palette.h"
-
+#include "a_sharedglobal.h"
 
 
 
@@ -101,7 +101,6 @@ void P_SerializeWorld (FArchive &arc)
 			<< sec->gravity
 			<< sec->damage
 			<< sec->mod
-			<< sec->alwaysfake
 			<< sec->waterzone
 			<< sec->SecActTarget
 			<< sec->FloorLight
@@ -109,7 +108,8 @@ void P_SerializeWorld (FArchive &arc)
 			<< sec->FloorFlags
 			<< sec->CeilingFlags
 			<< sec->sky
-			<< sec->MoreFlags;
+			<< sec->MoreFlags
+			<< sec->SkyBox;
 		if (arc.IsStoring ())
 		{
 			arc << sec->floorcolormap->Color
@@ -147,6 +147,7 @@ void P_SerializeWorld (FArchive &arc)
 				<< si->toptexture
 				<< si->bottomtexture
 				<< si->midtexture;
+			ADecal::SerializeChain (arc, &si->BoundActors);
 		}
 	}
 }

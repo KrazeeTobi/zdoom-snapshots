@@ -512,7 +512,7 @@ void R_RenderSegLoop1 (void)
 	}
 }
 
-// [RH] This is a cache optimized version of R_RenderSegLoop(). It first
+// [RH] This is a (cache) optimized version of R_RenderSegLoop(). It first
 //		draws columns into a temporary buffer with a pitch of 4 and then
 //		copies them to the framebuffer using a bunch of byte, word, and
 //		longword moves. This may seem like a lot of extra work just to
@@ -524,6 +524,7 @@ void R_RenderSegLoop1 (void)
 //
 // Footnote: Okay, maybe it's not the cache. I don't know why this is faster.
 // On Pentiums it's sometimes slightly faster, sometimes slightly slower.
+// Write combining maybe?
 
 void R_RenderSegLoop2 (void)
 {
@@ -628,7 +629,7 @@ void R_NewWall ()
 		// a single sided line is terminal, so it must mark ends
 		markfloor = markceiling = true;
 		// [RH] Render mirrors later, but mark them now.
-		if (linedef->special != Line_Mirror || !*r_drawmirrors)
+		if (linedef->special != Line_Mirror || !r_drawmirrors)
 		{
 			midtexture = texturetranslation[sidedef->midtexture];
 			if (linedef->flags & ML_DONTPEGBOTTOM)
@@ -840,8 +841,7 @@ void R_CheckOpenings (size_t need)
 
 //
 // R_StoreWallRange
-// A wall segment will be drawn
-//	between start and stop pixels (inclusive).
+// A wall segment will be drawn between start and stop pixels (inclusive).
 //
 
 void R_StoreWallRange (int start, int stop)
@@ -959,6 +959,9 @@ void R_StoreWallRange (int start, int stop)
 		if (sidedef->midtexture &&
 			(rw_ceilstat != 12 || sidedef->toptexture == 0) &&
 			(rw_floorstat != 3 || sidedef->bottomtexture == 0) &&
+			// The 3072 below is just an arbitrary value picked to avoid
+			// drawing lines the player is too close too that would overflow
+			// the texture calculations.
 			(WallSZ1 >= 3072 && WallSZ2 >= 3072))
 		{
 			fixed_t *swal;
@@ -1448,7 +1451,7 @@ static void R_RenderBoundWallSprite (AActor *actor, drawseg_t *clipper, int pass
 	else
 	{
 		WallSpriteTile = sprites[actor->sprite].spriteframes[actor->frame].lump[0];
-		flipx = sprites[actor->sprite].spriteframes[actor->frame].flip[0];
+		flipx = sprites[actor->sprite].spriteframes[actor->frame].flip & 1;
 	}
 
 	// Determine left and right edges of sprite. Since this sprite is bound

@@ -185,7 +185,7 @@ void P_TranslateLineDef (line_t *ld, maplinedef_t *mld)
 				short flagtemp;
 				BYTE op = *tlate++;
 				BYTE dest;
-				BYTE val;
+				BYTE val = 0;	// quiet, GCC
 				bool found;
 				int lsize;
 

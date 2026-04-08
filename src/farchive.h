@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "doomtype.h"
 #include "dobject.h"
+#include "tarray.h"
 
 class DObject;
 
@@ -137,6 +138,9 @@ virtual void Read (void *mem, unsigned int len);
 		FArchive& WriteObject (DObject *obj);
 		FArchive& ReadObject (DObject *&obj, TypeInfo *wanttype);
 
+		void WriteName (const char *name);
+		const char *ReadName ();	// The returned name disappears with the archive, unlike strings
+
 inline	FArchive& operator<< (char &c) { return operator<< ((BYTE &)c); }
 inline	FArchive& operator<< (SBYTE &c) { return operator<< ((BYTE &)c); }
 inline	FArchive& operator<< (SWORD &s) { return operator<< ((WORD &)s); }
@@ -159,6 +163,10 @@ protected:
 		const TypeInfo *ReadClass (const TypeInfo *wanttype);
 		const TypeInfo *ReadStoredClass (const TypeInfo *wanttype);
 		DWORD HashObject (const DObject *obj) const;
+		DWORD AddName (const char *name);
+		DWORD AddName (size_t start);	// Name has already been added to storage
+		DWORD FindName (const char *name) const;
+		DWORD FindName (const char *name, size_t bucket) const;
 
 		bool m_Persistent;		// meant for persistent storage (disk)?
 		bool m_Loading;			// extracting objects?
@@ -168,19 +176,31 @@ protected:
 		DWORD m_ObjectCount;	// # of objects currently serialized
 		DWORD m_MaxObjectCount;
 		DWORD m_ClassCount;		// # of unique classes currently serialized
+
 		struct TypeMap
 		{
 			const TypeInfo *toCurrent;	// maps archive type index to execution type index
 			DWORD toArchive;		// maps execution type index to archive type index
 
-			enum { NO_INDEX = 0xffffffff};
+			enum { NO_INDEX = 0xffffffff };
 		} *m_TypeMap;
+
 		struct ObjectMap
 		{
 			const DObject *object;
 			size_t hashNext;
 		} *m_ObjectMap;
 		size_t m_ObjectHash[EObjectHashSize];
+
+		struct NameMap
+		{
+			DWORD StringStart;	// index into m_NameStorage
+			DWORD HashNext;		// next in hash bucket
+			enum { NO_INDEX = 0xffffffff };
+		};
+		TArray<NameMap> m_Names;
+		TArray<char> m_NameStorage;
+		size_t m_NameHash[EObjectHashSize];
 
 private:
 		FArchive (const FArchive &src) {}

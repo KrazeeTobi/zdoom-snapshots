@@ -223,6 +223,7 @@ enum
 	MF3_CANBLAST		= 0x00020000,	// Actor is not a monster but can be blasted
 	MF3_NOTARGET		= 0x00040000,	// This actor not targetted when it hurts something else
 	MF3_DONTGIB			= 0x00080000,	// Don't gib this corpse
+	MF3_NOBLOCKMONST	= 0x00100000,	// Can cross ML_BLOCKMONSTERS lines
 
 // --- mobj.renderflags ---
 
@@ -285,6 +286,7 @@ enum ERenderStyle
 #define HX_ALTSHADOW		(0x6800)
 
 class FPlayerSkin;
+class FDecalBase;
 
 inline AActor *GetDefaultByName (const char *name)
 {
@@ -437,7 +439,8 @@ public:
 									// no matter what (even if shot)
 	player_s		*player;		// only valid if type of APlayerPawn
 	int				lastlook;		// player number last looked for
-	mapthing2_t		spawnpoint; 	// For nightmare respawn
+	WORD			SpawnPoint[3]; 	// For nightmare respawn
+	WORD			SpawnAngle;
 	AActor			*tracer;		// Thing being chased/attacked for tracers
 	fixed_t			floorclip;		// value to use for floor clipping
 	WORD			tid;			// thing identifier
@@ -448,6 +451,7 @@ public:
 	AActor			*goal;			// Monster's goal if not chasing anything
 	FPlayerSkin		*skin;			// Sprite override
 	byte			waterlevel;		// 0=none, 1=feet, 2=waist, 3=eyes
+	BYTE			SpawnFlags;
 	SWORD			gear;			// killough 11/98: used in torque simulation
 
 	// a linked list of sectors where this object appears
@@ -479,6 +483,9 @@ public:
 	FState *BDeathState;
 	FState *IDeathState;
 	FState *RaiseState;
+
+	// [RH] Decal(s) this weapon/projectile generates on impact.
+	FDecalBase *DecalGenerator;
 
 	// Public functions
 	bool IsTeammate (AActor *other);

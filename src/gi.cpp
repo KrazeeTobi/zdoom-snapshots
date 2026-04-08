@@ -52,7 +52,7 @@ static gameborder_t HereticBorder =
 
 gameinfo_t HexenGameInfo =
 {
-	GI_PAGESARERAW | GI_MAPxx | GI_NOLOOPFINALEMUSIC | GI_INFOINDEXED,
+	GI_PAGESARERAW | GI_MAPxx | GI_NOLOOPFINALEMUSIC | GI_INFOINDEXED | GI_ALWAYSFALLINGDAMAGE,
 	"TITLE",
 	"CREDIT",
 	"CREDIT",
@@ -130,7 +130,7 @@ gameinfo_t HereticSWGameInfo =
 
 gameinfo_t SharewareGameInfo =
 {
-	GI_SHAREWARE | GI_NOCRAZYDEATH,
+	GI_SHAREWARE,
 	{ 'T','I','T','L','E','P','I','C' },
 	"CREDIT",
 	"HELP2",
@@ -156,7 +156,7 @@ gameinfo_t SharewareGameInfo =
 
 gameinfo_t RegisteredGameInfo =
 {
-	GI_NOCRAZYDEATH,
+	0,
 	{ 'T','I','T','L','E','P','I','C' },
 	"CREDIT",
 	"HELP2",
@@ -182,7 +182,7 @@ gameinfo_t RegisteredGameInfo =
 
 gameinfo_t RetailGameInfo =
 {
-	GI_MENUHACK_RETAIL | GI_NOCRAZYDEATH,
+	GI_MENUHACK_RETAIL,
 	{ 'T','I','T','L','E','P','I','C' },
 	"CREDIT",
 	"CREDIT",

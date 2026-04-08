@@ -78,8 +78,10 @@ void FStat::PrintStat ()
 		char stattext[256];
 
 		m_CurrStat->GetStats (stattext);
+		screen->SetFont (ConFont);
 		screen->DrawText (CR_GREEN, 5, SCREENHEIGHT -
 			SmallFont->GetHeight(), stattext);
+		screen->SetFont (SmallFont);
 		SB_state = screen->GetPageCount ();
 	}
 }
@@ -98,7 +100,7 @@ void FStat::DumpRegisteredStats ()
 
 CCMD (stat)
 {
-	if (argc != 2)
+	if (argv.argc() != 2)
 	{
 		Printf ("Usage: stat <statistics>\n");
 		FStat::DumpRegisteredStats ();

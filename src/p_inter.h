@@ -25,7 +25,6 @@
 
 class player_s;
 
-bool P_GiveWeapon(player_s*, weapontype_t, BOOL);
 void P_GiveKey(player_s*, keytype_t);
 
 

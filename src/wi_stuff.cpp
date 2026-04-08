@@ -746,7 +746,7 @@ void WI_drawPercent (int x, int y, int p, int b)
 	if (p < 0)
 		return;
 
-	if (*wi_percents)
+	if (wi_percents)
 	{
 		FB->DrawPatchClean (percent, x, y);
 		if (b == 0)
@@ -1652,7 +1652,7 @@ void WI_Ticker ()
 	switch (state)
 	{
 	case StatCount:
-		if (*deathmatch)
+		if (deathmatch)
 			WI_updateDeathmatchStats ();
 		else if (multiplayer)
 			WI_updateNetgameStats ();
@@ -1870,7 +1870,7 @@ void WI_Drawer (void)
 	switch (state)
 	{
 	case StatCount:
-		if (*deathmatch)
+		if (deathmatch)
 			WI_drawDeathmatchStats();
 		else if (multiplayer)
 			WI_drawNetgameStats();
@@ -1907,7 +1907,7 @@ void WI_Start (wbstartstruct_t *wbstartstruct)
 	V_SetBlend (0,0,0,0);
 	WI_initVariables (wbstartstruct);
 	WI_loadData ();
-	if (*deathmatch)
+	if (deathmatch)
 		WI_initDeathmatchStats();
 	else if (multiplayer)
 		WI_initNetgameStats();

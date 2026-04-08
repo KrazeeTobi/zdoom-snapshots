@@ -78,13 +78,12 @@ enum SICommands
 // EXTERNAL FUNCTION PROTOTYPES --------------------------------------------
 
 void S_StartNamedSound (AActor *ent, fixed_t *pt, int channel, 
-	const char *name, float volume, float attenuation, BOOL looping);
+	const char *name, float volume, float attenuation, BOOL looping, int tag=0);
 
 // PUBLIC FUNCTION PROTOTYPES ----------------------------------------------
 
 // PRIVATE FUNCTION PROTOTYPES ---------------------------------------------
 
-static int STACK_ARGS SortS_rnd (const void *a, const void *b);
 static int STACK_ARGS SortPlayerClasses (const void *a, const void *b);
 static int S_DupPlayerSound (const char *pclass, int gender, int refid, int aliasref);
 static int S_AddPlayerClass (const char *name);
@@ -97,7 +96,7 @@ static void S_ParsePlayerSoundCommon (char pclass[MAX_SNDNAME+1], int &gender, i
 
 extern int sfx_sawup, sfx_sawidl, sfx_sawful, sfx_sawhit;
 extern int sfx_itemup, sfx_tink;
-extern int sfx_plasma, sfx_chngun, sfx_chainguy, sfx_empty;
+extern int sfx_empty;
 
 // PUBLIC DATA DEFINITIONS -------------------------------------------------
 
@@ -667,7 +666,6 @@ void S_ParseSndInfo ()
 	if (S_rnd.Size() > 0)
 	{
 		S_rnd.ShrinkToFit ();
-		qsort (&S_rnd[0], S_rnd.Size(), sizeof(FRandomSoundList), SortS_rnd);
 	}
 
 	S_ShrinkPlayerSoundLists ();
@@ -680,16 +678,7 @@ void S_ParseSndInfo ()
 	sfx_itemup = S_FindSound ("misc/i_pkup");
 	sfx_tink = S_FindSound ("misc/chat2");
 
-	sfx_plasma = S_FindSound ("weapons/plasmaf");
-	sfx_chngun = S_FindSound ("weapons/chngun");
-	sfx_chainguy = S_FindSound ("chainguy/attack");
 	sfx_empty = W_CheckNumForName ("dsempty");
-}
-
-static int STACK_ARGS SortS_rnd (const void *a, const void *b)
-{
-	return ((const FRandomSoundList *)a)->SfxHead -
-		   ((const FRandomSoundList *)b)->SfxHead;
 }
 
 //==========================================================================
@@ -876,6 +865,8 @@ int S_LookupPlayerSound (const char *pclass, int gender, int refid)
 
 static int S_LookupPlayerSound (int classidx, int gender, int refid)
 {
+	int ingender = gender;
+
 	if (classidx == -1)
 	{
 		classidx = DefPlayerClass;
@@ -898,12 +889,20 @@ static int S_LookupPlayerSound (int classidx, int gender, int refid)
 			}
 			return 0;
 		}
+		gender = g;
 	}
 
 	int sndnum = PlayerSounds[listidx + S_sfx[refid].link];
-	if (sndnum == 0 && classidx != DefPlayerClass)
-	{ // This sound is unavailable. Try the default class.
-		return S_LookupPlayerSound (DefPlayerClass, gender, refid);
+	if (sndnum == 0 || S_sfx[sndnum].lumpnum == -1 || S_sfx[sndnum].lumpnum == sfx_empty)
+	{ // This sound is unavailable.
+		if (ingender != 0)
+		{ // Try "male"
+			return S_LookupPlayerSound (classidx, 0, refid);
+		}
+		if (classidx != DefPlayerClass)
+		{ // Try the default class.
+			return S_LookupPlayerSound (DefPlayerClass, gender, refid);
+		}
 	}
 	return sndnum;
 }
@@ -957,7 +956,7 @@ CCMD (soundlist)
 		const sfxinfo_t *sfx = &S_sfx[i];
 		if (sfx->bRandomHeader)
 		{
-			Printf ("%3d. %s -> {", i, sfx->name);
+			Printf ("%3d. %s -> #%d {", i, sfx->name, sfx->link);
 			const FRandomSoundList *list = &S_rnd[sfx->link];
 			for (size_t j = 0; j < list->NumSounds; ++j)
 			{
@@ -1070,7 +1069,7 @@ void AAmbientSound::RunThink ()
 
 	if ((ambient->type & CONTINUOUS) == CONTINUOUS)
 	{
-		if (S_GetSoundPlayingInfo (this, S_FindSound (ambient->sound)))
+		if (S_IsActorPlayingSomething (this, CHAN_BODY))
 			return;
 
 		if (ambient->sound[0])

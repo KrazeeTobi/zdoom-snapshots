@@ -9,9 +9,14 @@ class FConfigFile;
 
 void C_ExecCmdLineParams ();
 
-// add commands to the console as if they were typed in
-// for map changing, etc
-void AddCommandString (char *text);
+// Add commands to the console as if they were typed in. Can handle wait
+// and semicolon-separated commands. This function may modify the source
+// string, but the string will be restored to its original state before
+// returning. Therefore, commands passed must not be in read-only memory.
+void AddCommandString (char *text, int keynum=0);
+
+// Process a single console command. Does not handle wait.
+void C_DoCommand (const char *cmd, int keynum=0);
 
 // Write out alias commands to a file for all current aliases.
 void C_ArchiveAliases (FConfigFile *f);
@@ -21,7 +26,25 @@ void C_SetAlias (const char *name, const char *cmd);
 // build a single string out of multiple strings
 char *BuildString (int argc, char **argv);
 
-typedef void (*CCmdRun) (int argc, char **argv, const char *args, AActor *instigator);
+// Class that can parse command lines
+class FCommandLine
+{
+public:
+	FCommandLine (const char *commandline);
+	~FCommandLine ();
+	int argc ();
+	char *operator[] (int i);
+	const char *args () { return cmd; }
+	const char *AllButFirstArg (int numToSkip=1);	// like args(), but can skip first n args
+
+private:
+	const char *cmd;
+	int _argc;
+	char **_argv;
+	long argsize;
+};
+
+typedef void (*CCmdRun) (FCommandLine &argv, AActor *instigator, int key);
 
 class FConsoleCommand
 {
@@ -31,7 +54,7 @@ public:
 	virtual bool IsAlias ();
 	void PrintCommand () { Printf ("%s\n", m_Name); }
 
-	virtual void Run (int argc, char **argv, const char *args, AActor *instigator);
+	virtual void Run (FCommandLine &args, AActor *instigator, int key);
 
 	FConsoleCommand *m_Next, **m_Prev;
 	char *m_Name;
@@ -42,20 +65,21 @@ protected:
 
 	CCmdRun m_RunFunc;
 
-	friend void C_DoCommand (char *cmd);
 };
 
 #define CCMD(n) \
-	void Cmd_##n (int, char **, const char *, AActor *); \
+	void Cmd_##n (FCommandLine &, AActor *, int key); \
 	FConsoleCommand Cmd_##n##_ (#n, Cmd_##n); \
-	void Cmd_##n (int argc, char **argv, const char *args, AActor *m_Instigator)
+	void Cmd_##n (FCommandLine &argv, AActor *m_Instigator, int key)
+
+const int KEY_DBLCLICKED = 0x8000;
 
 class FConsoleAlias : public FConsoleCommand
 {
 public:
 	FConsoleAlias (const char *name, const char *command);
 	~FConsoleAlias ();
-	void Run (int argc, char **argv, const char *args, AActor *m_Instigator);
+	void Run (FCommandLine &args, AActor *Instigator, int key);
 	bool IsAlias ();
 	void PrintAlias () { Printf ("%s : %s\n", m_Name, m_Command); }
 	void Archive (FConfigFile *f);
@@ -64,34 +88,29 @@ protected:
 };
 
 // Actions
-#define ACTION_MLOOK		0
-#define ACTION_KLOOK		1
-#define ACTION_USE			2
-#define ACTION_ATTACK		3
-#define ACTION_SPEED		4
-#define ACTION_MOVERIGHT	5
-#define ACTION_MOVELEFT		6
-#define ACTION_STRAFE		7
-#define ACTION_LOOKDOWN		8
-#define ACTION_LOOKUP		9
-#define ACTION_BACK			10
-#define ACTION_FORWARD		11
-#define ACTION_RIGHT		12
-#define ACTION_LEFT			13
-#define ACTION_MOVEDOWN		14
-#define ACTION_MOVEUP		15
-#define ACTION_JUMP			16
-#define ACTION_SHOWSCORES	17
-#define NUM_ACTIONS			18
-
-extern byte Actions[NUM_ACTIONS];
-
-struct ActionBits
+struct FButtonStatus
 {
-	unsigned int	key;
-	int				index;
-	char			name[12];
+	enum { MAX_KEYS = 6 };	// Maximum number of keys that can press this button
+
+	WORD Keys[MAX_KEYS];
+	BYTE bDown;				// Button is down right now
+	BYTE bWentDown;			// Button went down this tic
+	BYTE bWentUp;			// Button went up this tic
+	BYTE padTo16Bytes;
+
+	void PressKey (int keynum);
+	void ReleaseKey (int keynum);
+	void ResetTriggers () { bWentDown = bWentUp = false; }
 };
+
+extern FButtonStatus Button_Mlook, Button_Klook, Button_Use,
+	Button_Attack, Button_Speed, Button_MoveRight, Button_MoveLeft,
+	Button_Strafe, Button_LookDown, Button_LookUp, Button_Back,
+	Button_Forward, Button_Right, Button_Left, Button_MoveDown,
+	Button_MoveUp, Button_Jump, Button_ShowScores;
+
+void ResetButtonTriggers ();	// Call ResetTriggers for all buttons
+void ResetButtonStates ();		// Same as above, but also clear bDown
 
 extern unsigned int MakeKey (const char *s);
 

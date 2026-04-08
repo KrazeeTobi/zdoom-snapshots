@@ -6,28 +6,41 @@
 #include "doomtype.h"
 
 class AActor;
+class FDecal;
 
-class FDecal
+class FDecalBase
 {
 	friend class FDecalLib;
-
-private:
-	FDecal ();
-	~FDecal ();
-
-	FDecal *Left, *Right;
-
 public:
+	virtual FDecal *GetDecal ();
+	
+protected:
+	FDecalBase ();
+	virtual ~FDecalBase ();
+
+	FDecalBase *Left, *Right;
+	char *Name;
+	BYTE SpawnID;
+};
+
+class FDecal : public FDecalBase
+{
+	friend class FDecalLib;
+public:
+	FDecal () : Translation (NULL) {}
+
 	void ApplyToActor (AActor *actor) const;
+	FDecal *GetDecal ();
 
 	DWORD ShadeColor;
 	BYTE *Translation;
-	char *Name;
 	BYTE ScaleX, ScaleY;
-	BYTE SpawnID, RenderStyle;
+	BYTE RenderStyle;
 	WORD PicNum;
 	WORD RenderFlags;
 	WORD Alpha;				// same as (actor->alpha >> 1)
+
+	enum { DECAL_RandomFlipX = 0x100, DECAL_RandomFlipY = 0x200 };
 };
 
 class FDecalLib
@@ -42,17 +55,23 @@ public:
 
 	const FDecal *GetDecalByNum (byte num) const;
 	const FDecal *GetDecalByName (const char *name) const;
-	void AddDecal (const char *name, byte num, const FDecal &decal);
 
 private:
 	struct FTranslation;
 
-	static void DelTree (FDecal *root);
-	static FDecal *ScanTreeForNum (const BYTE num, FDecal *root);
-	static FDecal *ScanTreeForName (const char *name, FDecal *root);
+	static void DelTree (FDecalBase *root);
+	static FDecalBase *ScanTreeForNum (const BYTE num, FDecalBase *root);
+	static FDecalBase *ScanTreeForName (const char *name, FDecalBase *root);
 	FTranslation *GenerateTranslation (DWORD start, DWORD end);
+	void AddDecal (const char *name, byte num, const FDecal &decal);
+	void AddDecal (FDecalBase *decal);
 
-	FDecal *Root;
+	BYTE GetDecalID ();
+	void ParseDecal ();
+	void ParseDecalGroup ();
+	void ParseGenerator ();
+
+	FDecalBase *Root;
 	FTranslation *Translations;
 };
 

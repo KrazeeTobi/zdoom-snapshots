@@ -295,11 +295,7 @@ unsigned NetbufferChecksum (int len)
 
 	c = 0x1234567;
 
-	// FIXME -endianess?
-//#ifdef NORMALUNIX
-//	return 0;					// byte order problems
-//#endif
-
+	// FIXME -endianess? [RH] Is endian-ness still a problem?
 	l = (len - myoffsetof(doomdata_t, retransmitfrom))/4;
 	for (i=0 ; i<l ; i++)
 		c += ((unsigned *)&netbuffer->retransmitfrom)[i] * (i+1);
@@ -481,7 +477,7 @@ void GetPackets (void)
 			nodeingame[netnode] = false;
 			playeringame[netconsole] = false;
 
-			if (*deathmatch)
+			if (deathmatch)
 			{
 				Printf ("%s left the game with %d frags\n",
 						 players[netconsole].userinfo.netname,
@@ -1331,7 +1327,7 @@ void Net_DoCommand (int type, byte **stream, int player)
 		{
 			byte which = ReadByte (stream);
 			FWeaponInfo **infos = (players[player].powers[pw_weaponlevel2]
-				&& *deathmatch) ? wpnlev2info : wpnlev1info;
+				&& deathmatch) ? wpnlev2info : wpnlev1info;
 
 			if (which < NUMWEAPONS
 				&& which != players[player].readyweapon
@@ -1400,13 +1396,11 @@ void Net_DoCommand (int type, byte **stream, int player)
 		{
 			paused = 0;
 			S_ResumeSound ();
-			I_ResumeMouse ();
 		}
 		else
 		{
 			paused = player + 1;
 			S_PauseSound ();
-			I_PauseMouse ();
 		}
 		BorderNeedRefresh = screen->GetPageCount ();
 		break;

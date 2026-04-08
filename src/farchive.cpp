@@ -9,8 +9,19 @@
 #include "cmdlib.h"
 #include "i_system.h"
 #include "c_cvars.h"
+#include "c_dispatch.h"
 #include "d_player.h"
 #include "dobject.h"
+
+#define NEW_OBJ				((BYTE)1)
+#define NEW_CLS_OBJ			((BYTE)2)
+#define OLD_OBJ				((BYTE)3)
+#define NULL_OBJ			((BYTE)4)
+#define NEW_PLYR_OBJ		((BYTE)5)
+#define NEW_PLYR_CLS_OBJ	((BYTE)6)
+#define NEW_NAME			((BYTE)27)
+#define OLD_NAME			((BYTE)28)
+#define NIL_NAME			((BYTE)33)
 
 #ifdef __BIG_ENDIAN__
 #define SWAP_WORD(x)
@@ -231,7 +242,7 @@ void FCompressedFile::Implode ()
 	byte *oldbuf = m_Buffer;
 	int r;
 
-	if (!*nofilecompression && !m_NoCompress)
+	if (!nofilecompression && !m_NoCompress)
 	{
 		outlen = OUT_LEN(len);
 		do
@@ -248,12 +259,12 @@ void FCompressedFile::Implode ()
 		// If the data could not be compressed, store it as-is.
 		if (r != Z_OK || outlen >= len)
 		{
-			DPrintf ("cfile could not be deflated\n");
+			DPrintf ("cfile could not be compress\n");
 			outlen = 0;
 		}
 		else
 		{
-			DPrintf ("cfile shrank from %u to %u bytes\n", len, outlen);
+			DPrintf ("cfile shrank from %lu to %lu bytes\n", len, outlen);
 		}
 	}
 	else
@@ -407,7 +418,7 @@ void FCompressedMemFile::Serialize (FArchive &arc)
 	{
 		if (m_ImplodedBuffer == NULL)
 		{
-			I_Error ("FCompressedMemFile must be deflated before storing");
+			I_Error ("FCompressedMemFile must be compressed before storing");
 		}
 		arc.Write (ZSig, 4);
 
@@ -485,7 +496,10 @@ FArchive::FArchive (FFile &file)
 	}
 	m_ClassCount = 0;
 	for (i = 0; i < EObjectHashSize; i++)
+	{
 		m_ObjectHash[i] = ~0;
+		m_NameHash[i] = NameMap::NO_INDEX;
+	}
 }
 
 FArchive::~FArchive ()
@@ -513,7 +527,7 @@ void FArchive::Close ()
 	{
 		m_File->Close ();
 		m_File = NULL;
-		DPrintf ("Processed %d objects\n", m_ObjectCount);
+		DPrintf ("Processed %ld objects\n", m_ObjectCount);
 	}
 }
 
@@ -546,6 +560,72 @@ DWORD FArchive::ReadCount ()
 	} while (in & 0x80);
 
 	return count;
+}
+
+void FArchive::WriteName (const char *name)
+{
+	BYTE id;
+
+	if (name == NULL)
+	{
+		id = NIL_NAME;
+		Write (&id, 1);
+	}
+	else
+	{
+		DWORD index = FindName (name);
+		if (index != NameMap::NO_INDEX)
+		{
+			id = OLD_NAME;
+			Write (&id, 1);
+			WriteCount (index);
+		}
+		else
+		{
+			AddName (name);
+			id = NEW_NAME;
+			Write (&id, 1);
+			WriteString (name);
+		}
+	}
+}
+
+const char *FArchive::ReadName ()
+{
+	BYTE id;
+
+	operator<< (id);
+	if (id == NIL_NAME)
+	{
+		return NULL;
+	}
+	else if (id == OLD_NAME)
+	{
+		DWORD index = ReadCount ();
+		if (index >= m_Names.Size())
+		{
+			I_Error ("Name %lu has not been read yet\n", index);
+		}
+		return &m_NameStorage[m_Names[index].StringStart];
+	}
+	else if (id == NEW_NAME)
+	{
+		DWORD index;
+		DWORD size = ReadCount ();
+		char *str;
+
+		index = m_NameStorage.Reserve (size);
+		str = &m_NameStorage[index];
+		Read (str, size-1);
+		str[size-1] = 0;
+		AddName (index);
+		return str;
+	}
+	else
+	{
+		I_Error ("Expected a name but got something else\n");
+		return NULL;
+	}
 }
 
 void FArchive::WriteString (const char *str)
@@ -717,13 +797,6 @@ FArchive &FArchive::SerializeObject (DObject *&object, TypeInfo *type)
 		return ReadObject (object, type);
 }
 
-#define NEW_OBJ				((BYTE)1)
-#define NEW_CLS_OBJ			((BYTE)2)
-#define OLD_OBJ				((BYTE)3)
-#define NULL_OBJ			((BYTE)4)
-#define NEW_PLYR_OBJ		((BYTE)5)
-#define NEW_PLYR_CLS_OBJ	((BYTE)6)
-
 FArchive &FArchive::WriteObject (DObject *obj)
 {
 	player_t *player;
@@ -828,7 +901,7 @@ FArchive &FArchive::ReadObject (DObject* &obj, TypeInfo *wanttype)
 		index = ReadCount ();
 		if (index >= m_ObjectCount)
 		{
-			I_Error ("Object reference too high (%u; max is %u)\n", index, m_ObjectCount);
+			I_Error ("Object reference too high (%lu; max is %lu)\n", index, m_ObjectCount);
 		}
 		obj = (DObject *)m_ObjectMap[index].object;
 		break;
@@ -888,6 +961,52 @@ FArchive &FArchive::ReadObject (DObject* &obj, TypeInfo *wanttype)
 	return *this;
 }
 
+DWORD FArchive::AddName (const char *name)
+{
+	DWORD index;
+	size_t hash = MakeKey (name) % EObjectHashSize;
+
+	index = FindName (name, hash);
+	if (index == NameMap::NO_INDEX)
+	{
+		size_t namelen = strlen (name) + 1;
+		size_t strpos = m_NameStorage.Reserve (namelen);
+		NameMap mapper = { strpos, m_NameHash[hash] };
+
+		memcpy (&m_NameStorage[strpos], name, namelen);
+		m_NameHash[hash] = index = m_Names.Push (mapper);
+	}
+	return index;
+}
+
+DWORD FArchive::AddName (size_t start)
+{
+	size_t hash = MakeKey (&m_NameStorage[start]) % EObjectHashSize;
+	NameMap mapper = { start, m_NameHash[hash] };
+	return (m_NameHash[hash] = m_Names.Push (mapper));
+}
+
+DWORD FArchive::FindName (const char *name) const
+{
+	return FindName (name, MakeKey (name) % EObjectHashSize);
+}
+
+DWORD FArchive::FindName (const char *name, size_t bucket) const
+{
+	size_t map = m_NameHash[bucket];
+
+	while (map != NameMap::NO_INDEX)
+	{
+		const NameMap *mapping = &m_Names[map];
+		if (strcmp (name, &m_NameStorage[mapping->StringStart]) == 0)
+		{
+			return map;
+		}
+		map = mapping->HashNext;
+	}
+	return map;
+}
+
 DWORD FArchive::WriteClass (const TypeInfo *info)
 {
 	if (m_ClassCount >= TypeInfo::m_NumTypes)
@@ -930,7 +1049,7 @@ const TypeInfo *FArchive::ReadClass ()
 			return TypeInfo::m_Types[i];
 		}
 	}
-	I_Error ("Unknown class '%s'\n", typeName);
+	I_Error ("Unknown class '%s'\n", typeName.val);
 	return NULL;
 }
 
@@ -951,7 +1070,7 @@ const TypeInfo *FArchive::ReadStoredClass (const TypeInfo *wanttype)
 	DWORD index = ReadCount ();
 	if (index >= m_ClassCount)
 	{
-		I_Error ("Class reference too high (%u; max is %u)\n", index, m_ClassCount);
+		I_Error ("Class reference too high (%lu; max is %lu)\n", index, m_ClassCount);
 	}
 	const TypeInfo *type = m_TypeMap[index].toCurrent;
 	if (!type->IsDescendantOf (wanttype))
@@ -990,7 +1109,7 @@ DWORD FArchive::MapObject (const DObject *obj)
 
 DWORD FArchive::HashObject (const DObject *obj) const
 {
-	return (DWORD)((ptrdiff_t)obj % EObjectHashSize);
+	return (DWORD)((size_t)obj % EObjectHashSize);
 }
 
 DWORD FArchive::FindObjectIndex (const DObject *obj) const

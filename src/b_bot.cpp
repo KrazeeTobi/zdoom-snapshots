@@ -31,7 +31,7 @@ CCMD (addbot)
 		return;
 	}
 
-	if (argc > 2)
+	if (argv.argc() > 2)
 	{
 		Printf ("addbot [botname] : add a bot to the game\n");
 		return;
@@ -44,7 +44,7 @@ CCMD (addbot)
 		if (color>10) color=10;
 	}
 */
-	if (argc > 1)
+	if (argv.argc() > 1)
 		bglobal.SpawnBot (argv[1]);
 	else
 		bglobal.SpawnBot (NULL);

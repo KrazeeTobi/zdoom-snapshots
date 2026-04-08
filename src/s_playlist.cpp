@@ -7,8 +7,11 @@
 //**
 //**************************************************************************
 
+#include <stdlib.h>
+
 #include "cmdlib.h"
 #include "s_playlist.h"
+#include "templates.h"
 
 FPlayList::FPlayList (const char *path)
 {
@@ -106,6 +109,18 @@ bool FPlayList::NextLine (FILE *file, char *buffer, int n)
 	return true;
 }
 
+// Shuffles the playlist and resets the position to the start
+void FPlayList::Shuffle ()
+{
+	int i;
+
+	for (i = 0; i < NumSongs; ++i)
+	{
+		swap (Songs[i], Songs[rand()]);
+	}
+	Position = 0;
+}
+
 int FPlayList::GetNumSongs () const
 {
 	return NumSongs;
@@ -114,9 +129,13 @@ int FPlayList::GetNumSongs () const
 int FPlayList::SetPosition (int position)
 {
 	if ((unsigned)position >= (unsigned)NumSongs)
+	{
 		Position = 0;
+	}
 	else
+	{
 		Position = position;
+	}
 	return Position;
 }
 
@@ -128,7 +147,18 @@ int FPlayList::GetPosition () const
 int FPlayList::Advance ()
 {
 	if (++Position >= NumSongs)
+	{
 		Position = 0;
+	}
+	return Position;
+}
+
+int FPlayList::Backup ()
+{
+	if (--Position < 0)
+	{
+		Position = NumSongs - 1;
+	}
 	return Position;
 }
 

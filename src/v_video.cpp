@@ -199,12 +199,12 @@ void DCanvas::Clear (int left, int top, int right, int bottom, int color) const
 
 void DCanvas::Dim () const
 {
-	if (*dimamount < 0.f)
+	if (dimamount < 0.f)
 		dimamount = 0.f;
-	else if (*dimamount > 1.f)
+	else if (dimamount > 1.f)
 		dimamount = 1.f;
 
-	if (*dimamount == 0.f)
+	if (dimamount == 0.f)
 		return;
 
 	DWORD *bg2rgb;
@@ -217,7 +217,7 @@ void DCanvas::Dim () const
 		DWORD *fg2rgb;
 		fixed_t amount;
 
-		amount = (fixed_t)(*dimamount * 64);
+		amount = (fixed_t)(dimamount * 64);
 		fg2rgb = Col2RGB8[amount];
 		bg2rgb = Col2RGB8[64-amount];
 		fg = fg2rgb[dimcolor.GetIndex ()];
@@ -395,23 +395,19 @@ int V_GetColor (const DWORD *palette, const char *str)
 
 CCMD (setcolor)
 {
-	char *desc, setcmd[256], *name;
+	char *desc, setcmd[256];
 
-	if (argc < 3)
+	if (argv.argc() < 3)
 	{
 		Printf ("Usage: setcolor <cvar> <color>\n");
 		return;
 	}
 
-	if ( (name = BuildString (argc - 2, argv + 2)) )
+	if ( (desc = V_GetColorStringByName (argv.AllButFirstArg (2))) )
 	{
-		if ( (desc = V_GetColorStringByName (name)) )
-		{
-			sprintf (setcmd, "set %s \"%s\"", argv[1], desc);
-			AddCommandString (setcmd);
-			delete[] desc;
-		}
-		delete[] name;
+		sprintf (setcmd, "set %s \"%s\"", argv[1], desc);
+		C_DoCommand (setcmd);
+		delete[] desc;
 	}
 }
 
@@ -574,7 +570,7 @@ DFrameBuffer::DFrameBuffer (int width, int height)
 void DFrameBuffer::DrawRateStuff ()
 {
 	// Draws frame time and cumulative fps
-	if (*vid_fps)
+	if (vid_fps)
 	{
 		QWORD ms = I_MSTime ();
 		QWORD howlong = ms - LastMS;
@@ -606,7 +602,7 @@ void DFrameBuffer::DrawRateStuff ()
 	}
 
 	// draws little dots on the bottom of the screen
-	if (*ticker)
+	if (ticker)
 	{
 		int i = I_GetTime();
 		int tics = i - LastTic;
@@ -651,7 +647,7 @@ bool V_DoModeSetup (int width, int height, int bits)
 
 	screen = buff;
 	screen->SetFont (SmallFont);
-	screen->SetGamma (*Gamma);
+	screen->SetGamma (Gamma);
 
 	CleanXfac = width / 320;
 	CleanYfac = height / 200;
@@ -711,13 +707,13 @@ CCMD (vid_setmode)
 	int		width = 0, height = SCREENHEIGHT;
 	int		bits = DisplayBits;
 
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		width = atoi (argv[1]);
-		if (argc > 2)
+		if (argv.argc() > 2)
 		{
 			height = atoi (argv[2]);
-			if (argc > 3)
+			if (argv.argc() > 3)
 			{
 				bits = atoi (argv[3]);
 			}
@@ -789,8 +785,8 @@ void V_Init (void)
 	{
 		if (height == 0)
 		{
-			width = *vid_defwidth;
-			height = *vid_defheight;
+			width = vid_defwidth;
+			height = vid_defheight;
 		}
 		else
 		{
@@ -804,7 +800,7 @@ void V_Init (void)
 
 	if (bits == 0)
 	{
-		bits = *vid_defbits;
+		bits = vid_defbits;
 	}
 
 	atterm (FreeCanvasChain);

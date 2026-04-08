@@ -327,7 +327,8 @@ FWeaponInfo AFist::WeaponInfo =
 	100,
 	0,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(AFist)
 };
 
 IMPLEMENT_ACTOR (AFist, Doom, -1, 0)
@@ -422,7 +423,8 @@ FWeaponInfo APistol::WeaponInfo =
 	100,
 	0,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(APistol)
 };
 
 IMPLEMENT_ACTOR (APistol, Doom, -1, 0)
@@ -445,7 +447,7 @@ void A_FirePistol (player_t *player, pspdef_t *psp)
 	S_Sound (player->mo, CHAN_WEAPON, "weapons/pistol", 1, ATTN_NORM);
 
 	player->mo->PlayAttacking2 ();
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[wpnlev1info[player->readyweapon]->ammo]--;
 
 	P_SetPsprite (player,
@@ -465,8 +467,8 @@ class AChainsaw : public AWeapon
 	DECLARE_ACTOR (AChainsaw, AWeapon)
 	AT_GAME_SET_FRIEND (Chainsaw)
 protected:
-	bool TryPickup (AActor *toucher);
 	const char *PickupMessage ();
+	weapontype_t OldStyleID () const;
 private:
 	static FWeaponInfo WeaponInfo;
 };
@@ -508,7 +510,8 @@ FWeaponInfo AChainsaw::WeaponInfo =
 	0,
 	0,
 	"weapons/sawup",
-	"weapons/sawidle"
+	"weapons/sawidle",
+	RUNTIME_CLASS(AChainsaw)
 };
 
 IMPLEMENT_ACTOR (AChainsaw, Doom, 2005, 32)
@@ -528,9 +531,9 @@ AT_GAME_SET (Chainsaw)
 	}
 }
 
-bool AChainsaw::TryPickup (AActor *toucher)
+weapontype_t AChainsaw::OldStyleID () const
 {
-	return P_GiveWeapon (toucher->player, wp_chainsaw, flags & MF_DROPPED);
+	return wp_chainsaw;
 }
 
 const char *AChainsaw::PickupMessage ()
@@ -590,8 +593,8 @@ class AShotgun : public AWeapon
 	DECLARE_ACTOR (AShotgun, AWeapon)
 	AT_GAME_SET_FRIEND (Shotgun)
 protected:
-	bool TryPickup (AActor *toucher);
 	const char *PickupMessage ();
+	weapontype_t OldStyleID () const;
 private:
 	static FWeaponInfo WeaponInfo;
 };
@@ -642,7 +645,8 @@ FWeaponInfo AShotgun::WeaponInfo =
 	100,
 	0,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(AShotgun)
 };
 
 IMPLEMENT_ACTOR (AShotgun, Doom, 2001, 27)
@@ -662,9 +666,9 @@ AT_GAME_SET (Shotgun)
 	}
 }
 
-bool AShotgun::TryPickup (AActor *toucher)
+weapontype_t AShotgun::OldStyleID () const
 {
-	return P_GiveWeapon (toucher->player, wp_shotgun, flags & MF_DROPPED);
+	return wp_shotgun;
 }
 
 const char *AShotgun::PickupMessage ()
@@ -682,7 +686,7 @@ void A_FireShotgun (player_t *player, pspdef_t *psp)
 	S_Sound (player->mo, CHAN_WEAPON,  "weapons/shotgf", 1, ATTN_NORM);
 	player->mo->PlayAttacking2 ();
 
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[wpnlev1info[player->readyweapon]->ammo]--;
 
 	P_SetPsprite (player,
@@ -708,8 +712,8 @@ class ASuperShotgun : public AWeapon
 	DECLARE_ACTOR (ASuperShotgun, AWeapon)
 	AT_GAME_SET_FRIEND (SuperShotgun)
 protected:
-	bool TryPickup (AActor *toucher);
 	const char *PickupMessage ();
+	weapontype_t OldStyleID () const;
 private:
 	static FWeaponInfo WeaponInfo;
 };
@@ -765,7 +769,8 @@ FWeaponInfo ASuperShotgun::WeaponInfo =
 	100,
 	0,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(ASuperShotgun)
 };
 
 IMPLEMENT_ACTOR (ASuperShotgun, Doom, 82, 33)
@@ -785,9 +790,9 @@ AT_GAME_SET (SuperShotgun)
 	}
 }
 
-bool ASuperShotgun::TryPickup (AActor *toucher)
+weapontype_t ASuperShotgun::OldStyleID () const
 {
-	return P_GiveWeapon (toucher->player, wp_supershotgun, flags & MF_DROPPED);
+	return wp_supershotgun;
 }
 
 const char *ASuperShotgun::PickupMessage ()
@@ -808,7 +813,7 @@ void A_FireShotgun2 (player_t *player, pspdef_t *psp)
 	S_Sound (player->mo, CHAN_WEAPON, "weapons/sshotf", 1, ATTN_NORM);
 	player->mo->PlayAttacking2 ();
 
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[wpnlev1info[player->readyweapon]->ammo]-=2;
 
 	P_SetPsprite (player,
@@ -859,8 +864,8 @@ class AChaingun : public AWeapon
 	DECLARE_ACTOR (AChaingun, AWeapon)
 	AT_GAME_SET_FRIEND (Chaingun)
 protected:
-	bool TryPickup (AActor *toucher);
 	const char *PickupMessage ();
+	weapontype_t OldStyleID () const;
 private:
 	static FWeaponInfo WeaponInfo;
 };
@@ -905,7 +910,8 @@ FWeaponInfo AChaingun::WeaponInfo =
 	100,
 	0,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(AChaingun)
 };
 
 IMPLEMENT_ACTOR (AChaingun, Doom, 2002, 28)
@@ -925,9 +931,9 @@ AT_GAME_SET (Chaingun)
 	}
 }
 
-bool AChaingun::TryPickup (AActor *toucher)
+weapontype_t AChaingun::OldStyleID () const
 {
-	return P_GiveWeapon (toucher->player, wp_chaingun, flags & MF_DROPPED);
+	return wp_chaingun;
 }
 
 const char *AChaingun::PickupMessage ()
@@ -946,7 +952,7 @@ void A_FireCGun (player_t *player, pspdef_t *psp)
 		return;
 				
 	player->mo->PlayAttacking2 ();
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[wpnlev1info[player->readyweapon]->ammo]--;
 
 	P_SetPsprite (player,
@@ -969,8 +975,8 @@ class ARocketLauncher : public AWeapon
 	DECLARE_ACTOR (ARocketLauncher, AWeapon)
 	AT_GAME_SET_FRIEND (RocketLauncher)
 protected:
-	bool TryPickup (AActor *toucher);
 	const char *PickupMessage ();
+	weapontype_t OldStyleID () const;
 private:
 	static FWeaponInfo WeaponInfo;
 };
@@ -1017,7 +1023,8 @@ FWeaponInfo ARocketLauncher::WeaponInfo =
 	100,
 	0,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(ARocketLauncher)
 };
 
 IMPLEMENT_ACTOR (ARocketLauncher, Doom, 2003, 29)
@@ -1037,9 +1044,9 @@ AT_GAME_SET (RocketLauncher)
 	}
 }
 
-bool ARocketLauncher::TryPickup (AActor *toucher)
+weapontype_t ARocketLauncher::OldStyleID () const
 {
-	return P_GiveWeapon (toucher->player, wp_missile, flags & MF_DROPPED);
+	return wp_missile;
 }
 
 const char *ARocketLauncher::PickupMessage ()
@@ -1084,7 +1091,7 @@ void ARocket::BeginPlay ()
 //
 void A_FireMissile (player_t *player, pspdef_t *psp)
 {
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[wpnlev1info[player->readyweapon]->ammo]--;
 	P_SpawnPlayerMissile (player->mo, RUNTIME_CLASS(ARocket));
 }
@@ -1098,8 +1105,8 @@ class APlasmaRifle : public AWeapon
 	DECLARE_ACTOR (APlasmaRifle, AWeapon)
 	AT_GAME_SET_FRIEND (PlasmaRifle)
 protected:
-	bool TryPickup (AActor *toucher);
 	const char *PickupMessage ();
+	weapontype_t OldStyleID () const;
 private:
 	static FWeaponInfo WeaponInfo;
 };
@@ -1143,7 +1150,8 @@ FWeaponInfo APlasmaRifle::WeaponInfo =
 	100,
 	0,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(APlasmaRifle)
 };
 
 IMPLEMENT_ACTOR (APlasmaRifle, Doom, 2004, 30)
@@ -1163,9 +1171,9 @@ AT_GAME_SET (PlasmaRifle)
 	}
 }
 
-bool APlasmaRifle::TryPickup (AActor *toucher)
+weapontype_t APlasmaRifle::OldStyleID () const
 {
-	return P_GiveWeapon (toucher->player, wp_plasma, flags & MF_DROPPED);
+	return wp_plasma;
 }
 
 const char *APlasmaRifle::PickupMessage ()
@@ -1209,7 +1217,7 @@ END_DEFAULTS
 //
 void A_FirePlasma (player_t *player, pspdef_t *psp)
 {
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[wpnlev1info[player->readyweapon]->ammo]--;
 
 	if (wpnlev1info[player->readyweapon]->flashstate)
@@ -1241,7 +1249,7 @@ void A_FireRailgun (player_t *player, pspdef_t *psp)
 		return;
 	}
 
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[wpnlev1info[player->readyweapon]->ammo] -= 10;
 
 	if (wpnlev1info[player->readyweapon]->flashstate)
@@ -1252,7 +1260,7 @@ void A_FireRailgun (player_t *player, pspdef_t *psp)
 					   + (P_Random (pr_fireplasma)&1));
 	}
 
-	damage = *deathmatch ? 100 : 150;
+	damage = deathmatch ? 100 : 150;
 
 	P_RailAttack (player->mo, damage, RailOffset);
 	RailOffset = 0;
@@ -1286,8 +1294,8 @@ class ABFG9000 : public AWeapon
 	DECLARE_ACTOR (ABFG9000, AWeapon)
 	AT_GAME_SET_FRIEND (BFG9000)
 protected:
-	bool TryPickup (AActor *toucher);
 	const char *PickupMessage ();
+	weapontype_t OldStyleID () const;
 private:
 	static FWeaponInfo WeaponInfo;
 };
@@ -1345,7 +1353,8 @@ FWeaponInfo ABFG9000::WeaponInfo =
 	100,
 	0,
 	NULL,
-	NULL
+	NULL,
+	RUNTIME_CLASS(ABFG9000)
 };
 
 IMPLEMENT_ACTOR (ABFG9000, Doom, 2006, 31)
@@ -1365,9 +1374,9 @@ AT_GAME_SET (BFG9000)
 	}
 }
 
-bool ABFG9000::TryPickup (AActor *toucher)
+weapontype_t ABFG9000::OldStyleID () const
 {
-	return P_GiveWeapon (toucher->player, wp_bfg, flags & MF_DROPPED);
+	return wp_bfg;
 }
 
 const char *ABFG9000::PickupMessage ()
@@ -1432,11 +1441,11 @@ void A_FireBFG (player_t *player, pspdef_t *psp)
 	angle_t storedpitch = player->mo->pitch;
 	int storedaimdist = player->userinfo.aimdist;
 
-	if (!(*dmflags & DF_INFINITE_AMMO))
+	if (!(dmflags & DF_INFINITE_AMMO))
 		player->ammo[wpnlev1info[player->readyweapon]->ammo] -=
 			wpnlev1info[player->readyweapon]->ammouse;
 
-	if (*dmflags2 & DF2_NO_FREEAIMBFG)
+	if (dmflags2 & DF2_NO_FREEAIMBFG)
 	{
 		player->mo->pitch = 0;
 		player->userinfo.aimdist = ANGLE_1*32;

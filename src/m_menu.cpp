@@ -78,6 +78,7 @@ struct FSaveGameNode : public Node
 {
 	char Title[SAVESTRINGSIZE];
 	char *Filename;
+	bool bOldVersion;
 };
 
 // EXTERNAL FUNCTION PROTOTYPES --------------------------------------------
@@ -111,6 +112,7 @@ static void M_SaveSelect (const FSaveGameNode *file);
 static void M_ReadSaveStrings ();
 static void M_ExtractSaveData (const FSaveGameNode *file);
 static void M_UnloadSaveData ();
+static void M_InsertSaveNode (FSaveGameNode *node);
 static BOOL M_SaveLoadResponder (event_t *ev);
 static void M_DeleteSaveResponse (int choice);
 
@@ -556,7 +558,7 @@ CCMD (bumpgamma)
 	// on the fly for *any* gamma level.
 	// Q: What are reasonable limits to use here?
 
-	float newgamma = *Gamma + 0.1;
+	float newgamma = Gamma + 0.1;
 
 	if (newgamma > 3.0)
 		newgamma = 1.0;
@@ -604,31 +606,62 @@ void M_ReadSaveStrings ()
 				FILE *file = fopen (I_FindName (&c_file), "rb");
 				if (file != NULL)
 				{
-					char sig[MAX_PATH];
+					char sig[PATH_MAX];
 
-					if (fread (sig, 1, 16, file) == 16 &&
-						strncmp (sig, SAVESIG, 16) == 0)
+					if (fread (sig, 1, 16, file) == 16)
 					{
 						char title[SAVESTRINGSIZE];
 						int i, c;
+						bool oldVer = true;
+						bool addIt = false;
 
-						fread (title, 1, SAVESTRINGSIZE, file);
-						fseek (file, 8, SEEK_CUR);		// skip map name
-
-						// Check if it's for the current game.
-						// If it is, add it. Otherwise, ignore it.
-						i = 0;
-						do
+						if (strncmp (sig, SAVESIG, 9) == 0)
 						{
-							c = fgetc (file);
-							sig[i++] = c;
-						} while (c != EOF && c != 0);
-						if (c != EOF && stricmp (sig, W_GetWadName (1)) == 0)
+							fread (title, 1, SAVESTRINGSIZE, file);
+							fseek (file, 8, SEEK_CUR);		// skip map name
+
+							if (strncmp (sig, SAVESIG, 16) == 0)
+							{
+								// Was saved with a compatible ZDoom version,
+								// so check if it's for the current game.
+								// If it is, add it. Otherwise, ignore it.
+								i = 0;
+								do
+								{
+									c = fgetc (file);
+									sig[i++] = c;
+								} while (c != EOF && c != 0);
+								if (c != EOF && stricmp (sig, W_GetWadName (1)) == 0)
+								{
+									addIt = true;
+									oldVer = false;
+								}
+							}
+							else
+							{ // Game is from a different ZDoom version. Add it
+							  // just so that the user has a means of deleting it
+							  // if desired.
+								addIt = true;
+							}
+						}
+						else
+						{ // Before 1.23 beta 21, the savesig came after the title
+							memcpy (title, sig, 16);
+							if (fread (title + 16, 1, SAVESTRINGSIZE-16, file) == SAVESTRINGSIZE-16 &&
+								fread (sig, 1, 16, file) == 16 &&
+								strncmp (sig, SAVESIG, 9) == 0)
+							{ // Game is from an old ZDoom.
+								addIt = true;
+							}
+						}
+
+						if (addIt)
 						{
 							FSaveGameNode *node = new FSaveGameNode;
 							node->Filename = copystring (I_FindName (&c_file));
+							node->bOldVersion = oldVer;
 							memcpy (node->Title, title, SAVESTRINGSIZE);
-							SaveGames.AddTail (node);
+							M_InsertSaveNode (node);
 						}
 					}
 					fclose (file);
@@ -643,6 +676,38 @@ void M_ReadSaveStrings ()
 	}
 }
 
+void M_InsertSaveNode (FSaveGameNode *node)
+{
+	FSaveGameNode *probe;
+
+	if (SaveGames.IsEmpty ())
+	{
+		SaveGames.AddHead (node);
+		return;
+	}
+
+	if (node->bOldVersion)
+	{ // Add node at bottom of list
+		probe = static_cast<FSaveGameNode *>(SaveGames.TailPred);
+		while (probe->Pred != NULL && probe->bOldVersion &&
+			stricmp (node->Title, probe->Title) < 0)
+		{
+			probe = static_cast<FSaveGameNode *>(probe->Pred);
+		}
+		node->Insert (probe);
+	}
+	else
+	{ // Add node at top of list
+		probe = static_cast<FSaveGameNode *>(SaveGames.Head);
+		while (probe->Succ != NULL && !probe->bOldVersion &&
+			stricmp (node->Title, probe->Title) > 0)
+		{
+			probe = static_cast<FSaveGameNode *>(probe->Succ);
+		}
+		node->InsertBefore (probe);
+	}
+}
+
 void M_NotifyNewSave (const char *file, const char *title)
 {
 	FSaveGameNode *node;
@@ -652,7 +717,7 @@ void M_NotifyNewSave (const char *file, const char *title)
 		 node->Succ != NULL;
 		 node = static_cast<FSaveGameNode *>(node->Succ))
 	{
-#ifdef UNIX
+#ifdef unix
 		if (strcmp (node->Filename, file) == 0)
 #else
 		if (stricmp (node->Filename, file) == 0)
@@ -666,7 +731,9 @@ void M_NotifyNewSave (const char *file, const char *title)
 	node = new FSaveGameNode;
 	strcpy (node->Title, title);
 	node->Filename = copystring (file);
-	SaveGames.AddHead (node);
+	node->bOldVersion = false;
+	M_InsertSaveNode (node);
+	SelSaveGame = node;
 
 	if (quickSaveSlot == NULL)
 	{
@@ -729,8 +796,10 @@ static void M_ExtractSaveData (const FSaveGameNode *node)
 
 	M_UnloadSaveData ();
 
-	if (node->Succ != NULL &&
+	if (node != NULL &&
+		node->Succ != NULL &&
 		node->Filename != NULL &&
+		!node->bOldVersion &&
 		(file = fopen (node->Filename, "rb")) != NULL)
 	{
 		WORD x, y;
@@ -862,12 +931,19 @@ static void M_DrawSaveLoadCommon ()
 	}
 	else
 	{
-		const int textlen = screen->StringWidth ("No Picture")*CleanXfac;
-
 		screen->Clear (savepicLeft, savepicTop,
 			savepicLeft+savepicWidth, savepicTop+savepicHeight, 0);
-		screen->DrawTextClean (CR_GOLD, savepicLeft+(savepicWidth-textlen)/2,
-			savepicTop+(savepicHeight-rowHeight)/2, "No Picture");
+
+		if (!SaveGames.IsEmpty ())
+		{
+			const char *text =
+				(SelSaveGame == NULL || !SelSaveGame->bOldVersion)
+				? "No Picture" : "Different\nVersion";
+			const int textlen = screen->StringWidth (text)*CleanXfac;
+
+			screen->DrawTextClean (CR_GOLD, savepicLeft+(savepicWidth-textlen)/2,
+				savepicTop+(savepicHeight-rowHeight)/2, text);
+		}
 	}
 
 	// Draw comment area
@@ -883,20 +959,20 @@ static void M_DrawSaveLoadCommon ()
 	}
 
 	// Draw file area
-	M_DrawFrame (listboxLeft, listboxTop, listboxWidth, listboxHeight);
-	screen->Clear (listboxLeft, listboxTop, listboxRight, listboxBottom, 0);
-
-	if (SaveGames.IsEmpty ())
-	{
-		const int textlen = screen->StringWidth ("No files")*CleanXfac;
-
-		screen->DrawTextClean (CR_GOLD, listboxLeft+(listboxWidth-textlen)/2,
-			listboxTop+(listboxHeight-rowHeight)/2, "No files");
-		return;
-	}
-
 	do
 	{
+		M_DrawFrame (listboxLeft, listboxTop, listboxWidth, listboxHeight);
+		screen->Clear (listboxLeft, listboxTop, listboxRight, listboxBottom, 0);
+
+		if (SaveGames.IsEmpty ())
+		{
+			const int textlen = screen->StringWidth ("No files")*CleanXfac;
+
+			screen->DrawTextClean (CR_GOLD, listboxLeft+(listboxWidth-textlen)/2,
+				listboxTop+(listboxHeight-rowHeight)/2, "No files");
+			return;
+		}
+
 		for (i = 0, node = TopSaveGame;
 			 i < listboxRows && node->Succ != NULL;
 			 ++i, node = static_cast<FSaveGameNode *>(node->Succ))
@@ -909,7 +985,8 @@ static void M_DrawSaveLoadCommon ()
 				didSeeSelected = true;
 				if (!genStringEnter)
 				{
-					screen->DrawTextClean (CR_WHITE, listboxLeft+1,
+					screen->DrawTextClean (
+						SelSaveGame->bOldVersion ? CR_BLUE : CR_WHITE, listboxLeft+1,
 						listboxTop+rowHeight*i+CleanYfac, node->Title);
 				}
 				else
@@ -923,7 +1000,8 @@ static void M_DrawSaveLoadCommon ()
 			}
 			else
 			{
-				screen->DrawTextClean (CR_TAN, listboxLeft+1,
+				screen->DrawTextClean (
+					node->bOldVersion ? CR_BLUE : CR_TAN, listboxLeft+1,
 					listboxTop+rowHeight*i+CleanYfac, node->Title);
 			}
 		}
@@ -936,7 +1014,7 @@ static void M_DrawSaveLoadCommon ()
 
 		if (!didSeeSelected)
 		{
-			for (i = 0; node->Succ != NULL && node != SelSaveGame; ++i)
+			for (i = 1; node->Succ != NULL && node != SelSaveGame; ++i)
 			{
 				node = static_cast<FSaveGameNode *>(node->Succ);
 			}
@@ -1037,7 +1115,7 @@ void M_DrawSave()
 }
 
 //
-// M_Responder calls this when user is finished
+// M_Responder calls this when the user is finished
 //
 void M_DoSave (FSaveGameNode *node)
 {
@@ -1127,8 +1205,7 @@ void M_QuickSave ()
 	if (quickSaveSlot == NULL)
 	{
 		M_StartControlPanel(false);
-		M_ReadSaveStrings();
-		M_SetupNextMenu(&SaveDef);
+		M_SaveGame (0);
 		quickSaveSlot = NULL; 	// means to pick a slot now
 		return;
 	}
@@ -1412,7 +1489,7 @@ void M_QuitDOOM (int choice)
 static void M_PlayerSetup (int choice)
 {
 	choice = 0;
-	strcpy (savegamestring, *name);
+	strcpy (savegamestring, name);
 	M_DemoNoPlay = true;
 	if (demoplayback)
 		G_CheckDemoStatus ();
@@ -1633,12 +1710,12 @@ static void M_PlayerSetupDrawer ()
 
 	screen->DrawTextCleanMove (label, PSetupDef.x, PSetupDef.y + LINEHEIGHT*7+yo, "Autoaim");
 	screen->DrawTextCleanMove (value, x, PSetupDef.y + LINEHEIGHT*7+yo,
-		*autoaim == 0 ? "Never" :
-		*autoaim <= 0.25 ? "Very Low" :
-		*autoaim <= 0.5 ? "Low" :
-		*autoaim <= 1 ? "Medium" :
-		*autoaim <= 2 ? "High" :
-		*autoaim <= 3 ? "Very High" : "Always");
+		autoaim == 0 ? "Never" :
+		autoaim <= 0.25 ? "Very Low" :
+		autoaim <= 0.5 ? "Low" :
+		autoaim <= 1 ? "Medium" :
+		autoaim <= 2 ? "High" :
+		autoaim <= 3 ? "Very High" : "Always");
 }
 
 static void M_DrawPlayerBackdrop (int x, int y)
@@ -1709,7 +1786,7 @@ static void M_ChangeSkin (int choice)
 static void M_ChangeAutoAim (int choice)
 {
 	static const float ranges[] = { 0, 0.25, 0.5, 1, 2, 3, 5000 };
-	float aim = *autoaim;
+	float aim = autoaim;
 	int i;
 
 	if (!choice) {
@@ -1757,39 +1834,39 @@ static void M_PlayerNameChanged (FSaveGameNode *dummy)
 	char command[SAVESTRINGSIZE+8];
 
 	sprintf (command, "name \"%s\"", savegamestring);
-	AddCommandString (command);
+	C_DoCommand (command);
 }
 
 static void M_ChangePlayerTeam (int choice)
 {
 	if (!choice)
 	{
-		if (*team == 0)
+		if (team == 0)
 		{
 			team = TEAM_None;
 		}
-		else if (*team == TEAM_None)
+		else if (team == TEAM_None)
 		{
 			team = NUM_TEAMS-1;
 		}
 		else
 		{
-			team = *team - 1;
+			team = team - 1;
 		}
 	}
 	else
 	{
-		if (*team == NUM_TEAMS-1)
+		if (team == NUM_TEAMS-1)
 		{
 			team = TEAM_None;
 		}
-		else if (*team == TEAM_None)
+		else if (team == TEAM_None)
 		{
 			team = 0;
 		}
 		else
 		{
-			team = *team + 1;
+			team = team + 1;
 		}	
 	}
 }
@@ -1799,7 +1876,7 @@ static void SendNewColor (int red, int green, int blue)
 	char command[24];
 
 	sprintf (command, "color \"%02x %02x %02x\"", red, green, blue);
-	AddCommandString (command);
+	C_DoCommand (command);
 }
 
 static void M_SlidePlayerRed (int choice)
@@ -1931,9 +2008,23 @@ BOOL M_Responder (event_t *ev)
 			return true;
 		}
 	}
-	else if (ev->type == EV_GUI_Event && ev->subtype == EV_GUI_KeyDown && menuactive)
+	else if (ev->type == EV_GUI_Event && menuactive && !chatmodeon)
 	{
-		ch = ev->data1;
+		if (ev->subtype == EV_GUI_KeyDown || ev->subtype == EV_GUI_KeyRepeat)
+		{
+			ch = ev->data1;
+		}
+		else if (ev->subtype == EV_GUI_Char && genStringEnter)
+		{
+			ch = ev->data1;
+			if (saveCharIndex < genStringLen &&
+				screen->StringWidth (savegamestring) < (genStringLen-1)*8)
+			{
+				savegamestring[saveCharIndex] = ch;
+				savegamestring[++saveCharIndex] = 0;
+			}
+			return true;
+		}
 	}
 	
 	if (OptionsActive && !chatmodeon)
@@ -1942,7 +2033,7 @@ BOOL M_Responder (event_t *ev)
 		return true;
 	}
 	
-	if (ch == -1 || chatmodeon)
+	if (ch == -1)
 		return false;
 
 	// Save Game string input
@@ -1971,20 +2062,6 @@ BOOL M_Responder (event_t *ev)
 				if (messageToPrint)
 					M_ClearMenus ();
 				genStringEnd (SelSaveGame);	// [RH] Function to call when enter is pressed
-			}
-			break;
-
-		default:
-			ch = ev->data2;
-			if (ch != ' ')
-				if (ch-HU_FONTSTART < 0 || ch-HU_FONTSTART >= HU_FONTSIZE)
-					break;
-			if (saveCharIndex < genStringLen &&
-				screen->StringWidth (savegamestring) <
-				(genStringLen-1)*8)
-			{
-				savegamestring[saveCharIndex] = ch;
-				savegamestring[++saveCharIndex] = 0;
 			}
 			break;
 		}
@@ -2038,7 +2115,7 @@ BOOL M_Responder (event_t *ev)
 				itemOn = 0;
 			else itemOn++;
 			S_Sound (CHAN_VOICE, "menu/cursor", 1, ATTN_NONE);
-		} while(currentMenu->menuitems[itemOn].status==255);
+		} while(currentMenu->menuitems[itemOn].status==-1);
 		return true;
 
 	case GK_UP:
@@ -2048,7 +2125,7 @@ BOOL M_Responder (event_t *ev)
 				itemOn = currentMenu->numitems-1;
 			else itemOn--;
 			S_Sound (CHAN_VOICE, "menu/cursor", 1, ATTN_NONE);
-		} while(currentMenu->menuitems[itemOn].status==255);
+		} while(currentMenu->menuitems[itemOn].status==-1);
 		return true;
 
 	case GK_LEFT:
@@ -2124,10 +2201,24 @@ BOOL M_Responder (event_t *ev)
 
 BOOL M_SaveLoadResponder (event_t *ev)
 {
+	char workbuf[512];
+
 	if (SelSaveGame != NULL && SelSaveGame->Succ != NULL)
 	{
 		switch (ev->data1)
 		{
+		case GK_F1:
+			if (SelSaveGame->Filename != NULL)
+			{
+				sprintf (workbuf, "File on disk:\n%s", SelSaveGame->Filename);
+				if (SaveComment != NULL)
+				{
+					V_FreeBrokenLines (SaveComment);
+				}
+				SaveComment = V_BreakLines (216*screen->GetWidth()/640/CleanXfac, workbuf);
+			}
+			break;
+
 		case GK_UP:
 			if (SelSaveGame != SaveGames.Head)
 			{
@@ -2237,6 +2328,10 @@ static void M_DeleteSaveResponse (int choice)
 		if (next->Succ == NULL)
 		{
 			next = static_cast<FSaveGameNode *>(SelSaveGame->Pred);
+			if (next->Pred == NULL)
+			{
+				next = NULL;
+			}
 		}
 
 		remove (SelSaveGame->Filename);
@@ -2272,7 +2367,6 @@ void M_StartControlPanel (bool makeSound)
 	itemOn = currentMenu->lastOn;
 	C_HideConsole ();				// [RH] Make sure console goes bye bye.
 	OptionsActive = false;			// [RH] Make sure none of the options menus appear.
-	I_PauseMouse ();				// [RH] Give the mouse back in windowed modes.
 	M_ActivateMenuInput ();
 
 	if (makeSound)
@@ -2409,9 +2503,6 @@ void M_ClearMenus ()
 	drawSkull = true;
 	M_DemoNoPlay = false;
 	BorderNeedRefresh = screen->GetPageCount ();
-//C_HideConsole ();		// [RH] Hide the console if we can.
-	if (gamestate != GS_FULLCONSOLE)
-		I_ResumeMouse ();	// [RH] Recapture the mouse in windowed modes.
 }
 
 
@@ -2439,7 +2530,6 @@ void M_PopMenuStack (void)
 	M_ClearSaveStuff ();
 	if (MenuStackDepth > 1)
 	{
-		I_PauseMouse ();
 		MenuStackDepth -= 2;
 		if (MenuStack[MenuStackDepth].isNewStyle)
 		{

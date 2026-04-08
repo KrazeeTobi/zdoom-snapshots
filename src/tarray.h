@@ -90,6 +90,30 @@ public:
 			}
 		}
 	}
+	// Grow Array to be large enough to hold amount more entries without
+	// further growing.
+	void Grow (size_t amount)
+	{
+		if (Count + amount > Most)
+		{
+			const size_t choicea = Count + amount;
+			const size_t choiceb = Most + Most/2;
+			Most = (choicea > choiceb ? choicea : choiceb);
+			Array = (T *)Realloc (Array, sizeof(T)*Most);
+		}
+	}
+	// Reserves amount entries at the end of the array, but does nothing
+	// with them.
+	size_t Reserve (size_t amount)
+	{
+		if (Count + amount > Most)
+		{
+			Grow (amount);
+		}
+		size_t place = Count;
+		Count += amount;
+		return place;
+	}
 	size_t Size () const
 	{
 		return Count;

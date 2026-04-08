@@ -27,7 +27,8 @@ enum
 	SCRIPT_Pickup		= 5,
 	SCRIPT_T1Return		= 6,
 	SCRIPT_T2Return		= 7,
-	SCRIPT_Render		= 11
+	SCRIPT_Render		= 11,
+	SCRIPT_Lightning	= 12,
 };
 
 enum ACSFormat { ACS_Old, ACS_Enhanced, ACS_LittleEnhanced, ACS_Unknown };

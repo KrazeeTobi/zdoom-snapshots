@@ -5,12 +5,14 @@
 // created with a statnum, it will be given MAX_STATNUM.
 
 enum
-{
-	STAT_DECAL,			// A decal (does not think)
+{ // Thinkers that don't actually think
+	STAT_INFO,								// An info queue
+	STAT_DECAL,								// A decal
 
-	STAT_SCROLLER,		// A DScroller thinker
-	STAT_PLAYER,		// A player actor
-	STAT_BOSSTARGET,	// A boss brain target
-
-	STAT_FIRST_THINKING = STAT_SCROLLER
+  // Thinkers that do think
+	STAT_FIRST_THINKING=32,
+	STAT_SCROLLER=STAT_FIRST_THINKING,		// A DScroller thinker
+	STAT_PLAYER,							// A player actor
+	STAT_BOSSTARGET,						// A boss brain target
+	STAT_LIGHTNING,							// The lightning thinker
 };

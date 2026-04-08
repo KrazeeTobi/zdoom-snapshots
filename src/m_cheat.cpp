@@ -288,16 +288,6 @@ void cht_Give (player_t *player, char *name)
 			return;
 	}
 
-	if (giveall || stricmp (name, "weapons") == 0) {
-		weapontype_t pendweap = player->pendingweapon;
-		for (i = 0; i<NUMWEAPONS; i++)
-			P_GiveWeapon (player, (weapontype_t)i, false);
-		player->pendingweapon = pendweap;
-
-		if (!giveall)
-			return;
-	}
-
 	if (giveall || stricmp (name, "ammo") == 0) {
 		for (i=0;i<NUMAMMO;i++)
 			player->ammo[i] = player->maxammo[i];
@@ -345,7 +335,6 @@ void cht_Give (player_t *player, char *name)
 
 		P_GiveAmmo (player, (ammotype_t)it->offset, howmuch);
 	} else if (it->flags & IT_WEAPON) {
-		P_GiveWeapon (player, (weapontype_t)it->offset, 0);
 	} else if (it->flags & IT_KEY) {
 		P_GiveKey (player, (keytype_t)it->offset);
 	} else if (it->flags & IT_POWERUP) {

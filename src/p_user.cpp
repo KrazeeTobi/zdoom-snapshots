@@ -181,7 +181,7 @@ const TypeInfo *APlayerPawn::GetDropType ()
 
 void APlayerPawn::NoBlockingSet ()
 {
-	if (*dmflags2 & DF2_YES_WEAPONDROP)
+	if (dmflags2 & DF2_YES_WEAPONDROP)
 	{
 		const TypeInfo *droptype = GetDropType ();
 		if (droptype)
@@ -380,7 +380,8 @@ void P_CalcHeight (player_t *player)
 */
 CUSTOM_CVAR (Float, sv_aircontrol, 0.00390625f, CVAR_SERVERINFO)
 {
-	level.aircontrol = (fixed_t)(*var * 65536.f);
+	level.aircontrol = (fixed_t)(self * 65536.f);
+	G_AirControlChanged ();
 }
 
 void P_MovePlayer (player_t *player)
@@ -454,59 +455,82 @@ void P_MovePlayer (player_t *player)
 	}
 }		
 
-// [RH] (Adapted from Q2)
+//==========================================================================
+//
 // P_FallingDamage
 //
-void P_FallingDamage (AActor *ent)
+//==========================================================================
+
+void P_FallingDamage (AActor *actor)
 {
-	float	delta;
-	int		damage;
+	int damagestyle;
+	int damage;
+	fixed_t mom;
 
-	if (!ent->player)
-		return;		// not a player
+	damagestyle = ((level.flags >> 15) | (dmflags)) &
+		(DF_FORCE_FALLINGZD | DF_FORCE_FALLINGHX);
 
-	if (ent->flags & MF_NOCLIP)
+	if (damagestyle == 0)
 		return;
 
-	if ((ent->player->oldvelocity[2] < 0)
-		&& (ent->momz > ent->player->oldvelocity[2])
-		&& (!(ent->flags2 & MF2_ONMOBJ)
-			|| !(ent->z <= ent->floorz)))
-	{
-		delta = (float)ent->player->oldvelocity[2];
-	}
-	else
-	{
-		if (!(ent->flags2 & MF2_ONMOBJ))
+	mom = abs (actor->momz);
+
+	// Since Hexen falling damage is stronger than ZDoom's, it takes
+	// precedence. ZDoom falling damage may not be as strong, but it
+	// gets felt sooner.
+
+	if (damagestyle & DF_FORCE_FALLINGHX)
+	{ // Hexen falling damage
+
+		if (mom <= 23*FRACUNIT)
+		{ // Not fast enough to hurt
 			return;
-		delta = (float)(ent->momz - ent->player->oldvelocity[2]);
-	}
-	delta = delta*delta * 2.03904313e-11f;
-
-	if (delta < 1)
-		return;
-
-	if (delta < 15)
-	{
-		//ent->s.event = EV_FOOTSTEP;
-		return;
-	}
-
-	if (delta > 30)
-	{
-		damage = (int)((delta-30)/2);
-		if (damage < 1)
-			damage = 1;
-
-		if (*dmflags & DF_YES_FALLING)
-			P_DamageMobj (ent, NULL, NULL, damage, MOD_FALLING);
+		}
+		if (mom >= 63*FRACUNIT)
+		{ // automatic death
+			damage = 10000;
+		}
+		else
+		{
+			mom = FixedMul (mom, 16*FRACUNIT/23);
+			damage = ((FixedMul (mom, mom) / 10) >> FRACBITS) - 24;
+			if (actor->momz > -39*FRACUNIT && damage > actor->health
+				&& actor->health != 1)
+			{ // No-death threshold
+				damage = actor->health-1;
+			}
+		}
 	}
 	else
-	{
-		//ent->s.event = EV_FALLSHORT;
-		return;
+	{ // ZDoom falling damage
+		if (mom <= 19*FRACUNIT)
+		{ // Not fast enough to hurt
+			return;
+		}
+		if (mom >= 84*FRACUNIT)
+		{ // automatic death
+			damage = 10000;
+		}
+		else
+		{
+			damage = ((MulScale23 (mom, mom*11) >> FRACBITS) - 30) / 2;
+			if (damage < 1)
+			{
+				damage = 1;
+			}
+		}
 	}
 
+	if (actor->player)
+	{
+		S_Sound (actor, CHAN_AUTO, "*land", 1, ATTN_NORM);
+		P_NoiseAlert (actor, actor);
+		if (damage == 10000 && (actor->player->cheats & CF_GODMODE))
+		{
+			damage = 999;
+		}
+	}
+	P_DamageMobj (actor, NULL, NULL, damage, MOD_FALLING);
 }
 
 //==========================================================================
@@ -607,7 +631,7 @@ void P_DeathThink (player_t *player)
 	if (level.time >= player->respawn_time)
 	{
 		if (player->cmd.ucmd.buttons & BT_USE ||
-			((*deathmatch || *alwaysapplydmflags) && (*dmflags & DF_FORCE_RESPAWN)))
+			((deathmatch || alwaysapplydmflags) && (dmflags & DF_FORCE_RESPAWN)))
 		{
 			player->playerstate = PST_REBORN;
 			if (player->mo->special1 > 2)
@@ -696,7 +720,7 @@ void P_PlayerThink (player_t *player)
 
 	if (player->mo == NULL)
 	{
-		I_Error ("No player %ld start\n", player - players + 1);
+		I_Error ("No player %d start\n", player - players + 1);
 	}
 
 	player->xviewshift = 0;		// [RH] Make sure view is in right place
@@ -766,7 +790,7 @@ void P_PlayerThink (player_t *player)
 	}
 
 	// [RH] Look up/down stuff
-	if (*dmflags & DF_NO_FREELOOK)
+	if (dmflags & DF_NO_FREELOOK)
 	{
 		player->mo->pitch = 0;
 	}
@@ -849,7 +873,7 @@ void P_PlayerThink (player_t *player)
 			{
 				player->mo->momz = 3*FRACUNIT;
 			}
-			else if (!(*dmflags & DF_NO_JUMP) && onground && !player->jumpTics)
+			else if (!(dmflags & DF_NO_JUMP) && onground && !player->jumpTics)
 			{
 				player->mo->momz += player->mo->GetJumpZ ();
 				S_Sound (player->mo, CHAN_BODY, "*jump", 1, ATTN_NORM);
@@ -1216,8 +1240,6 @@ void player_s::Serialize (FArchive &arc)
 		arc << ammo[i] << maxammo[i];
 	for (i = 0; i < NUMPSPRITES; i++)
 		arc << psprites[i];
-	for (i = 0; i < 3; i++)
-		arc << oldvelocity[i];
 
 	if (isbot)
 	{

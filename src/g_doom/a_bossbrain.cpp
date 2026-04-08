@@ -239,7 +239,7 @@ void A_BrainExplode (AActor *self)
 void A_BrainDie (AActor *self)
 {
 	// [RH] If noexit, then don't end the level.
-	if ((*deathmatch || *alwaysapplydmflags) && (*dmflags & DF_NO_EXIT))
+	if ((deathmatch || alwaysapplydmflags) && (dmflags & DF_NO_EXIT))
 		return;
 
 	G_ExitLevel (0);
@@ -337,7 +337,7 @@ ABossTarget *DBrainState::GetTarget ()
 {
 	Easy = !Easy;
 
-	if (*gameskill <= sk_easy && !Easy)
+	if (gameskill <= sk_easy && !Easy)
 		return NULL;
 
 	ABossTarget *target;

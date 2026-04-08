@@ -376,7 +376,7 @@ int wipe_exitFade (int ticks)
 
 int wipe_StartScreen (void)
 {
-	CurrentWipeType = *wipetype;
+	CurrentWipeType = wipetype;
 	if (CurrentWipeType < 0)
 		CurrentWipeType = 0;
 	else if (CurrentWipeType >= wipe_NUMWIPES)

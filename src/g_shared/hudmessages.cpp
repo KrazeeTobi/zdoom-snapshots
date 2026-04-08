@@ -53,7 +53,7 @@ FHUDMessage::~FHUDMessage ()
 
 void FHUDMessage::ResetText (const char *text)
 {
-	Lines = V_BreakLines (*con_scaletext ?
+	Lines = V_BreakLines (con_scaletext ?
 		SCREENWIDTH / CleanXfac : SCREENWIDTH, (byte *)text);
 
 	NumLines = 0;
@@ -90,7 +90,7 @@ void FHUDMessage::Draw (int bottom)
 
 	DrawSetup ();
 
-	if ( (clean = (*con_scaletext != 0.f)) )
+	if ( (clean = con_scaletext) )
 	{
 		xscale = CleanXfac;
 		yscale = CleanYfac;

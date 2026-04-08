@@ -116,8 +116,8 @@ byte* I_AllocLow (int length);
 void I_Tactile (int on, int off, int total);
 
 extern "C" {
-void STACK_ARGS I_Error (const char *error, ...);
-void STACK_ARGS I_FatalError (const char *error, ...);
+void STACK_ARGS I_Error (const char *error, ...) GCCPRINTF(1,2);
+void STACK_ARGS I_FatalError (const char *error, ...) GCCPRINTF(1,2);
 }
 
 void atterm (void (STACK_ARGS *func)(void));
@@ -134,12 +134,6 @@ void I_SetTitleString (const char *title);
 
 // Pick from multiple IWADs to use
 int I_PickIWad (WadStuff *wads, int numwads);
-
-// In i_input.c. Used to release control of the
-// mouse to the user when the game is paused in
-// windowed modes.
-void I_PauseMouse (void);
-void I_ResumeMouse (void);
 
 // [RH] Returns millisecond-accurate time
 unsigned int I_MSTime (void);

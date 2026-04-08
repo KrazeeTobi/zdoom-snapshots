@@ -78,6 +78,8 @@
 
 FGameConfigFile *GameConfig;
 
+static long ParseCommandLine (const char *args, int *argc, char **argv);
+
 //
 // M_WriteFile
 //
@@ -137,8 +139,6 @@ int M_ReadFile (char const *name, byte **buffer)
 //
 //---------------------------------------------------------------------------
 
-#define MAXARGVS 100
-
 void M_FindResponseFile (void)
 {
 	int i;
@@ -148,51 +148,50 @@ void M_FindResponseFile (void)
 		if (Args.GetArg(i)[0] == '@')
 		{
 			char	**argv;
+			char	*file;
+			int		argc;
+			int		argcinresp;
 			FILE	*handle;
 			int 	size;
+			long	argsize;
 			int 	k;
 			int 	index;
-			int 	indexinfile;
-			char	*infile;
-			char	*file;
 
 			// READ THE RESPONSE FILE INTO MEMORY
 			handle = fopen (Args.GetArg(i) + 1,"rb");
 			if (!handle)
-				I_FatalError ("\nNo such response file!");
+			{ // [RH] Make this a warning, not an error.
+				Printf ("No such response file (%s)!", Args.GetArg(i) + 1);
+				continue;
+			}
 
 			Printf ("Found response file %s!\n", Args.GetArg(i) + 1);
 			fseek (handle, 0, SEEK_END);
 			size = ftell (handle);
 			fseek (handle, 0, SEEK_SET);
-			file = new char[size];
+			file = new char[size+1];
 			fread (file, size, 1, handle);
+			file[size] = 0;
 			fclose (handle);
 
-			argv = new char *[MAXARGVS];
-			for (index = 0; index < i; index++)
-				argv[index] = Args.GetArg (index);
+			argsize = ParseCommandLine (file, &argcinresp, NULL);
+			argc = argcinresp + Args.NumArgs() - 1;
 
-			infile = file;
-			k = 0;
-			indexinfile = index;
-			do
+			if (argc != 0)
 			{
-				argv[indexinfile++] = infile+k;
-				while(k < size &&
-					  ((*(infile+k)>= ' '+1) && (*(infile+k)<='z')))
-					k++;
-				*(infile+k) = 0;
-				while(k < size &&
-					  ((*(infile+k)<= ' ') || (*(infile+k)>'z')))
-					k++;
-			} while(k < size);
+				argv = (char **)Z_Malloc (argc*sizeof(char *) + argsize, PU_STATIC, 0);
+				argv[i] = (char *)argv + argc*sizeof(char *);
+				ParseCommandLine (file, NULL, argv+i);
 
-			for (index = i + 1; index < Args.NumArgs (); index++)
-				argv[indexinfile++] = Args.GetArg (index);
+				for (index = 0; index < i; ++index)
+					argv[index] = Args.GetArg (index);
 
-			DArgs newargs (indexinfile, argv);
-			Args = newargs;
+				for (index = i + 1, i += argcinresp; index < Args.NumArgs (); ++index)
+					argv[i++] = Args.GetArg (index);
+
+				DArgs newargs (i, argv);
+				Args = newargs;
+			}
 
 			delete[] file;
 		
@@ -206,18 +205,95 @@ void M_FindResponseFile (void)
 	}
 }
 
-
+// ParseCommandLine
 //
-// DEFAULTS
-//
-// [RH] Handled by console code now.
+// This is just like the version in c_dispatch.cpp, except it does not
+// do cvar expansion.
 
-#ifdef UNIX
+static long ParseCommandLine (const char *args, int *argc, char **argv)
+{
+	int count;
+	char *buffplace;
+
+	count = 0;
+	buffplace = NULL;
+	if (argv != NULL)
+	{
+		buffplace = argv[0];
+	}
+
+	for (;;)
+	{
+		while (*args <= ' ' && *args)
+		{ // skip white space
+			args++;
+		}
+		if (*args == 0)
+		{
+			break;
+		}
+		else if (*args == '\"')
+		{ // read quoted string
+			char stuff;
+			if (argv != NULL)
+			{
+				argv[count] = buffplace;
+			}
+			count++;
+			args++;
+			do
+			{
+				stuff = *args++;
+				if (stuff == '\\' && *args == '\"')
+				{
+					stuff = '\"', args++;
+				}
+				else if (stuff == '\"')
+				{
+					stuff = 0;
+				}
+				if (argv != NULL)
+				{
+					*buffplace = stuff;
+				}
+				buffplace++;
+			} while (stuff);
+		}
+		else
+		{ // read unquoted string
+			const char *start = args++, *end;
+
+			while (*args && *args > ' ' && *args != '\"')
+				args++;
+			end = args;
+			if (argv != NULL)
+			{
+				argv[count] = buffplace;
+				while (start < end)
+					*buffplace++ = *start++;
+				*buffplace++ = 0;
+			}
+			else
+			{
+				buffplace += end - start + 1;
+			}
+			count++;
+		}
+	}
+	if (argc != NULL)
+	{
+		*argc = count;
+	}
+	return (long)buffplace;
+}
+
+
+#ifdef unix
 char *GetUserFile (const char *file, bool nodir)
 {
 	char *home = getenv ("HOME");
 	if (home == NULL || *home == '\0')
-		I_FatalError ("Please set your HOME variable");
+		I_FatalError ("Please set your HOME environment variable");
 
 	char *path = new char[strlen (home) + 9 + strlen (file)];
 	strcpy (path, home);
@@ -456,7 +532,7 @@ void M_ScreenShot (char *filename)
 	// find a file name to save it to
 	if (!filename)
 	{
-#ifndef UNIX
+#ifndef unix
 		if (Args.CheckParm ("-cdrom"))
 		{
 			strcpy (autoname, "C:\\ZDOOMDAT\\");
@@ -474,12 +550,16 @@ void M_ScreenShot (char *filename)
 		}
 		filename = autoname;
 	}
+	else
+	{
+		lbmname = filename;
+	}
 
 	// save the pcx file
 	D_Display (true);
 	WritePCXfile (filename, screen, screen->GetPalette ());
 
-	if (!*screenshot_quiet)
+	if (!screenshot_quiet)
 	{
 		Printf ("Captured %s\n", lbmname);
 	}
@@ -487,7 +567,7 @@ void M_ScreenShot (char *filename)
 
 CCMD (screenshot)
 {
-	if (argc == 1)
+	if (argv.argc() == 1)
 		G_ScreenShot (NULL);
 	else
 		G_ScreenShot (argv[1]);

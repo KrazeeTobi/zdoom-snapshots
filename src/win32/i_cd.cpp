@@ -78,7 +78,7 @@ static int Inited = NOT_INITED;
 
 CUSTOM_CVAR (Bool, cd_enabled, true, CVAR_ARCHIVE|CVAR_NOINITCALL|CVAR_GLOBALCONFIG)
 {
-	if (*var)
+	if (self)
 		CD_Init ();
 	else
 		CD_Close ();
@@ -406,13 +406,13 @@ static void STACK_ARGS KillThread ()
 
 bool CD_Init ()
 {
-	if ((*cd_drive)[0] == 0 || (*cd_drive)[1] != 0)
+	if ((cd_drive)[0] == 0 || (cd_drive)[1] != 0)
 	{
 		return CD_Init (-1);
 	}
 	else
 	{
-		char drive = toupper ((*cd_drive)[0]);
+		char drive = toupper ((cd_drive)[0]);
 
 		if (drive >= 'A' && drive <= 'Z' && !CD_Init (drive - 'A'))
 			return CD_Init (-1);
@@ -422,7 +422,7 @@ bool CD_Init ()
 
 bool CD_Init (int device)
 {
-	if (!*cd_enabled || Args.CheckParm ("-nocdaudio"))
+	if (!cd_enabled || Args.CheckParm ("-nocdaudio"))
 		return false;
 
 	if (CDThread == NULL)

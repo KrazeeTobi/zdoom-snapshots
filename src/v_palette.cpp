@@ -34,16 +34,15 @@ int		BlendR, BlendG, BlendB, BlendA;
 byte newgamma[256];
 CUSTOM_CVAR (Float, Gamma, 1.f, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 {
-	if (*var == 0.f)
-	{
-		// Gamma values of 0 are illegal.
-		var = 1.f;
+	if (self == 0.f)
+	{ // Gamma values of 0 are illegal.
+		self = 1.f;
 		return;
 	}
 
 	if (screen != NULL)
 	{
-		screen->SetGamma (*var);
+		screen->SetGamma (self);
 	}
 }
 
@@ -243,7 +242,7 @@ CCMD (testblend)
 	int color;
 	float amt;
 
-	if (argc < 3)
+	if (argv.argc() < 3)
 	{
 		Printf ("testblend <color> <amount>\n");
 	}
@@ -275,7 +274,7 @@ CCMD (testfade)
 	char *colorstring;
 	DWORD color;
 
-	if (argc < 2)
+	if (argv.argc() < 2)
 	{
 		Printf ("testfade <color>\n");
 	}
@@ -473,7 +472,7 @@ CCMD (testcolor)
 	char *colorstring;
 	DWORD color;
 
-	if (argc < 2)
+	if (argv.argc() < 2)
 	{
 		Printf ("testcolor <color>\n");
 	}

@@ -132,6 +132,7 @@ struct FWeaponInfo
 	fixed_t			yadjust;
 	const char		*upsound;
 	const char		*readysound;
+	TypeInfo		*type;		// type of actor that represents this weapon
 };
 
 enum
@@ -231,6 +232,9 @@ class AWeapon : public AInventory
 	DECLARE_ACTOR (AWeapon, AInventory)
 protected:
 	virtual void PlayPickupSound (AActor *toucher);
+	virtual weapontype_t OldStyleID() const;
+	virtual bool TryPickup (AActor *toucher);
+	virtual bool ShouldStay ();
 };
 #define S_LIGHTDONE 0
 

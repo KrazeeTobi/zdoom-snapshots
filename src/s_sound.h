@@ -1,8 +1,6 @@
 // Emacs style mode select	 -*- C++ -*- 
 //-----------------------------------------------------------------------------
 //
-// $Id: s_sound.h,v 1.1.1.1 1997/12/28 12:59:03 pekangas Exp $
-//
 // Copyright (C) 1993-1996 by id Software, Inc.
 //
 // This source is available for distribution and/or modification
@@ -72,31 +70,25 @@ extern TArray<sfxinfo_t> S_sfx;
 // Sets channels, SFX and music volume,
 //	allocates channel buffer, sets S_sfx lookup.
 //
-void S_Init (int sfxVolume, int musicVolume);
+void S_Init ();
 
 // Per level startup code.
-// Kills playing sounds at start of level,
-//	determines music if any, changes music.
+// Kills playing sounds at start of level and starts new music.
 //
 void S_Start ();
 
 // Start sound for thing at <ent>
 void S_Sound (int channel, const char *name, float volume, int attenuation);
 void S_Sound (AActor *ent, int channel, const char *name, float volume, int attenuation);
-void S_Sound (fixed_t *pt, int channel, const char *name, float volume, int attenuation);
+void S_Sound (fixed_t *pt, int channel, const char *name, float volume, int attenuation, int tag=0);
 void S_Sound (fixed_t x, fixed_t y, int channel, const char *name, float volume, int attenuation);
 void S_LoopedSound (AActor *ent, int channel, const char *name, float volume, int attenuation);
 void S_LoopedSound (fixed_t *pt, int channel, const char *name, float volume, int attenuation);
 void S_SoundID (int channel, int sfxid, float volume, int attenuation);
 void S_SoundID (AActor *ent, int channel, int sfxid, float volume, int attenuation);
-void S_SoundID (fixed_t *pt, int channel, int sfxid, float volume, int attenuation);
+void S_SoundID (fixed_t *pt, int channel, int sfxid, float volume, int attenuation, int tag=0);
 void S_LoopedSoundID (AActor *ent, int channel, int sfxid, float volume, int attenuation);
-void S_LoopedSoundID (fixed_t *pt, int channel, int sfxid, float volume, int attenuation);
-
-// Returns true if the max of the named sound are already playing.
-// Does not handle player sounds.
-bool S_CheckSound (const char *name);
-bool S_CheckSound (int sfxid);
+void S_LoopedSoundID (fixed_t *pt, int channel, int sfxid, float volume, int attenuation, int tag=0);
 
 // sound channels
 // channel 0 never willingly overrides
@@ -122,7 +114,7 @@ int S_PickReplacement (int refid);
 
 // [RH] From Hexen.
 //		Prevents too many of the same sound from playing simultaneously.
-BOOL S_StopSoundID (int sound_id, int priority);
+BOOL S_StopSoundID (int sound_id, int priority, int tag);
 
 // Stops a sound emanating from one of an entity's channels
 void S_StopSound (AActor *ent, int channel);
@@ -134,6 +126,7 @@ void S_StopAllChannels (void);
 // Is the sound playing on one of the entity's channels?
 bool S_GetSoundPlayingInfo (AActor *ent, int sound_id);
 bool S_GetSoundPlayingInfo (fixed_t *pt, int sound_id);
+bool S_IsActorPlayingSomething (AActor *actor, int channel);
 
 // Moves all sounds from one mobj to another
 void S_RelinkSound (AActor *from, AActor *to);
@@ -162,10 +155,6 @@ void S_ResumeSound ();
 // Updates music & sounds
 //
 void S_UpdateSounds (void *listener);
-
-void S_SetMusicVolume (int volume);
-void S_SetSfxVolume (int volume);
-
 
 // [RH] S_sfx "maintenance" routines
 void S_ParseSndInfo ();

@@ -38,7 +38,7 @@
 #define RIGHTMARGIN 8
 #define BOTTOMARGIN 12
 
-static void C_TabComplete ();
+static void C_TabComplete (bool goForward);
 static BOOL TabbedLast;		// Last key pressed was tab
 
 
@@ -118,32 +118,32 @@ FIntCVar msglevel ("msg", 0, CVAR_ARCHIVE);
 
 CUSTOM_CVAR (Int, msg0color, 6, CVAR_ARCHIVE)
 {
-	setmsgcolor (0, *var);
+	setmsgcolor (0, self);
 }
 
 CUSTOM_CVAR (Int, msg1color, 5, CVAR_ARCHIVE)
 {
-	setmsgcolor (1, *var);
+	setmsgcolor (1, self);
 }
 
 CUSTOM_CVAR (Int, msg2color, 2, CVAR_ARCHIVE)
 {
-	setmsgcolor (2, *var);
+	setmsgcolor (2, self);
 }
 
 CUSTOM_CVAR (Int, msg3color, 3, CVAR_ARCHIVE)
 {
-	setmsgcolor (3, *var);
+	setmsgcolor (3, self);
 }
 
 CUSTOM_CVAR (Int, msg4color, 3, CVAR_ARCHIVE)
 {
-	setmsgcolor (4, *var);
+	setmsgcolor (4, self);
 }
 
 CUSTOM_CVAR (Int, msgmidcolor, 5, CVAR_ARCHIVE)
 {
-	setmsgcolor (PRINTLEVELS, *var);
+	setmsgcolor (PRINTLEVELS, self);
 }
 
 static void maybedrawnow ()
@@ -200,7 +200,7 @@ void C_InitConsole (int width, int height, BOOL ingame)
 
 			if (stylize)
 			{
-				byte *fadetable = (byte *)W_CacheLumpName ("COLORMAP", PU_CACHE), f, *v, *i;
+				byte *fadetable = (byte *)W_CacheLumpName ("COLORMAP", PU_CACHE), f, *i;
 				int x, y;
 
 				for (y = 0; y < conback->GetHeight(); y++)
@@ -212,7 +212,7 @@ void C_InitConsole (int width, int height, BOOL ingame)
 							f = y;
 						else
 							f = 199 - y;
-						v = fadetable + (30 - f) * 256;
+						byte *v = fadetable + (30 - f) * 256;
 						for (x = 0; x < conback->GetWidth(); x++)
 						{
 							*i = v[*i];
@@ -224,11 +224,12 @@ void C_InitConsole (int width, int height, BOOL ingame)
 						for (x = 0; x < conback->GetWidth(); x++)
 						{
 							if (x <= 8)
-								v = fadetable + (30 - x) * 256;
+								*i = *(fadetable + (30 - x) * 256 + *i);
 							else if (x > 312)
-								v = fadetable + (x - 289) * 256;
-							*i = v[*i];
-							i++;
+								*i = *(fadetable + (x - 289) * 256 + *i);
+							else
+								*i = *(fadetable + 22*256 + *i);
+							++i;
 						}
 					}
 				}
@@ -253,7 +254,7 @@ void C_InitConsole (int width, int height, BOOL ingame)
 
 		char *fmtBuff = (char *)malloc (CONSOLESIZE);
 		char **fmtLines = (char **)malloc (CONSOLELINES*sizeof(char*)*4);
-		int out;
+		int out = 0;
 
 		if (fmtBuff && fmtLines)
 		{
@@ -264,7 +265,7 @@ void C_InitConsole (int width, int height, BOOL ingame)
 			fmtpos = fmtBuff;
 			memset (fmtBuff, 0, CONSOLESIZE);
 
-			for (in = TopLine, out = 0; in != InsertLine; in = (in + 1) & LINEMASK)
+			for (in = TopLine; in != InsertLine; in = (in + 1) & LINEMASK)
 			{
 				int len = strlen (Lines[in]);
 
@@ -348,12 +349,12 @@ void C_AddNotifyString (int printlevel, const char *source)
 	brokenlines_t *lines;
 	int i, len, width;
 
-	if ((printlevel != 128 && !*show_messages) ||
+	if ((printlevel != 128 && !show_messages) ||
 		!(len = strlen (source)) ||
 		gamestate != GS_LEVEL)
 		return;
 
-	width = *con_scaletext ? DisplayWidth / CleanXfac : DisplayWidth;
+	width = con_scaletext ? DisplayWidth / CleanXfac : DisplayWidth;
 
 	if (addtype == APPENDLINE && NotifyStrings[NUMNOTIFIES-1].printlevel == printlevel
 		&& (work = (char *)malloc (strlen ((char *)NotifyStrings[NUMNOTIFIES-1].text)
@@ -377,7 +378,7 @@ void C_AddNotifyString (int printlevel, const char *source)
 		if (addtype == NEWLINE)
 			memmove (&NotifyStrings[0], &NotifyStrings[1], sizeof(struct NotifyText) * (NUMNOTIFIES-1));
 		strcpy ((char *)NotifyStrings[NUMNOTIFIES-1].text, lines[i].string);
-		NotifyStrings[NUMNOTIFIES-1].timeout = gametic + (int)(*con_notifytime * TICRATE);
+		NotifyStrings[NUMNOTIFIES-1].timeout = gametic + (int)(con_notifytime * TICRATE);
 		NotifyStrings[NUMNOTIFIES-1].printlevel = printlevel;
 		addtype = NEWLINE;
 	}
@@ -486,6 +487,7 @@ static void AddToConsole (int printlevel, const char *text)
 		{
 			strcpy (work, Lines[InsertLine]);
 			strcat (work, text);
+			cc = CR_TAN;
 		}
 		else if (printlevel >= 0)
 		{
@@ -583,7 +585,7 @@ static void AddToConsole (int printlevel, const char *text)
 /* Adds a string to the console and also to the notify buffer */
 int PrintString (int printlevel, const char *outline)
 {
-	if (printlevel < *msglevel || *outline == '\0')
+	if (printlevel < msglevel || *outline == '\0')
 	{
 		return 0;
 	}
@@ -659,7 +661,7 @@ int STACK_ARGS DPrintf (const char *format, ...)
 	va_list argptr;
 	int count;
 
-	if (*developer)
+	if (developer)
 	{
 		va_start (argptr, format);
 		count = VPrintf (PRINT_HIGH, format, argptr);
@@ -735,7 +737,7 @@ void C_Ticker ()
 
 static void C_DrawNotifyText ()
 {
-	bool center = (*con_centernotify != 0.f);
+	bool center = (con_centernotify != 0.f);
 	int i, line, color;
 	
 	if (gamestate != GS_LEVEL || menuactive)
@@ -749,7 +751,7 @@ static void C_DrawNotifyText ()
 	{
 		if (NotifyStrings[i].timeout > gametic)
 		{
-			if (!*show_messages && NotifyStrings[i].printlevel != 128)
+			if (!show_messages && NotifyStrings[i].printlevel != 128)
 				continue;
 
 			if (NotifyStrings[i].printlevel >= PRINTLEVELS)
@@ -757,7 +759,7 @@ static void C_DrawNotifyText ()
 			else
 				color = PrintColors[NotifyStrings[i].printlevel];
 
-			if (*con_scaletext)
+			if (con_scaletext)
 			{
 				if (!center)
 					screen->DrawTextClean (color, 0, line, NotifyStrings[i].text);
@@ -917,14 +919,14 @@ void C_DrawConsole ()
 			else
 			{
 				CmdLine[2+CmdLine[0]] = 0;
-				screen->DrawText (CR_ORANGE, left, bottomline, "\x1c");
+				screen->DrawChar (CR_ORANGE, left, bottomline, '\x1c');
 				screen->DrawText (CR_ORANGE, left + 8, bottomline,
 					(char *)&CmdLine[2+CmdLine[259]]);
 			}
 			if (cursoron)
 			{
-				screen->DrawText (CR_YELLOW, left + 8 + (CmdLine[1] - CmdLine[259])* 8,
-					bottomline, "\xb");
+				screen->DrawChar (CR_YELLOW, left + 8 + (CmdLine[1] - CmdLine[259])* 8,
+					bottomline, '\xb');
 			}
 			if (RowAdjust && ConBottom >= 28)
 			{
@@ -957,7 +959,6 @@ void C_FullConsole ()
 		S_Start ();
 		SN_StopAllSequences ();
 		V_SetBlend (0,0,0,0);
-		I_PauseMouse ();
 	}
 	else
 	{
@@ -976,13 +977,11 @@ void C_ToggleConsole ()
 		ConsoleState = c_falling;
 		HistPos = NULL;
 		TabbedLast = false;
-		I_PauseMouse ();
 	}
 	else if (gamestate != GS_FULLCONSOLE && gamestate != GS_STARTUP)
 	{
 		ConsoleState = c_rising;
 		C_FlushDisplay ();
-		I_ResumeMouse ();
 	}
 }
 
@@ -995,10 +994,6 @@ void C_HideConsole ()
 		ConsoleState = c_up;
 		ConBottom = 0;
 		HistPos = NULL;
-		if (!menuactive)
-		{
-			I_ResumeMouse ();
-		}
 	}
 }
 
@@ -1030,316 +1025,314 @@ static void makestartposgood ()
 
 static BOOL C_HandleKey (event_t *ev, byte *buffer, int len)
 {
-	switch (ev->data1)
-	{
-	case '\t':
-		// Try to do tab-completion
-		C_TabComplete ();
-		break;
-
-	case GK_PGUP:
-		if (ev->data3 & (GKM_SHIFT|GKM_CTRL))
-		{ // Scroll console buffer up one page
-			RowAdjust += (SCREENHEIGHT-4) /
-				((gamestate == GS_FULLCONSOLE || gamestate == GS_STARTUP) ? 8 : 16) - 3;
-		}
-		else if (RowAdjust < CONSOLELINES)
-		{ // Scroll console buffer up
-			RowAdjust++;
-		}
-		break;
-
-	case GK_PGDN:
-		if (ev->data3 & (GKM_SHIFT|GKM_CTRL))
-		{ // Scroll console buffer down one page
-			const int scrollamt = (SCREENHEIGHT-4) /
-				((gamestate == GS_FULLCONSOLE || gamestate == GS_STARTUP) ? 8 : 16) - 3;
-			if (RowAdjust < scrollamt)
+	if (ev->subtype == EV_GUI_Char)
+	{ // Add keypress to command line
+		if (buffer[0] < len)
+		{
+			if (buffer[1] == buffer[0])
 			{
-				RowAdjust = 0;
+				buffer[buffer[0] + 2] = ev->data1;
 			}
 			else
 			{
-				RowAdjust -= scrollamt;
+				char *c, *e;
+
+				e = (char *)&buffer[buffer[0] + 1];
+				c = (char *)&buffer[buffer[1] + 2];
+
+				for (; e >= c; e--)
+					*(e + 1) = *e;
+
+				*c = ev->data1;
 			}
-		}
-		else if (RowAdjust > 0)
-		{ // Scroll console buffer down
-			RowAdjust--;
-		}
-		break;
-
-	case GK_HOME:
-		if (ev->data3 & GKM_CTRL)
-		{ // Move to top of console buffer
-			RowAdjust = CONSOLELINES;
-		}
-		else
-		{ // Move cursor to start of line
-			buffer[1] = buffer[len+4] = 0;
-		}
-		break;
-
-	case GK_END:
-		if (ev->data3 & GKM_CTRL)
-		{ // Move to bottom of console buffer
-			RowAdjust = 0;
-		}
-		else
-		{ // Move cursor to end of line
-			buffer[1] = buffer[0];
-			makestartposgood ();
-		}
-		break;
-
-	case GK_LEFT:
-		// Move cursor left one character
-		if (buffer[1])
-		{
-			buffer[1]--;
-			makestartposgood ();
-		}
-		break;
-
-	case GK_RIGHT:
-		// Move cursor right one character
-		if (buffer[1] < buffer[0])
-		{
+			buffer[0]++;
 			buffer[1]++;
 			makestartposgood ();
-		}
-		break;
-
-	case '\b':
-		// Erase character to left of cursor
-		if (buffer[0] && buffer[1])
-		{
-			char *c, *e;
-
-			e = (char *)&buffer[buffer[0] + 2];
-			c = (char *)&buffer[buffer[1] + 2];
-
-			for (; c < e; c++)
-				*(c - 1) = *c;
-			
-			buffer[0]--;
-			buffer[1]--;
-			if (buffer[len+4])
-				buffer[len+4]--;
-			makestartposgood ();
-		}
-		TabbedLast = false;
-		break;
-
-	case GK_DEL:
-		// Erase charater under cursor
-		if (buffer[1] < buffer[0])
-		{
-			char *c, *e;
-
-			e = (char *)&buffer[buffer[0] + 2];
-			c = (char *)&buffer[buffer[1] + 3];
-
-			for (; c < e; c++)
-				*(c - 1) = *c;
-
-			buffer[0]--;
-			makestartposgood ();
-		}
-		TabbedLast = false;
-		break;
-
-	case GK_UP:
-		// Move to previous entry in the command history
-		if (HistPos == NULL)
-		{
-			HistPos = HistHead;
-		}
-		else if (HistPos->Older)
-		{
-			HistPos = HistPos->Older;
-		}
-
-		if (HistPos)
-		{
-			strcpy ((char *)&buffer[2], HistPos->String);
-			buffer[0] = buffer[1] = strlen ((char *)&buffer[2]);
-			buffer[len+4] = 0;
-			makestartposgood();
-		}
-
-		TabbedLast = false;
-		break;
-
-	case GK_DOWN:
-		// Move to next entry in the command history
-		if (HistPos && HistPos->Newer)
-		{
-			HistPos = HistPos->Newer;
-		
-			strcpy ((char *)&buffer[2], HistPos->String);
-			buffer[0] = buffer[1] = strlen ((char *)&buffer[2]);
-		}
-		else
-		{
 			HistPos = NULL;
-			buffer[0] = buffer[1] = 0;
 		}
-		buffer[len+4] = 0;
-		makestartposgood();
 		TabbedLast = false;
-		break;
-
-	case '\r':
-		// Execute command line (ENTER)
-
-		buffer[2 + buffer[0]] = 0;
-
-		if (HistHead && stricmp (HistHead->String, (char *)&buffer[2]) == 0)
+	}
+	else
+	{
+		switch (ev->data1)
 		{
-			// Command line was the same as the previous one,
-			// so leave the history list alone
-		}
-		else
-		{
-			// Command line is different from last command line,
-			// or there is nothing in the history list,
-			// so add it to the history list.
+		case '\t':
+			// Try to do tab-completion
+			C_TabComplete ((ev->data3 & GKM_SHIFT) ? false : true);
+			break;
 
-			History *temp = (History *)Malloc (sizeof(struct History) + buffer[0]);
-
-			strcpy (temp->String, (char *)&buffer[2]);
-			temp->Older = HistHead;
-			if (HistHead)
-			{
-				HistHead->Newer = temp;
+		case GK_PGUP:
+			if (ev->data3 & (GKM_SHIFT|GKM_CTRL))
+			{ // Scroll console buffer up one page
+				RowAdjust += (SCREENHEIGHT-4) /
+					((gamestate == GS_FULLCONSOLE || gamestate == GS_STARTUP) ? 8 : 16) - 3;
 			}
-			temp->Newer = NULL;
-			HistHead = temp;
-
-			if (!HistTail)
-			{
-				HistTail = temp;
+			else if (RowAdjust < CONSOLELINES)
+			{ // Scroll console buffer up
+				RowAdjust++;
 			}
+			break;
 
-			if (HistSize == MAXHISTSIZE)
-			{
-				HistTail = HistTail->Newer;
-				free (HistTail->Older);
-				HistTail->Older = NULL;
-			}
-			else
-			{
-				HistSize++;
-			}
-		}
-		HistPos = NULL;
-		Printf (127, "]%s\n", &buffer[2]);
-		buffer[0] = buffer[1] = buffer[len+4] = 0;
-		AddCommandString ((char *)&buffer[2]);
-		TabbedLast = false;
-		break;
-	
-	case '`':
-	case GK_ESCAPE:
-		// Close console and clear command line. But if we're in the
-		// fullscreen console mode, there's nothing to fall back on
-		// if it's closed, so open the main menu instead.
-		if (gamestate == GS_STARTUP)
-		{
-			return false;
-		}
-		else if (gamestate == GS_FULLCONSOLE)
-		{
-			AddCommandString ("menu_main");
-		}
-		else
-		{
-			buffer[0] = buffer[1] = buffer[len+4] = 0;
-			HistPos = NULL;
-			C_ToggleConsole ();
-		}
-		break;
-
-	case 'C':
-	case 'V':
-		TabbedLast = false;
-		if (ev->data3 & GKM_CTRL)
-		{
-			if (ev->data1 == 'C')
-			{ // copy to clipboard
-				if (buffer[0] > 0)
+		case GK_PGDN:
+			if (ev->data3 & (GKM_SHIFT|GKM_CTRL))
+			{ // Scroll console buffer down one page
+				const int scrollamt = (SCREENHEIGHT-4) /
+					((gamestate == GS_FULLCONSOLE || gamestate == GS_STARTUP) ? 8 : 16) - 3;
+				if (RowAdjust < scrollamt)
 				{
-					buffer[2 + buffer[0]] = 0;
-					I_PutInClipboard ((char *)&buffer[2]);
-				}
-				break;
-			}
-			else
-			{ // paste from clipboard
-				char *clip = I_GetFromClipboard ();
-				if (clip != NULL)
-				{
-					strtok (clip, "\r\n\b");
-					int cliplen = strlen (clip);
-
-					cliplen = MIN(len, cliplen);
-					if (buffer[0] + cliplen > len)
-					{
-						cliplen = len - buffer[0];
-					}
-
-					if (cliplen > 0)
-					{
-						if (buffer[1] < buffer[0])
-						{
-							memmove (&buffer[2 + buffer[1] + cliplen],
-									 &buffer[2 + buffer[1]], buffer[0] - buffer[1]);
-						}
-						memcpy (&buffer[2 + buffer[1]], clip, cliplen);
-						buffer[0] += cliplen;
-						buffer[1] += cliplen;
-						makestartposgood ();
-						HistPos = NULL;
-					}
-					delete[] clip;
-				}
-				break;
-			}
-		}
-		// intentional fall-through
-	default:
-		if (ev->data2 >= ' ')
-		{ // Add keypress to command line
-
-			if (buffer[0] < len)
-			{
-				char data = ev->data2;
-
-				if (buffer[1] == buffer[0])
-				{
-					buffer[buffer[0] + 2] = data;
+					RowAdjust = 0;
 				}
 				else
 				{
-					char *c, *e;
-
-					e = (char *)&buffer[buffer[0] + 1];
-					c = (char *)&buffer[buffer[1] + 2];
-
-					for (; e >= c; e--)
-						*(e + 1) = *e;
-
-					*c = data;
+					RowAdjust -= scrollamt;
 				}
-				buffer[0]++;
+			}
+			else if (RowAdjust > 0)
+			{ // Scroll console buffer down
+				RowAdjust--;
+			}
+			break;
+
+		case GK_HOME:
+			if (ev->data3 & GKM_CTRL)
+			{ // Move to top of console buffer
+				RowAdjust = CONSOLELINES;
+			}
+			else
+			{ // Move cursor to start of line
+				buffer[1] = buffer[len+4] = 0;
+			}
+			break;
+
+		case GK_END:
+			if (ev->data3 & GKM_CTRL)
+			{ // Move to bottom of console buffer
+				RowAdjust = 0;
+			}
+			else
+			{ // Move cursor to end of line
+				buffer[1] = buffer[0];
+				makestartposgood ();
+			}
+			break;
+
+		case GK_LEFT:
+			// Move cursor left one character
+			if (buffer[1])
+			{
+				buffer[1]--;
+				makestartposgood ();
+			}
+			break;
+
+		case GK_RIGHT:
+			// Move cursor right one character
+			if (buffer[1] < buffer[0])
+			{
 				buffer[1]++;
 				makestartposgood ();
-				HistPos = NULL;
+			}
+			break;
+
+		case '\b':
+			// Erase character to left of cursor
+			if (buffer[0] && buffer[1])
+			{
+				char *c, *e;
+
+				e = (char *)&buffer[buffer[0] + 2];
+				c = (char *)&buffer[buffer[1] + 2];
+
+				for (; c < e; c++)
+					*(c - 1) = *c;
+				
+				buffer[0]--;
+				buffer[1]--;
+				if (buffer[len+4])
+					buffer[len+4]--;
+				makestartposgood ();
 			}
 			TabbedLast = false;
+			break;
+
+		case GK_DEL:
+			// Erase charater under cursor
+			if (buffer[1] < buffer[0])
+			{
+				char *c, *e;
+
+				e = (char *)&buffer[buffer[0] + 2];
+				c = (char *)&buffer[buffer[1] + 3];
+
+				for (; c < e; c++)
+					*(c - 1) = *c;
+
+				buffer[0]--;
+				makestartposgood ();
+			}
+			TabbedLast = false;
+			break;
+
+		case GK_UP:
+			// Move to previous entry in the command history
+			if (HistPos == NULL)
+			{
+				HistPos = HistHead;
+			}
+			else if (HistPos->Older)
+			{
+				HistPos = HistPos->Older;
+			}
+
+			if (HistPos)
+			{
+				strcpy ((char *)&buffer[2], HistPos->String);
+				buffer[0] = buffer[1] = strlen ((char *)&buffer[2]);
+				buffer[len+4] = 0;
+				makestartposgood();
+			}
+
+			TabbedLast = false;
+			break;
+
+		case GK_DOWN:
+			// Move to next entry in the command history
+			if (HistPos && HistPos->Newer)
+			{
+				HistPos = HistPos->Newer;
+			
+				strcpy ((char *)&buffer[2], HistPos->String);
+				buffer[0] = buffer[1] = strlen ((char *)&buffer[2]);
+			}
+			else
+			{
+				HistPos = NULL;
+				buffer[0] = buffer[1] = 0;
+			}
+			buffer[len+4] = 0;
+			makestartposgood();
+			TabbedLast = false;
+			break;
+
+		case '\r':
+			// Execute command line (ENTER)
+
+			buffer[2 + buffer[0]] = 0;
+
+			if (HistHead && stricmp (HistHead->String, (char *)&buffer[2]) == 0)
+			{
+				// Command line was the same as the previous one,
+				// so leave the history list alone
+			}
+			else
+			{
+				// Command line is different from last command line,
+				// or there is nothing in the history list,
+				// so add it to the history list.
+
+				History *temp = (History *)Malloc (sizeof(struct History) + buffer[0]);
+
+				strcpy (temp->String, (char *)&buffer[2]);
+				temp->Older = HistHead;
+				if (HistHead)
+				{
+					HistHead->Newer = temp;
+				}
+				temp->Newer = NULL;
+				HistHead = temp;
+
+				if (!HistTail)
+				{
+					HistTail = temp;
+				}
+
+				if (HistSize == MAXHISTSIZE)
+				{
+					HistTail = HistTail->Newer;
+					free (HistTail->Older);
+					HistTail->Older = NULL;
+				}
+				else
+				{
+					HistSize++;
+				}
+			}
+			HistPos = NULL;
+			Printf (127, "]%s\n", &buffer[2]);
+			buffer[0] = buffer[1] = buffer[len+4] = 0;
+			AddCommandString ((char *)&buffer[2]);
+			TabbedLast = false;
+			break;
+		
+		case '`':
+		case GK_ESCAPE:
+			// Close console and clear command line. But if we're in the
+			// fullscreen console mode, there's nothing to fall back on
+			// if it's closed, so open the main menu instead.
+			if (gamestate == GS_STARTUP)
+			{
+				return false;
+			}
+			else if (gamestate == GS_FULLCONSOLE)
+			{
+				C_DoCommand ("menu_main");
+			}
+			else
+			{
+				buffer[0] = buffer[1] = buffer[len+4] = 0;
+				HistPos = NULL;
+				C_ToggleConsole ();
+			}
+			break;
+
+		case 'C':
+		case 'V':
+			TabbedLast = false;
+			if (ev->data3 & GKM_CTRL)
+			{
+				if (ev->data1 == 'C')
+				{ // copy to clipboard
+					if (buffer[0] > 0)
+					{
+						buffer[2 + buffer[0]] = 0;
+						I_PutInClipboard ((char *)&buffer[2]);
+					}
+					break;
+				}
+				else
+				{ // paste from clipboard
+					char *clip = I_GetFromClipboard ();
+					if (clip != NULL)
+					{
+						strtok (clip, "\r\n\b");
+						int cliplen = strlen (clip);
+
+						cliplen = MIN(len, cliplen);
+						if (buffer[0] + cliplen > len)
+						{
+							cliplen = len - buffer[0];
+						}
+
+						if (cliplen > 0)
+						{
+							if (buffer[1] < buffer[0])
+							{
+								memmove (&buffer[2 + buffer[1] + cliplen],
+										 &buffer[2 + buffer[1]], buffer[0] - buffer[1]);
+							}
+							memcpy (&buffer[2 + buffer[1]], clip, cliplen);
+							buffer[0] += cliplen;
+							buffer[1] += cliplen;
+							makestartposgood ();
+							HistPos = NULL;
+						}
+						delete[] clip;
+					}
+					break;
+				}
+			}
+			break;
 		}
-		break;
 	}
 	CursorTicker = C_BLINKRATE;
 	cursoron = 1;
@@ -1356,7 +1349,9 @@ BOOL C_Responder (event_t *ev)
 		return false;
 	}
 
-	if (ev->subtype == EV_GUI_KeyDown || ev->subtype == EV_GUI_KeyRepeat)
+	if (ev->subtype == EV_GUI_KeyDown ||
+		ev->subtype == EV_GUI_KeyRepeat ||
+		ev->subtype == EV_GUI_Char)
 	{
 		return C_HandleKey (ev, CmdLine, 255);
 	}
@@ -1383,12 +1378,7 @@ CCMD (clear)
 
 CCMD (echo)
 {
-	if (argc > 1)
-	{
-		char *str = BuildString (argc - 1, argv + 1);
-		Printf ("%s\n", str);
-		delete[] str;
-	}
+	Printf ("%s\n", argv.AllButFirstArg());
 }
 
 /* Printing in the middle of the screen */
@@ -1411,7 +1401,7 @@ void C_MidPrint (const char *msg)
 		AddToConsole (-1, buff);
 
 		StatusBar->AttachMessage (new FHUDMessage (msg, 1.5f, 0.375f,
-			(EColorRange)PrintColors[PRINTLEVELS], *con_midtime), 'CNTR');
+			(EColorRange)PrintColors[PRINTLEVELS], con_midtime), 'CNTR');
 	}
 	else
 	{
@@ -1495,7 +1485,7 @@ static int FindDiffPoint (const char *str1, const char *str2)
 	return i;
 }
 
-static void C_TabComplete ()
+static void C_TabComplete (bool goForward)
 {
 	int i;
 	int diffpoint;
@@ -1524,11 +1514,26 @@ static void C_TabComplete ()
 		if (!FindTabCommand ((char *)(CmdLine + TabStart), &TabPos, TabSize))
 			return;		// No initial matches
 
-		TabPos--;
+		if (goForward)
+		{ // Position just before the list of completions so that when TabPos
+		  // gets advanced below, it will be at the first one.
+			--TabPos;
+		}
+		else
+		{ // Find the last matching tab, then go one past it.
+			while (++TabPos < NumTabCommands)
+			{
+				if (FindDiffPoint (TabCommands[TabPos].Name, (char *)(CmdLine + TabStart)) < TabSize)
+				{
+					break;
+				}
+			}
+		}
 		TabbedLast = true;
 	}
 
-	if (++TabPos == NumTabCommands)
+	if ((goForward && ++TabPos == NumTabCommands) ||
+		(!goForward && --TabPos < 0))
 	{
 		TabbedLast = false;
 		CmdLine[0] = CmdLine[1] = TabSize;

@@ -110,9 +110,24 @@ CVAR (Bool, r_particles, true, 0);
 // [RH] Removed checks for coexistance of rotation 0 with other
 //		rotations and made it look more like BOOM's version.
 //
-static void R_InstallSpriteLump (int lump, unsigned frame, unsigned rotation, BOOL flipped)
+static void R_InstallSpriteLump (int lump, unsigned frame, char rot, BOOL flipped)
 {
-	if (frame >= MAX_SPRITE_FRAMES || rotation > 8)
+	unsigned rotation;
+
+	if (rot >= '0' && rot <= '9')
+	{
+		rotation = rot - '0';
+	}
+	else if (rot >= 'A')
+	{
+		rotation = rot - 'A' + 10;
+	}
+	else
+	{
+		rotation = 17;
+	}
+
+	if (frame >= MAX_SPRITE_FRAMES || rotation > 16)
 		I_FatalError ("R_InstallSpriteLump: Bad frame characters in lump %i", lump);
 
 	if ((int)frame > maxframe)
@@ -125,22 +140,40 @@ static void R_InstallSpriteLump (int lump, unsigned frame, unsigned rotation, BO
         // allows doom to have a "no value set yet" boolean value!
 		int r;
 
-		for (r = 7; r >= 0; r--)
+		for (r = 15; r >= 0; r--)
 		{
 			if (sprtemp[frame].lump[r] == -1)
 			{
 				sprtemp[frame].lump[r] = (short)(lump);
-				sprtemp[frame].flip[r] = (byte)flipped;
+				if (flipped)
+				{
+					sprtemp[frame].flip |= 1 << r;
+				}
 				sprtemp[frame].rotate = false;
 			}
 		}
 	}
-	else if (sprtemp[frame].lump[--rotation] == -1)
+	else
 	{
-		// the lump is only used for one rotation
-		sprtemp[frame].lump[rotation] = (short)(lump);
-		sprtemp[frame].flip[rotation] = (byte)flipped;
-		sprtemp[frame].rotate = true;
+		if (rotation <= 8)
+		{
+			rotation = (rotation - 1) * 2;
+		}
+		else
+		{
+			rotation = (rotation - 9) * 2 + 1;
+		}
+
+		if (sprtemp[frame].lump[rotation] == -1)
+		{
+			// the lump is only used for one rotation
+			sprtemp[frame].lump[rotation] = (short)(lump);
+			if (flipped)
+			{
+				sprtemp[frame].flip |= 1 << rotation;
+			}
+			sprtemp[frame].rotate = true;
+		}
 	}
 }
 
@@ -158,28 +191,53 @@ static void R_InstallSprite (int num)
 
 	maxframe++;
 	
-	for (frame = 0 ; frame < maxframe ; frame++)
+	for (frame = 0; frame < maxframe; frame++)
 	{
 		switch ((int)sprtemp[frame].rotate)
 		{
-		  case -1:
+		case -1:
 			// no rotations were found for that frame at all
 			I_FatalError ("R_InstallSprite: No patches found for %s frame %c", sprites[num].name, frame+'A');
 			break;
 			
-		  case 0:
+		case 0:
 			// only the first rotation is needed
 			break;
 					
-		  case 1:
-			// must have all 8 frames
+		case 1:
+			// must have all 8 frame pairs
 			{
-				int rotation;
+				int rot;
 
-				for (rotation = 0; rotation < 8; rotation++)
-					if (sprtemp[frame].lump[rotation] == -1)
-						I_FatalError ("R_InstallSprite: Sprite %s frame %c is missing rotations",
-									  sprites[num].name, frame+'A');
+				for (rot = 0; rot < 8; ++rot)
+				{
+					if (sprtemp[frame].lump[rot*2+1] == -1)
+					{
+						sprtemp[frame].lump[rot*2+1] = sprtemp[frame].lump[rot*2];
+						if (sprtemp[frame].flip & (1 << (rot*2)))
+						{
+							sprtemp[frame].flip |= 1 << (rot*2+1);
+						}
+					}
+					if (sprtemp[frame].lump[rot*2] == -1)
+					{
+						sprtemp[frame].lump[rot*2] = sprtemp[frame].lump[rot*2+1];
+						if (sprtemp[frame].flip & (1 << (rot*2+1)))
+						{
+							sprtemp[frame].flip |= 1 << (rot*2);
+						}
+					}
+
+				}
+				for (rot = 0; rot < 16; ++rot)
+				{
+					if (sprtemp[frame].lump[rot] == -1)
+						I_FatalError ("R_InstallSprite: Sprite %c%c%c%c frame %c is missing rotations",
+									  sprites[num].name[0],
+									  sprites[num].name[1],
+									  sprites[num].name[2],
+									  sprites[num].name[3], frame+'A');
+				}
 			}
 			break;
 		}
@@ -226,6 +284,10 @@ void R_InitSpriteDefs ()
 	{
 		spritename = sprites[i].name;
 		memset (sprtemp, -1, sizeof(sprtemp));
+		for (int j = 0; j < 16; ++j)
+		{
+			sprtemp[j].flip = 0;
+		}
 				
 		maxframe = -1;
 		intname = *(int *)spritename;
@@ -238,13 +300,13 @@ void R_InitSpriteDefs ()
 			{
 				R_InstallSpriteLump (l, 
 									 lumpinfo[l].name[4] - 'A',
-									 lumpinfo[l].name[5] - '0',
+									 lumpinfo[l].name[5],
 									 false);
 
 				if (lumpinfo[l].name[6])
 					R_InstallSpriteLump (l,
 									 lumpinfo[l].name[6] - 'A',
-									 lumpinfo[l].name[7] - '0',
+									 lumpinfo[l].name[7],
 									 true);
 			}
 		}
@@ -329,7 +391,7 @@ void R_InitSkins (void)
 			if (0 == stricmp (key, "name"))
 			{
 				strncpy (skins[i].name, sc_String, 16);
-				for (j = 0; j < i; j++)
+				for (j = 0; (size_t)j < i; j++)
 				{
 					if (stricmp (skins[i].name, skins[j].name) == 0)
 					{
@@ -384,6 +446,10 @@ void R_InitSkins (void)
 		}
 
 		memset (sprtemp, -1, sizeof(sprtemp));
+		for (k = 0; k < 16; ++k)
+		{
+			sprtemp[k].flip = 0;
+		}
 		maxframe = -1;
 
 		for (k = base + 1; lumpinfo[k].wadnum == lumpinfo[base].wadnum; k++)
@@ -392,13 +458,13 @@ void R_InitSkins (void)
 			{
 				R_InstallSpriteLump (k, 
 									 lumpinfo[k].name[4] - 'A',
-									 lumpinfo[k].name[5] - '0',
+									 lumpinfo[k].name[5],
 									 false);
 
 				if (lumpinfo[k].name[6])
 					R_InstallSpriteLump (k,
 									 lumpinfo[k].name[6] - 'A',
-									 lumpinfo[k].name[7] - '0',
+									 lumpinfo[k].name[7],
 									 true);
 			}
 		}
@@ -868,7 +934,7 @@ void R_ProjectSprite (AActor *thing)
 	int 				lump;
 	
 	unsigned			rot;
-	byte 				flip;
+	WORD 				flip;
 	
 	vissprite_t*		vis;
 	
@@ -928,15 +994,17 @@ void R_ProjectSprite (AActor *thing)
 	{
 		// choose a different rotation based on player view
 		ang = R_PointToAngle (thing->x, thing->y);
-		rot = (ang-thing->angle+(unsigned)(ANG45/2)*9)>>29;
+//		rot = (ang-thing->angle+(unsigned)(ANG45/2)*9)>>29;
+		rot = (ang-thing->angle+(unsigned)(ANG45/2)*9)>>28;
+//		rot <<= 1;
 		lump = sprframe->lump[rot];
-		flip = sprframe->flip[rot];
+		flip = sprframe->flip & (1 << rot);
 	}
 	else
 	{
 		// use single rotation for all views
 		lump = sprframe->lump[rot = 0];
-		flip = sprframe->flip[0];
+		flip = sprframe->flip & 1;
 	}
 
 	if (TileSizes[lump].Width == 0xffff)
@@ -1128,7 +1196,7 @@ void R_DrawPSprite (pspdef_t* psp, AActor *owner)
 	sprframe = &sprdef->spriteframes[psp->state->GetFrame()];
 
 	lump = sprframe->lump[0];
-	flip = (BOOL)sprframe->flip[0];
+	flip = (BOOL)sprframe->flip & 1;
 
 	if (TileSizes[lump].Width == 0xffff)
 	{
@@ -1160,7 +1228,7 @@ void R_DrawPSprite (pspdef_t* psp, AActor *owner)
 		(psp->sy - (TileSizes[lump].TopOffset << FRACBITS));
 	if (camera->player && (RenderTarget != screen ||
 		realviewheight == RenderTarget->GetHeight() ||
-		(RenderTarget->GetWidth() > 320 && !*st_scale)))
+		(RenderTarget->GetWidth() > 320 && !st_scale)))
 	{	// Adjust PSprite for fullscreen views
 		FWeaponInfo *weapon;
 		if (camera->player->powers[pw_weaponlevel2])
@@ -1249,7 +1317,7 @@ void R_DrawPlayerSprites (void)
 	static sector_t tempsec;
 	int			floorlight, ceilinglight;
 	
-	if (!*r_drawplayersprites ||
+	if (!r_drawplayersprites ||
 		!camera->player ||
 		(players[consoleplayer].cheats & CF_CHASECAM))
 		return;
@@ -1732,7 +1800,6 @@ void R_DrawParticle (vissprite_t *vis, int x1, int x2)
 		DWORD *bg2rgb;
 		int countbase = x2 - x1 + 1;
 		int ycount;
-		int colsize = ds_colsize;
 		int spacing;
 		byte *dest;
 		DWORD fg;
@@ -1753,8 +1820,8 @@ void R_DrawParticle (vissprite_t *vis, int x1, int x2)
 			fg = fg2rgb[color];
 		}
 
-		spacing = SCREENPITCH - (countbase << detailxshift);
-		dest = ylookup[yl] + columnofs[x1];
+		spacing = (RenderTarget->GetPitch()<<detailyshift) - countbase;
+		dest = ylookup[yl] + x1;
 
 		do
 		{
@@ -1763,8 +1830,7 @@ void R_DrawParticle (vissprite_t *vis, int x1, int x2)
 			{
 				DWORD bg = bg2rgb[*dest];
 				bg = (fg+bg) | 0x1f07c1f;
-				*dest = RGB32k[0][0][bg & (bg>>15)];
-				dest += colsize;
+				*dest++ = RGB32k[0][0][bg & (bg>>15)];
 			} while (--count);
 			dest += spacing;
 		} while (--ycount);

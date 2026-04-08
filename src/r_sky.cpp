@@ -80,7 +80,7 @@ void R_InitSkyMap ()
 
 	if (textureheight[sky1texture] != textureheight[sky2texture])
 	{
-		Printf ("\x81+Both sky textures must be the same height.\x81-\n");
+		Printf ("\x1f+Both sky textures must be the same height.\x1f-\n");
 		sky2texture = sky1texture;
 	}
 
@@ -94,8 +94,8 @@ void R_InitSkyMap ()
 	if (fskyheight <= (128 << FRACBITS))
 	{
 		skytexturemid = 200/2*FRACUNIT;
-		skystretch = (*r_stretchsky
-					  && !(*dmflags & DF_NO_FREELOOK)
+		skystretch = (r_stretchsky
+					  && !(dmflags & DF_NO_FREELOOK)
 					  && !(level.flags & LEVEL_FORCENOSKYSTRETCH)) ? 1 : 0;
 	}
 	else

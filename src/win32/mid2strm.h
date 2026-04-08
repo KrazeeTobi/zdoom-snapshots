@@ -1,26 +1,14 @@
 #ifndef __MID2STRM_H__
 #define __MID2STRM_H__
 
+#include "mus2midi.h"
+
 #define CB_STREAMBUF	(32768)					// Size of each stream buffer
 
 // MIDI file constants
 //
 #define MThd			0x6468544D				// Start of file
 #define MTrk			0x6B72544D				// Start of track
-
-#define MIDI_SYSEX		((BYTE)0xF0)			// SysEx begin
-#define MIDI_SYSEXEND	((BYTE)0xF7)			// SysEx end
-#define MIDI_META		((BYTE)0xFF)			// Meta event begin
-#define MIDI_META_TEMPO	((BYTE)0x51)
-#define MIDI_META_EOT	((BYTE)0x2F)			// End-of-track
-
-#define MIDI_NOTEOFF	((BYTE)0x80)			// + note + velocity
-#define MIDI_NOTEON		((BYTE)0x90)			// + note + velocity
-#define MIDI_POLYPRESS  ((BYTE)0xA0)			// + pressure (2 bytes)
-#define MIDI_CTRLCHANGE ((BYTE)0xB0)			// + ctrlr + value
-#define MIDI_PRGMCHANGE	((BYTE)0xC0)			// + new patch
-#define MIDI_CHANPRESS	((BYTE)0xD0)			// + pressure (1 byte)
-#define MIDI_PITCHBEND	((BYTE)0xE0)			// + pitch bend (2 bytes)
 
 #define MIDS_SHORTMSG	(0x00000000)
 #define MIDS_TEMPO		(0x01000000)

@@ -291,7 +291,6 @@ struct sector_t
 	short damage;		// [RH] Damage to do while standing on floor
 	short mod;			// [RH] Means-of-death for applied damage
 
-	bool alwaysfake;	// [RH] Always apply heightsec modifications?
 	byte waterzone;		// [RH] Sector is underwater?
 	WORD MoreFlags;		// [RH] Misc sector flags
 
@@ -542,11 +541,9 @@ typedef struct vissprite_s vissprite_t;
 //
 struct spriteframe_s
 {
-	// Note: as eight entries are available,
-	//	we might as well insert the same name eight times.
 	byte	 	rotate;		// if false, use 0 for any position.
-	short		lump[8];	// lump to use for view angles 0-7
-	byte		flip[8];	// flip (1 = flip) to use for view angles 0-7.
+	short		lump[16];	// lump to use for view angles 0-15
+	WORD		flip;		// flip (1 = flip) to use for view angles 0-15.
 };
 typedef struct spriteframe_s spriteframe_t;
 

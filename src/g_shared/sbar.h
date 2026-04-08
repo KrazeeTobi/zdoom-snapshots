@@ -99,7 +99,9 @@ public:
 	virtual void SetFace (void *);		// Takes a FPlayerSkin as input
 
 protected:
+	void UpdateRect (int x, int y, int width, int height) const;
 	void DrawImage (const FImageCollection &collection, int image, int x, int y, byte *translation=NULL) const;
+	void DrawImageNoUpdate (const FImageCollection &collection, int image, int x, int y, byte *translation=NULL) const;
 	void DrawPartialImage (const FImageCollection &collection, int image, int x, int y, int wx, int wy, int ww, int wh) const;
 
 	void SetHorizCentering (bool which) { Centering = which; }

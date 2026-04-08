@@ -31,16 +31,16 @@ public:
 	FColorMatcher &operator= (const FColorMatcher &other);
 
 private:
-	enum { HIBITS=4, LOBITS=8-HIBITS, HISIZE=1<<HIBITS, LOSIZE=1<<LOBITS};
+	enum { CHIBITS=4, CLOBITS=8-CHIBITS, CHISIZE=1<<CHIBITS, CLOSIZE=1<<CLOBITS};
 	struct Seed;
 	struct PalEntry;
 
 	const PalEntry *Pal;
-	byte FirstColor[HISIZE+1][HISIZE+1][HISIZE+1];
+	byte FirstColor[CHISIZE+1][CHISIZE+1][CHISIZE+1];
 	byte NextColor[256];
 
 	int FillPlane (int r1, int r2, int g1, int g2, int b1, int b2,
-		byte seedspread[HISIZE+1][HISIZE+1][HISIZE+1],
+		byte seedspread[CHISIZE+1][CHISIZE+1][CHISIZE+1],
 		Seed *seeds, int thisseed);
 };
 

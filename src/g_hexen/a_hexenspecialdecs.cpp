@@ -130,6 +130,7 @@ IMPLEMENT_ACTOR (ATreeDestructible, Hexen, 8062, 0)
 	PROP_SpawnHealth (70)
 	PROP_RadiusFixed (15)
 	PROP_HeightFixed (180)
+	PROP_MassLong (INT_MAX)
 	PROP_Flags (MF_SOLID|MF_SHOOTABLE|MF_NOBLOOD)
 
 	PROP_SpawnState (S_ZTREEDESTRUCTIBLE)
@@ -300,7 +301,7 @@ void A_PotteryExplode (AActor *actor)
 	S_Sound (mo, CHAN_BODY, "PotteryExplode", 1, ATTN_NORM);
 	if (SpawnableThings[actor->args[0]])
 	{ // Spawn an item
-		if (!(*dmflags & DF_NO_MONSTERS) 
+		if (!(dmflags & DF_NO_MONSTERS) 
 		|| !(GetDefaultByType (SpawnableThings[actor->args[0]])->flags & MF_COUNTKILL))
 		{ // Only spawn monsters if not -nomonsters
 			Spawn (SpawnableThings[actor->args[0]],
@@ -1080,7 +1081,7 @@ void A_SoAExplode (AActor *actor)
 	}
 	if (SpawnableThings[actor->args[0]])
 	{ // Spawn an item
-		if (!(*dmflags & DF_NO_MONSTERS) 
+		if (!(dmflags & DF_NO_MONSTERS) 
 		|| !(GetDefaultByType (SpawnableThings[actor->args[0]])->flags & MF_COUNTKILL))
 		{ // Only spawn monsters if not -nomonsters
 			Spawn (SpawnableThings[actor->args[0]],

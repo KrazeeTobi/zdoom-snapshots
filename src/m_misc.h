@@ -41,8 +41,6 @@ void M_LoadDefaults ();
 
 void STACK_ARGS M_SaveDefaults ();
 
-#ifdef UNIX
 char *GetUserFile (const char *path, bool nodir=false);
-#endif
 
 #endif

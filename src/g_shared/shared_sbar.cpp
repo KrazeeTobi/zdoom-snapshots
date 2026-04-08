@@ -36,14 +36,14 @@ CUSTOM_CVAR (Bool, st_scale, true, CVAR_ARCHIVE)
 {
 	if (StatusBar)
 	{
-		StatusBar->SetScaled (*var);
+		StatusBar->SetScaled (self);
 		setsizeneeded = true;
 	}
 }
 
 CUSTOM_CVAR (Int, crosshair, 0, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 {
-	int num = *var;
+	int num = self;
 	char name[16], size;
 	const char *namelist;
 	int lump;
@@ -108,7 +108,7 @@ FBaseStatusBar::FBaseStatusBar (int reltop)
 	Messages = NULL;
 	Displacement = 0;
 
-	SetScaled (*st_scale);
+	SetScaled (st_scale);
 	AmmoImages.Init (AmmoPics, NUMAMMO);
 	ArtiImages.Init (ArtiPics, NUMARTIFACTS);
 	ArmorImages.Init (ArmorPics, NUMARMOR);
@@ -380,6 +380,7 @@ void FBaseStatusBar::CopyToScreen (int x, int y, int w, int h) const
 		fixed_t cx = left;
 		do
 		{
+			//*to++ = x;
 			*to++ = from[cx>>FRACBITS];
 			cx += ix;
 		} while (--l);
@@ -390,13 +391,32 @@ void FBaseStatusBar::CopyToScreen (int x, int y, int w, int h) const
 
 //---------------------------------------------------------------------------
 //
+// PROC UpdateRect
+//
+// If scaling, copies the given rectangle on the status bar to the screen.
+// If not scaling, does nothing.
+//
+//---------------------------------------------------------------------------
+
+void FBaseStatusBar::UpdateRect (int x, int y, int w, int h) const
+{
+	if (Scaled)
+	{
+		ScaleCopy->Lock ();
+		CopyToScreen (x, y, w, h);
+		ScaleCopy->Unlock ();
+	}
+}
+
+//---------------------------------------------------------------------------
+//
 // PROC DrawImage
 //
 // Draws an image with the status bar's upper-left corner as the origin.
 //
 //---------------------------------------------------------------------------
 
-void FBaseStatusBar::DrawImage (const FImageCollection &coll, int img,
+void FBaseStatusBar::DrawImageNoUpdate (const FImageCollection &coll, int img,
 	int x, int y, byte *translation) const
 {
 	int w, h, xo, yo;
@@ -410,7 +430,7 @@ void FBaseStatusBar::DrawImage (const FImageCollection &coll, int img,
 			if (y < 0)
 			{
 				screen->ScaleMaskedBlock (x * screen->GetWidth() / 320,
-					(y + ST_Y) * screen->GetHeight() / 200, w, h,
+					::ST_Y + y * screen->GetHeight() / 200, w, h,
 					(w * screen->GetWidth()) / 320, (h * screen->GetHeight()) / 200,
 					data, NULL);
 			}
@@ -418,13 +438,29 @@ void FBaseStatusBar::DrawImage (const FImageCollection &coll, int img,
 			{
 				ScaleCopy->Lock ();
 				ScaleCopy->DrawMaskedBlock (x, y, w, h, data, translation);
-				CopyToScreen (x, y, w, h);
 				ScaleCopy->Unlock ();
 			}
 		}
 		else
 		{
 			screen->DrawMaskedBlock (x + ST_X, y + ST_Y, w, h, data, translation);
+		}
+	}
+}
+
+void FBaseStatusBar::DrawImage (const FImageCollection &coll, int img,
+	int x, int y, byte *translation) const
+{
+	DrawImageNoUpdate (coll, img, x, y, translation);
+	if (Scaled)
+	{
+		int w, h, xo, yo;
+		byte *data = coll.GetImage (img, &w, &h, &xo, &yo);
+		if (data && y >= 0)
+		{
+			ScaleCopy->Lock ();
+			CopyToScreen (x, y, w, h);
+			ScaleCopy->Unlock ();
 		}
 	}
 }
@@ -493,7 +529,7 @@ bool FBaseStatusBar::RepositionCoords (int &x, int &y, int xo, int yo,
 		xo = w / 2;
 		yo = h;
 	}
-	if (*hud_scale)
+	if (hud_scale)
 	{
 		x *= CleanXfac;
 		if (Centering)
@@ -1028,7 +1064,7 @@ void FBaseStatusBar::DrawCrosshair ()
 		return;
 	}
 
-	if (*crosshairscale)
+	if (crosshairscale)
 	{
 		size = SCREENWIDTH * FRACUNIT / 320;
 	}
@@ -1037,14 +1073,14 @@ void FBaseStatusBar::DrawCrosshair ()
 		size = FRACUNIT;
 	}
 
-	if (*crosshairgrow)
+	if (crosshairgrow)
 	{
 		size = FixedMul (size, CrosshairSize);
 	}
 	w = (iw * size) >> FRACBITS;
 	h = (ih * size) >> FRACBITS;
 
-	if (*crosshairhealth)
+	if (crosshairhealth)
 	{
 		int health = CPlayer->health;
 
@@ -1075,7 +1111,7 @@ void FBaseStatusBar::DrawCrosshair ()
 	}
 	else
 	{
-		color = *crosshaircolor;
+		color = crosshaircolor;
 	}
 
 	if (color != prevcolor)
@@ -1136,7 +1172,7 @@ void FBaseStatusBar::Draw (EHudState state)
 		RefreshBackground ();
 	}
 
-	if (*idmypos)
+	if (idmypos)
 	{ // Draw current coordinates
 		int height = screen->Font->GetHeight();
 		int y = ::ST_Y - height;
@@ -1147,7 +1183,7 @@ void FBaseStatusBar::Draw (EHudState state)
 		value = &CPlayer->mo->z;
 		for (i = 2, value = &CPlayer->mo->z; i >= 0; y -= height, --value, --i)
 		{
-			sprintf (line, "%c: %d", labels[i], *value >> FRACBITS);
+			sprintf (line, "%c: %ld", labels[i], *value >> FRACBITS);
 			screen->DrawText (CR_GREEN, SCREENWIDTH - 80, y, line);
 			BorderNeedRefresh = screen->GetPageCount();
 		}
@@ -1166,7 +1202,7 @@ void FBaseStatusBar::Draw (EHudState state)
 		height = screen->Font->GetHeight () * CleanYfac;
 
 		// Draw timer
-		if (*am_showtime)
+		if (am_showtime)
 		{
 			sprintf (line, "%02d:%02d:%02d", time/3600, (time%3600)/60, time%60);	// Time
 			screen->DrawTextClean (CR_GREY, SCREENWIDTH - 80*CleanXfac, 8, line);
@@ -1187,19 +1223,19 @@ void FBaseStatusBar::Draw (EHudState state)
 			{
 				line[i++] = level.mapname[i];
 			}
-			line[i++] = ':';
-			line[i++] = ' ';
+			line[i] = ':';
+			line[i+1] = ' ';
 		}
-		line[i++] = '\x81';
-		line[i++] = CR_GREY + 'A';
-		strcpy (&line[i], level.level_name);
+		line[i+2] = TEXTCOLOR_ESCAPE;
+		line[i+3] = CR_GREY + 'A';
+		strcpy (&line[i+4], level.level_name);
 		screen->DrawTextClean (highlight,
 			(SCREENWIDTH - screen->StringWidth (line)*CleanXfac)/2, y, line);
 
-		if (!*deathmatch)
+		if (!deathmatch)
 		{
 			// Draw monster count
-			if (*am_showmonsters)
+			if (am_showmonsters)
 			{
 				sprintf (line, "MONSTERS:"
 							   TEXTCOLOR_GREY " %d/%d",
@@ -1208,7 +1244,7 @@ void FBaseStatusBar::Draw (EHudState state)
 			}
 
 			// Draw secret count
-			if (*am_showsecrets)
+			if (am_showsecrets)
 			{
 				sprintf (line, "SECRETS:"
 							   TEXTCOLOR_GREY " %d/%d",
@@ -1218,7 +1254,7 @@ void FBaseStatusBar::Draw (EHudState state)
 		}
 	}
 
-	if (*noisedebug)
+	if (noisedebug)
 	{
 		S_NoiseDebug ();
 	}

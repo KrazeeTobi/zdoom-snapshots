@@ -22,7 +22,6 @@ FUZZTABLE	equ	50
 
 %ifdef M_TARGET_LINUX
 
-EXTERN columnofs
 EXTERN ylookup
 EXTERN centery
 EXTERN fuzzpos
@@ -43,7 +42,6 @@ EXTERN dc_mask
 EXTERN dc_ctspan
 EXTERN dc_temp
 
-EXTERN ds_colsize
 EXTERN ds_xstep
 EXTERN ds_ystep
 EXTERN ds_colormap
@@ -59,7 +57,6 @@ GLOBAL ds_curcolormap
 
 %else
 
-EXTERN _columnofs
 EXTERN _ylookup
 EXTERN _centery
 EXTERN _fuzzpos
@@ -80,7 +77,6 @@ EXTERN _dc_mask
 EXTERN _dc_ctspan
 EXTERN _dc_temp
 
-EXTERN _ds_colsize
 EXTERN _ds_xstep
 EXTERN _ds_ystep
 EXTERN _ds_colormap
@@ -94,7 +90,6 @@ EXTERN _ds_y
 GLOBAL _ds_cursource
 GLOBAL _ds_curcolormap
 
-%define columnofs	_columnofs
 %define ylookup		_ylookup
 %define centery		_centery
 %define fuzzpos		_fuzzpos
@@ -115,7 +110,6 @@ GLOBAL _ds_curcolormap
 %define dc_ctspan	_dc_ctspan
 %define dc_temp		_dc_temp
 
-%define ds_colsize	_ds_colsize
 %define ds_xstep	_ds_xstep
 %define ds_ystep	_ds_ystep
 %define ds_colormap	_ds_colormap
@@ -149,28 +143,6 @@ pixelcount	DD 0
   SECTION .data
 %endif
 
-
-GLOBAL	ASM_PatchColSize
-GLOBAL	_ASM_PatchColSize
-GLOBAL	@ASM_PatchColSize@0
-
-ASM_PatchColSize:
-_ASM_PatchColSize:
-@ASM_PatchColSize@0:
-	mov	ecx,[ds_colsize]
-	mov	edx,[ds_colsize]
-	neg	ecx
-	mov	[spadva+2],edx
-	mov	[spstb+2],dl
-	add	edx,edx
-	mov	[spadvb+2],edx
-	add	edx,edx
-	mov	[spsta+2],cl
-	mov	[spstd+2],cl
-	add	cl,cl
-	mov	[spadvc+2],edx
-	mov	[spstc+2],cl
-	ret
 
 GLOBAL @R_SetSpanSource_ASM@4
 GLOBAL _R_SetSpanSource_ASM
@@ -216,7 +188,7 @@ GLOBAL R_DrawSpanP_ASM
 
 ; eax: scratch
 ; ebx: zero
-; ecx: xfrac at top end, yfrac int part in low end
+; ecx: xfrac at top end, yfrac int part in low end3
 ; edx: yfrac frac part at top end
 ; edi: dest
 ; ebp: scratch
@@ -237,7 +209,7 @@ R_DrawSpanP_ASM:
 	push	ebp
 	push	esi
 
-	mov	edi,[columnofs+ecx*4]
+	mov	edi,ecx
 	 mov	ecx,[ds_y]
 	add	edi,[ylookup+ecx*4]
 	 mov	edx,[ds_ystep]
@@ -271,7 +243,7 @@ R_DrawSpanP_ASM:
 spreada		 mov	bl,[ebp+SPACEFILLER4]
 spmapa		mov	bl,[ebx+SPACEFILLER4]
 		mov	[edi],bl
-spadva		 add	edi,1
+		 inc	edi
 
 dseven1		shr	esi,1
 		 jnc	dsrest
@@ -291,10 +263,10 @@ spreadb		 mov	bl,[ebp+SPACEFILLER4]	;read texel1
 		and	eax,0xfff
 spmapb		 mov	bl,[ebx+SPACEFILLER4]	;map texel1
 		mov	[edi],bl		;store texel1
-spadvb		 add	edi,2
+		 add	edi,2
 spreadc		mov	bl,[eax+SPACEFILLER4]	;read texel2
 spmapc		mov	bl,[ebx+SPACEFILLER4]	;map texel2
-spsta		mov	[edi-1],bl		;store texel2
+		mov	[edi-1],bl		;store texel2
 
 ; do the rest
 
@@ -324,19 +296,19 @@ spstep2f	adc	ecx,[ds_xstep]
 		rol	ebp,6
 spmape		mov	bl,[ebx+SPACEFILLER4]	;map texel2
 		 mov	eax,ecx
-spstb		mov	[edi+1],bl		;store texel2
+		mov	[edi+1],bl		;store texel2
 spreadf		 mov	bl,[ebp+SPACEFILLER4]	;read texel3
 spmapf		mov	bl,[ebx+SPACEFILLER4]	;map texel3
-spadvc		 add	edi,4
+		 add	edi,4
 		rol	eax,6
 		and	eax,0xfff
-spstc		 mov	[edi-2],bl		;store texel3
+		 mov	[edi-2],bl		;store texel3
 spreadg		mov	bl,[eax+SPACEFILLER4]	;read texel4
 spstep1g	 add	edx,[ds_ystep]
 spstep2g	adc	ecx,[ds_xstep]
 spmapg		 mov	bl,[ebx+SPACEFILLER4]	;map texel4
 		dec	esi
-spstd		 mov	[edi-1],bl		;store texel4
+		 mov	[edi-1],bl		;store texel4
 		jnz near dsloop
 
 dsdone	pop	esi
@@ -401,13 +373,13 @@ _R_DrawColumnP_ASM:
 	push	edi
 	 push	esi
 
-; dest = ylookup[dc_yl] + columnofs[dc_x];
+; dest = ylookup[dc_yl] + dc_x;
 
 	inc	eax			; make 0 count mean 0 pixels
 	 mov	ebx,[dc_x]
 	imul	eax,[dc_pitch]		; Start turning the counter into an index
 	mov	edi,[ylookup+ecx*4]
-	add	edi,[columnofs+ebx*4]	; edi = top of destination column
+	add	edi,ebx			; edi = top of destination column
 	add	edi,eax			; Point edi to the bottom of the destination column
 	 mov	edx,[dc_iscale]
 	shr	edx,16
@@ -506,7 +478,7 @@ _R_DrawFuzzColumnP_ASM:
 	js	near .dfcdone		; Zero length (or less)
 
 	mov	edi,[ylookup+eax*4]
-	 mov	ebx,[columnofs+edx*4]
+	 mov	ebx,edx
 	mov	eax,[NormalLight]
 	 mov	ecx,[fuzzpos]
 	add	edi,ebx
@@ -631,7 +603,7 @@ _R_DrawColumnHorizP_ASM:
 	push	edi
 	push	esi
 
-; dest = ylookup[dc_yl] + columnofs[dc_x];
+; dest = ylookup[dc_yl] + dc_x;
 
 	inc	eax			; make 0 count mean 0 pixels
 	 and	edx,3
@@ -889,7 +861,7 @@ _rt_copy1col_asm:
 
 	lea	esi,[eax*4]
 	inc	ebx			; ebx = count
-	mov	eax,[columnofs+edx*4]
+	mov	eax,edx
 	lea	ecx,[dc_temp+ecx+esi]	; ecx = source
 	mov	edi,[ylookup+esi]
 	mov	esi,[dc_pitch]		; esi = pitch
@@ -959,7 +931,7 @@ rt_copy2cols_asm:
 
 	lea	esi,[eax*4]
 	inc	ebx			; ebx = count
-	mov	eax,[columnofs+edx*4]
+	mov	eax,edx
 	lea	ecx,[dc_temp+ecx+esi]	; ecx = source
 	mov	edi,[ylookup+esi]
 	mov	edx,[dc_pitch]		; edx = pitch
@@ -1024,7 +996,7 @@ _rt_copy4cols_asm:
 	js	.done
 
 	inc	ebx			; ebx = count
-	mov	eax,[columnofs+ecx*4]
+	mov	eax,ecx
 	mov	esi,[ylookup+edx*4]
 	lea	ecx,[dc_temp+edx*4]	; ecx = source
 	mov	edx,[dc_pitch]		; edx = pitch
@@ -1096,7 +1068,7 @@ _rt_map1col_asm:
 	lea	edi,[eax*4]
 	mov	esi,[dc_colormap]		; esi = colormap
 	inc	ebx				; ebx = count
-	mov	eax,[columnofs+edx*4]
+	mov	eax,edx
 	lea	ebp,[dc_temp+ecx+edi]		; ebp = source
 	mov	ecx,[ylookup+edi]
 	mov	edi,[dc_pitch]			; edi = pitch
@@ -1174,7 +1146,7 @@ _rt_map2cols_asm:
 	lea	edi,[eax*4]
 	mov	esi,[dc_colormap]		; esi = colormap
 	inc	ebx				; ebx = count
-	mov	eax,[columnofs+edx*4]
+	mov	eax,edx
 	lea	ebp,[dc_temp+ecx+edi]		; ebp = source
 	mov	ecx,[ylookup+edi]
 	mov	edi,[dc_pitch]			; edi = pitch
@@ -1256,7 +1228,7 @@ _rt_map4cols_asm1:
 
 	mov	esi,[dc_colormap]	; esi = colormap
 	shl	edx,2
-	mov	eax,[columnofs+ecx*4]
+	mov	eax,ecx
 	inc	ebx			; ebx = count
 	mov	edi,[ylookup+edx]
 	lea	ebp,[dc_temp+edx]	; ebp = source
@@ -1349,7 +1321,7 @@ _rt_map4cols_asm2:
 
 	mov	esi,[dc_colormap]	; esi = colormap
 	shl	edx,2
-	mov	eax,[columnofs+ecx*4]
+	mov	eax,ecx
 	inc	ebx			; ebx = count
 	mov	edi,[ylookup+edx]
 	lea	ebp,[dc_temp+edx]	; ebp = source

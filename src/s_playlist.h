@@ -13,6 +13,8 @@ public:
 	int SetPosition (int position);
 	int GetPosition () const;
 	int Advance ();
+	int Backup ();
+	void Shuffle ();
 	const char *GetSong (int position) const;
 
 private:

@@ -440,7 +440,7 @@ bool DDrawFB::CreateResources ()
 		}
 		LOG2 ("Mode set to %d x %d\n", Width, Height);
 
-		if (*vid_attachedsurfaces)
+		if (vid_attachedsurfaces)
 		{
 			if (!CreateSurfacesAttached ())
 				return false;
@@ -932,8 +932,6 @@ void DDrawFB::Unlock ()
 	}
 }
 
-CVAR(Int, pitch, 0, 0);
-
 bool DDrawFB::LockSurf (LPRECT lockrect)
 {
 	HRESULT hr;
@@ -991,7 +989,7 @@ bool DDrawFB::LockSurf (LPRECT lockrect)
 		I_FatalError ("Could not lock framebuffer: %08x", hr);
 	}
 	Buffer = (BYTE *)desc.lpSurface;
-	Pitch = *pitch ? *pitch : desc.lPitch;
+	Pitch = desc.lPitch;
 	BufferingNow = false;
 	return wasLost;
 }
@@ -1035,7 +1033,7 @@ void DDrawFB::Update ()
 		}
 	}
 	
-	if (NeedPalUpdate || *vid_palettehack)
+	if (NeedPalUpdate || vid_palettehack)
 	{
 		NeedPalUpdate = false;
 		if (Palette != NULL || GDIPalette != NULL)

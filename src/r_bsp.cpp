@@ -258,6 +258,30 @@ void R_ClearClipSegs (short left, short right)
 	newend = solidsegs+2;
 }
 
+int GetFloorLight (const sector_t *sec)
+{
+	if (sec->FloorFlags & SECF_ABSLIGHTING)
+	{
+		return sec->FloorLight;
+	}
+	else
+	{
+		return clamp (sec->lightlevel + (SBYTE)sec->FloorLight, 0, 255);
+	}
+}
+
+int GetCeilingLight (const sector_t *sec)
+{
+	if (sec->CeilingFlags & SECF_ABSLIGHTING)
+	{
+		return sec->CeilingLight;
+	}
+	else
+	{
+		return clamp (sec->lightlevel + (SBYTE)sec->CeilingLight, 0, 255);
+	}
+}
+
 //
 // killough 3/7/98: Hack floor/ceiling heights for deep water etc.
 //
@@ -278,26 +302,12 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec,
 	// [RH] allow per-plane lighting
 	if (floorlightlevel != NULL)
 	{
-		if (sec->FloorFlags & SECF_ABSLIGHTING)
-		{
-			*floorlightlevel = sec->FloorLight;
-		}
-		else
-		{
-			*floorlightlevel = clamp (sec->lightlevel + (SBYTE)sec->FloorLight, 0, 255);
-		}
+		*floorlightlevel = GetFloorLight (sec);
 	}
 
 	if (ceilinglightlevel != NULL)
 	{
-		if (sec->CeilingFlags & SECF_ABSLIGHTING)
-		{
-			*ceilinglightlevel = sec->CeilingLight;
-		}
-		else
-		{
-			*ceilinglightlevel = clamp (sec->lightlevel + (SBYTE)sec->CeilingLight, 0, 255);
-		}
+		*ceilinglightlevel = GetCeilingLight (sec);
 	}
 
 	if (sec->heightsec)
@@ -306,7 +316,7 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec,
 		sector_t *heightsec = camera->subsector->sector->heightsec;
 		int underwater = heightsec && viewz <= heightsec->floorplane.ZatPoint (viewx, viewy);
 
-		// Replace sector being drawn, with a copy to be hacked
+		// Replace sector being drawn with a copy to be hacked
 		*tempsec = *sec;
 
 		// Replace floor and ceiling height with other sector's heights.
@@ -318,26 +328,27 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec,
 		fixed_t orgflorz = sec->floorplane.ZatPoint (viewx, viewy);
 		fixed_t orgceilz = sec->ceilingplane.ZatPoint (viewx, viewy);
 
-		if (sec->alwaysfake)
-		{
-		// Code for ZDoom. Allows the effect to be visible outside sectors with
-		// fake flat. The original is still around in case it turns out that this
-		// isn't always appropriate (which it isn't).
-			if (viewz <= refflorz && refflorz > orgflorz)
-			{
-				tempsec->floorplane			= sec->floorplane;
-				tempsec->floorcolormap		= s->floorcolormap;
-				tempsec->floorpic			= s->floorpic;
-				tempsec->floor_xoffs		= s->floor_xoffs;
-				tempsec->floor_yoffs		= s->floor_yoffs;
-				tempsec->floor_xscale		= s->floor_xscale;
-				tempsec->floor_yscale		= s->floor_yscale;
-				tempsec->floor_angle		= s->floor_angle;
-				tempsec->base_floor_angle	= s->base_floor_angle;
-				tempsec->base_floor_yoffs	= s->base_floor_yoffs;
+		if ((underwater && (tempsec->  floorplane = sec->floorplane,
+							tempsec->ceilingplane = s->floorplane,
+							tempsec->ceilingplane.ChangeHeight(-1),
+							!back)))
+		{					// head-below-floor hack
+			tempsec->floorpic			= s->floorpic;
+			tempsec->floor_xoffs		= s->floor_xoffs;
+			tempsec->floor_yoffs		= s->floor_yoffs;
+			tempsec->floor_xscale		= s->floor_xscale;
+			tempsec->floor_yscale		= s->floor_yscale;
+			tempsec->floor_angle		= s->floor_angle;
+			tempsec->base_floor_angle	= s->base_floor_angle;
+			tempsec->base_floor_yoffs	= s->base_floor_yoffs;
 
+			if (underwater)
+			{
+				tempsec->lightlevel			= s->lightlevel;
+				tempsec->floorcolormap		= s->floorcolormap;
+				tempsec->ceilingplane		= s->floorplane;
 				tempsec->ceilingplane.ChangeHeight (-1);
-				tempsec->ceilingcolormap = s->ceilingcolormap;
+				tempsec->ceilingcolormap	= s->ceilingcolormap;
 				if (s->ceilingpic == skyflatnum)
 				{
 					tempsec->floorplane			= tempsec->ceilingplane;
@@ -348,235 +359,75 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec,
 					tempsec->ceiling_xscale		= tempsec->floor_xscale;
 					tempsec->ceiling_yscale		= tempsec->floor_yscale;
 					tempsec->ceiling_angle		= tempsec->floor_angle;
-					tempsec->base_ceiling_angle = tempsec->base_floor_angle;
-					tempsec->base_ceiling_yoffs = tempsec->base_floor_yoffs;
+					tempsec->base_ceiling_angle	= tempsec->base_floor_angle;
+					tempsec->base_ceiling_yoffs	= tempsec->base_floor_yoffs;
 				}
 				else
 				{
-					tempsec->ceilingpic    = s->ceilingpic;
-					tempsec->ceiling_xoffs = s->ceiling_xoffs;
-					tempsec->ceiling_yoffs = s->ceiling_yoffs;
-					tempsec->ceiling_xscale = s->ceiling_xscale;
-					tempsec->ceiling_yscale = s->ceiling_yscale;
-					tempsec->ceiling_angle = s->ceiling_angle;
-					tempsec->base_ceiling_angle = s->base_ceiling_angle;
-					tempsec->base_ceiling_yoffs = s->base_ceiling_yoffs;
-				}
-				tempsec->lightlevel = s->lightlevel;
-
-				if (floorlightlevel != NULL)
-				{
-					if (s->FloorFlags & SECF_ABSLIGHTING)
-					{
-						*floorlightlevel = s->FloorLight;
-					}
-					else
-					{
-						*floorlightlevel = clamp (s->lightlevel + (SBYTE)s->FloorLight, 0, 255);
-					}
-				}
-
-				if (ceilinglightlevel != NULL)
-				{
-					if (s->FloorFlags & SECF_ABSLIGHTING)
-					{
-						*ceilinglightlevel = s->FloorLight;
-					}
-					else
-					{
-						*ceilinglightlevel = clamp (s->lightlevel + (SBYTE)s->CeilingLight, 0, 255);
-					}
+					tempsec->ceilingpic			= s->ceilingpic;
+					tempsec->ceiling_xoffs		= s->ceiling_xoffs;
+					tempsec->ceiling_yoffs		= s->ceiling_yoffs;
+					tempsec->ceiling_xscale		= s->ceiling_xscale;
+					tempsec->ceiling_yscale		= s->ceiling_yscale;
+					tempsec->ceiling_angle		= s->ceiling_angle;
+					tempsec->base_ceiling_angle	= s->base_ceiling_angle;
+					tempsec->base_ceiling_yoffs	= s->base_ceiling_yoffs;
 				}
 			}
-			else if (viewz > refceilz && refceilz < orgceilz)
+			else
 			{
-				tempsec->ceilingplane		= s->ceilingplane;
-				tempsec->floorplane			= s->ceilingplane;
-				tempsec->floorplane.ChangeHeight (+1);
-				tempsec->ceilingcolormap	= s->ceilingcolormap;
-				tempsec->floorcolormap		= s->floorcolormap;
+				tempsec->floorplane = sec->floorplane;
+			}
 
-				tempsec->floorpic			= tempsec->ceilingpic    = s->ceilingpic;
-				tempsec->floor_xoffs		= tempsec->ceiling_xoffs = s->ceiling_xoffs;
-				tempsec->floor_yoffs		= tempsec->ceiling_yoffs = s->ceiling_yoffs;
-				tempsec->floor_xscale		= tempsec->ceiling_xscale = s->ceiling_xscale;
-				tempsec->floor_yscale		= tempsec->ceiling_yscale = s->ceiling_yscale;
-				tempsec->floor_angle		= tempsec->ceiling_angle = s->ceiling_angle;
-				tempsec->base_floor_angle	= tempsec->base_ceiling_angle = s->base_ceiling_angle;
-				tempsec->base_floor_yoffs	= tempsec->base_ceiling_yoffs = s->base_ceiling_yoffs;
+			if (floorlightlevel != NULL)
+			{
+				*floorlightlevel = GetFloorLight (s);
+			}
 
-				if (s->floorpic != skyflatnum)
-				{
-					tempsec->ceilingplane		= sec->ceilingplane;
-					tempsec->floorpic			= s->floorpic;
-					tempsec->floor_xoffs		= s->floor_xoffs;
-					tempsec->floor_yoffs		= s->floor_yoffs;
-					tempsec->floor_xscale		= s->floor_xscale;
-					tempsec->floor_yscale		= s->floor_yscale;
-					tempsec->floor_angle		= s->floor_angle;
-					tempsec->base_floor_angle	= s->base_floor_angle;
-					tempsec->base_floor_yoffs	= s->base_floor_yoffs;
-				}
-
-				tempsec->lightlevel  = s->lightlevel;
-
-				if (floorlightlevel != NULL)
-				{
-					if (s->FloorFlags & SECF_ABSLIGHTING)
-					{
-						*floorlightlevel = s->FloorLight;
-					}
-					else
-					{
-						*floorlightlevel = clamp (s->lightlevel + (SBYTE)s->FloorLight, 0, 255);
-					}
-				}
-
-				if (ceilinglightlevel != NULL)
-				{
-					if (s->FloorFlags & SECF_ABSLIGHTING)
-					{
-						*ceilinglightlevel = s->FloorLight;
-					}
-					else
-					{
-						*ceilinglightlevel = clamp (s->lightlevel + (SBYTE)s->CeilingLight, 0, 255);
-					}
-				}
+			if (ceilinglightlevel != NULL)
+			{
+				*ceilinglightlevel = GetFloorLight (s);
 			}
 		}
-		else
-		{
-		// Original BOOM code
-			if ((underwater && (tempsec->  floorplane = sec->floorplane,
-								tempsec->ceilingplane = s->floorplane,
-								tempsec->ceilingplane.ChangeHeight(-1),
-								!back)) || viewz <= refflorz)
-			{					// head-below-floor hack
-				tempsec->floorpic			= s->floorpic;
-				tempsec->floor_xoffs		= s->floor_xoffs;
-				tempsec->floor_yoffs		= s->floor_yoffs;
-				tempsec->floor_xscale		= s->floor_xscale;
-				tempsec->floor_yscale		= s->floor_yscale;
-				tempsec->floor_angle		= s->floor_angle;
-				tempsec->base_floor_angle	= s->base_floor_angle;
-				tempsec->base_floor_yoffs	= s->base_floor_yoffs;
+		else if (heightsec && viewz >= heightsec->ceilingplane.ZatPoint (viewx, viewy) &&
+				 orgceilz > refceilz)
+		{	// Above-ceiling hack
+			tempsec->ceilingplane		= s->ceilingplane;
+			tempsec->floorplane			= s->ceilingplane;
+			tempsec->floorplane.ChangeHeight (+1);
+			tempsec->ceilingcolormap	= s->ceilingcolormap;
+			tempsec->floorcolormap		= s->floorcolormap;
 
-				if (underwater)
-				{
-					tempsec->lightlevel			= s->lightlevel;
-					tempsec->floorcolormap		= s->floorcolormap;
-					tempsec->ceilingplane		= s->floorplane;
-					tempsec->ceilingplane.ChangeHeight (-1);
-					tempsec->ceilingcolormap	= s->ceilingcolormap;
-					if (s->ceilingpic == skyflatnum)
-					{
-						tempsec->floorplane			= tempsec->ceilingplane;
-						tempsec->floorplane.ChangeHeight (+1);
-						tempsec->ceilingpic			= tempsec->floorpic;
-						tempsec->ceiling_xoffs		= tempsec->floor_xoffs;
-						tempsec->ceiling_yoffs		= tempsec->floor_yoffs;
-						tempsec->ceiling_xscale		= tempsec->floor_xscale;
-						tempsec->ceiling_yscale		= tempsec->floor_yscale;
-						tempsec->ceiling_angle		= tempsec->floor_angle;
-						tempsec->base_ceiling_angle	= tempsec->base_floor_angle;
-						tempsec->base_ceiling_yoffs	= tempsec->base_floor_yoffs;
-					}
-					else
-					{
-						tempsec->ceilingpic			= s->ceilingpic;
-						tempsec->ceiling_xoffs		= s->ceiling_xoffs;
-						tempsec->ceiling_yoffs		= s->ceiling_yoffs;
-						tempsec->ceiling_xscale		= s->ceiling_xscale;
-						tempsec->ceiling_yscale		= s->ceiling_yscale;
-						tempsec->ceiling_angle		= s->ceiling_angle;
-						tempsec->base_ceiling_angle	= s->base_ceiling_angle;
-						tempsec->base_ceiling_yoffs	= s->base_ceiling_yoffs;
-					}
-				}
-				else
-				{
-					tempsec->floorplane = sec->floorplane;
-				}
+			tempsec->floorpic			= tempsec->ceilingpic			= s->ceilingpic;
+			tempsec->floor_xoffs		= tempsec->ceiling_xoffs		= s->ceiling_xoffs;
+			tempsec->floor_yoffs		= tempsec->ceiling_yoffs		= s->ceiling_yoffs;
+			tempsec->floor_xscale		= tempsec->ceiling_xscale		= s->ceiling_xscale;
+			tempsec->floor_yscale		= tempsec->ceiling_yscale		= s->ceiling_yscale;
+			tempsec->floor_angle		= tempsec->ceiling_angle		= s->ceiling_angle;
+			tempsec->base_floor_angle	= tempsec->base_ceiling_angle	= s->base_ceiling_angle;
+			tempsec->base_floor_yoffs	= tempsec->base_ceiling_yoffs	= s->base_ceiling_yoffs;
 
-				if (floorlightlevel != NULL)
-				{
-					if (s->FloorFlags & SECF_ABSLIGHTING)
-					{
-						*floorlightlevel = s->FloorLight;
-					}
-					else
-					{
-						*floorlightlevel = clamp (s->lightlevel + (SBYTE)s->FloorLight, 0, 255);
-					}
-				}
-
-				if (ceilinglightlevel != NULL)
-				{
-					if (s->FloorFlags & SECF_ABSLIGHTING)
-					{
-						*ceilinglightlevel = s->FloorLight;
-					}
-					else
-					{
-						*ceilinglightlevel = clamp (s->lightlevel + (SBYTE)s->CeilingLight, 0, 255);
-					}
-				}
+			if (s->floorpic != skyflatnum)
+			{
+				tempsec->ceilingplane	= sec->ceilingplane;
+				tempsec->floorpic		= s->floorpic;
+				tempsec->floor_xoffs	= s->floor_xoffs;
+				tempsec->floor_yoffs	= s->floor_yoffs;
+				tempsec->floor_xscale	= s->floor_xscale;
+				tempsec->floor_yscale	= s->floor_yscale;
+				tempsec->floor_angle	= s->floor_angle;
 			}
-			else if (heightsec && viewz >= heightsec->ceilingplane.ZatPoint (viewx, viewy) &&
-					 orgceilz > refceilz)
-			{	// Above-ceiling hack
-				tempsec->ceilingplane		= s->ceilingplane;
-				tempsec->floorplane			= s->ceilingplane;
-				tempsec->floorplane.ChangeHeight (+1);
-				tempsec->ceilingcolormap	= s->ceilingcolormap;
-				tempsec->floorcolormap		= s->floorcolormap;
 
-				tempsec->floorpic			= tempsec->ceilingpic			= s->ceilingpic;
-				tempsec->floor_xoffs		= tempsec->ceiling_xoffs		= s->ceiling_xoffs;
-				tempsec->floor_yoffs		= tempsec->ceiling_yoffs		= s->ceiling_yoffs;
-				tempsec->floor_xscale		= tempsec->ceiling_xscale		= s->ceiling_xscale;
-				tempsec->floor_yscale		= tempsec->ceiling_yscale		= s->ceiling_yscale;
-				tempsec->floor_angle		= tempsec->ceiling_angle		= s->ceiling_angle;
-				tempsec->base_floor_angle	= tempsec->base_ceiling_angle	= s->base_ceiling_angle;
-				tempsec->base_floor_yoffs	= tempsec->base_ceiling_yoffs	= s->base_ceiling_yoffs;
+			tempsec->lightlevel  = s->lightlevel;
 
-				if (s->floorpic != skyflatnum)
-				{
-					tempsec->ceilingplane	= sec->ceilingplane;
-					tempsec->floorpic		= s->floorpic;
-					tempsec->floor_xoffs	= s->floor_xoffs;
-					tempsec->floor_yoffs	= s->floor_yoffs;
-					tempsec->floor_xscale	= s->floor_xscale;
-					tempsec->floor_yscale	= s->floor_yscale;
-					tempsec->floor_angle	= s->floor_angle;
-				}
+			if (floorlightlevel != NULL)
+			{
+				*floorlightlevel = GetFloorLight (s);
+			}
 
-				tempsec->lightlevel  = s->lightlevel;
-
-				if (floorlightlevel != NULL)
-				{
-					if (s->FloorFlags & SECF_ABSLIGHTING)
-					{
-						*floorlightlevel = s->FloorLight;
-					}
-					else
-					{
-						*floorlightlevel = clamp (s->lightlevel + (SBYTE)s->FloorLight, 0, 255);
-					}
-				}
-
-				if (ceilinglightlevel != NULL)
-				{
-					if (s->FloorFlags & SECF_ABSLIGHTING)
-					{
-						*ceilinglightlevel = s->FloorLight;
-					}
-					else
-					{
-						*ceilinglightlevel = clamp (s->lightlevel + (SBYTE)s->CeilingLight, 0, 255);
-					}
-				}
+			if (ceilinglightlevel != NULL)
+			{
+				*ceilinglightlevel = GetCeilingLight (s);
 			}
 		}
 		sec = tempsec;					// Use other sector
@@ -843,6 +694,7 @@ void R_AddLine (seg_t *line)
 #endif
 
 	rw_havehigh = rw_havelow = false;
+
 	if (backsector != NULL)
 	{
 		if (rw_frontcz1 > rw_backcz1 || rw_frontcz2 > rw_backcz2)
@@ -945,7 +797,7 @@ static BOOL R_CheckBBox (fixed_t *bspcoord)	// killough 1/28/98: static
 	{
 		if (rx1 > ry1) return false;	// left edge is off the right side
 		sx1 = (centerxfrac + Scale (rx1, centerxfrac, ry1)) >> FRACBITS;
-		if (rx1 >= 0) sx1 = MIN (viewwidth, sx1+1);	// fix for signed divide
+		if (rx1 >= 0) sx1 = MIN<fixed_t> (viewwidth, sx1+1);	// fix for signed divide
 	}
 	else
 	{
@@ -958,7 +810,7 @@ static BOOL R_CheckBBox (fixed_t *bspcoord)	// killough 1/28/98: static
 	{
 		if (rx2 < -ry2) return false;	// right edge is off the left side
 		sx2 = (centerxfrac + Scale (rx2, centerxfrac, ry2)) >> FRACBITS;
-		if (rx2 >= 0) sx2 = MIN (viewwidth, sx2+1); // fix for signed divide
+		if (rx2 >= 0) sx2 = MIN<fixed_t> (viewwidth, sx2+1); // fix for signed divide
 	}
 	else
 	{

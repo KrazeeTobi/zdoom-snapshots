@@ -311,7 +311,7 @@ AActor *DCajunMaster::Choose_Mate (AActor *bot)
 
 	target = NULL;
 	closest_dist = FIXED_MAX;
-	if (*bot_observer)
+	if (bot_observer)
 		observer = players[consoleplayer].mo;
 	else
 		observer = NULL;
@@ -324,10 +324,10 @@ AActor *DCajunMaster::Choose_Mate (AActor *bot)
 		if (playeringame[count]
 			&& client->mo
 			&& bot != client->mo
-			&& (bot->IsTeammate (client->mo) || !*deathmatch)
+			&& (bot->IsTeammate (client->mo) || !deathmatch)
 			&& client->mo->health > 0
 			&& client->mo != observer
-			&& ((bot->health/2) <= client->mo->health || !*deathmatch)
+			&& ((bot->health/2) <= client->mo->health || !deathmatch)
 			&& !p_leader[count]) //taken?
 		{
 
@@ -374,7 +374,7 @@ AActor *DCajunMaster::Find_enemy (AActor *bot)
 	AActor *observer;
 
 	//Allow monster killing. keep monster enemy.
-	if (!*deathmatch)
+	if (!deathmatch)
 		return NULL;
 
 	//Note: It's hard to ambush a bot who is not alone
@@ -386,7 +386,7 @@ AActor *DCajunMaster::Find_enemy (AActor *bot)
 
 	target = NULL;
 	closest_dist = FIXED_MAX;
-	if (*bot_observer)
+	if (bot_observer)
 		observer = players[consoleplayer].mo;
 	else
 		observer = NULL;

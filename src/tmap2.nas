@@ -16,7 +16,6 @@ BITS 32
 %define planelightfloat			_planelightfloat
 %define spanend				_spanend
 %define ylookup				_ylookup
-%define columnofs			_columnofs
 %define ds_colormap			_ds_colormap
 %define ds_source			_ds_source
 %define centery				_centery
@@ -38,7 +37,6 @@ EXTERN plane_sv
 EXTERN planelightfloat
 EXTERN spanend
 EXTERN ylookup
-EXTERN columnofs
 EXTERN ds_colormap
 EXTERN centery
 EXTERN centerx
@@ -154,7 +152,7 @@ R_DrawTiltedPlane_ASM:
 	sub	ebx,edx			; ebx = span length - 1
 	mov	edi,[ylookup+ecx*4]
 	push	eax
-	add	edi,[columnofs+edx*4]	; edi = frame buffer pointer
+	add	edi,edx			; edi = frame buffer pointer
 	sub	edx,[centerx]		; edx = x-centerx
 	push	edx
 	xor	eax,eax

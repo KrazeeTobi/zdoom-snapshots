@@ -401,7 +401,9 @@ void FBaseCVar::EnableCallbacks ()
 	while (cvar)
 	{
 		if (!(cvar->Flags & CVAR_NOINITCALL))
+		{
 			cvar->Callback ();
+		}
 		cvar = cvar->m_Next;
 	}
 }
@@ -676,8 +678,6 @@ void FColorCVar::SetGenericRepDefault (UCVarValue value, ECVarType type)
 
 void FColorCVar::DoSet (UCVarValue value, ECVarType type)
 {
-	if (strcmp (Name, "dimcolor") == 0)
-		value = value;
 	Value = ToInt2 (value, type);
 	if (screen)
 		Index = ColorMatcher.Pick (RPART(Value), GPART(Value), BPART(Value));
@@ -777,14 +777,14 @@ ECVarType FFlagCVar::GetRealType () const
 
 UCVarValue FFlagCVar::GetGenericRep (ECVarType type) const
 {
-	return FromBool ((*ValueVar & BitVal) != 0, type);
+	return FromBool ((ValueVar & BitVal) != 0, type);
 }
 
 UCVarValue FFlagCVar::GetFavoriteRep (ECVarType *type) const
 {
 	UCVarValue ret;
 	*type = CVAR_Bool;
-	ret.Bool = (*ValueVar & BitVal) != 0;
+	ret.Bool = (ValueVar & BitVal) != 0;
 	return ret;
 }
 
@@ -1022,6 +1022,28 @@ FBaseCVar *FindCVar (const char *var_name, FBaseCVar **prev)
 	return var;
 }
 
+FBaseCVar *FindCVarSub (const char *var_name, int namelen)
+{
+	FBaseCVar *var;
+
+	if (var_name == NULL)
+		return NULL;
+
+	var = CVars;
+	while (var)
+	{
+		const char *probename = var->GetName ();
+
+		if (strnicmp (probename, var_name, namelen) == 0 &&
+			probename[namelen] == 0)
+		{
+			break;
+		}
+		var = var->m_Next;
+	}
+	return var;
+}
+
 void UnlatchCVars (void)
 {
 	FLatchedValue var;
@@ -1088,34 +1110,41 @@ void C_ArchiveCVars (FConfigFile *f, int type)
 	}
 }
 
+void FBaseCVar::CmdSet (const char *newval)
+{
+	UCVarValue val;
+
+	// Casting away the const is safe in this case.
+	val.String = const_cast<char *>(newval);	
+	SetGenericRep (val, CVAR_String);
+
+	if (GetFlags() & CVAR_NOSET)
+		Printf ("%s is write protected.\n", GetName());
+	else if (GetFlags() & CVAR_LATCH)
+		Printf ("%s will be changed for next game.\n", GetName());
+}
+
 CCMD (set)
 {
-	if (argc != 3)
+	if (argv.argc() != 3)
 	{
 		Printf ("usage: set <variable> <value>\n");
 	}
 	else
 	{
-		FBaseCVar *var, *prev;
-		UCVarValue val;
+		FBaseCVar *var;
 
-		var = FindCVar (argv[1], &prev);
-		if (!var)
+		var = FindCVar (argv[1], NULL);
+		if (var == NULL)
 			var = new FStringCVar (argv[1], NULL, CVAR_AUTO | CVAR_UNSETTABLE | cvar_defflags);
 
-		val.String = argv[2];
-		var->SetGenericRep (val, CVAR_String);
-
-		if (var->GetFlags() & CVAR_NOSET)
-			Printf ("%s is write protected.\n", argv[1]);
-		else if (var->GetFlags() & CVAR_LATCH)
-			Printf ("%s will be changed for next game.\n", argv[1]);
+		var->CmdSet (argv[2]);
 	}
 }
 
 CCMD (unset)
 {
-	if (argc != 2)
+	if (argv.argc() != 2)
 	{
 		Printf ("usage: unset <variable>\n");
 	}
@@ -1140,7 +1169,7 @@ CCMD (get)
 {
 	FBaseCVar *var, *prev;
 
-	if (argc >= 2)
+	if (argv.argc() >= 2)
 	{
 		if ( (var = FindCVar (argv[1], &prev)) )
 		{
@@ -1164,7 +1193,7 @@ CCMD (toggle)
 	FBaseCVar *var, *prev;
 	UCVarValue val;
 
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		if ( (var = FindCVar (argv[1], &prev)) )
 		{
@@ -1177,7 +1206,7 @@ CCMD (toggle)
 	}
 }
 
-CCMD (cvarlist)
+void FBaseCVar::ListVars (const char *filter)
 {
 	FBaseCVar *var = CVars;
 	int count = 0;
@@ -1197,8 +1226,20 @@ CCMD (cvarlist)
 					flags & CVAR_LATCH ? 'L' :
 					flags & CVAR_UNSETTABLE ? '*' : ' ',
 				var->GetName(),
-				val.String);
+				var->GetGenericRep (CVAR_String).String);
 		var = var->m_Next;
 	}
 	Printf ("%d cvars\n", count);
+}
+
+CCMD (cvarlist)
+{
+	if (argv.argc() == 1)
+	{
+		FBaseCVar::ListVars (NULL);
+	}
+	else
+	{
+		FBaseCVar::ListVars (argv[1]);
+	}
 }

@@ -1,3 +1,313 @@
+August 15, 2001
+- Fixed: Wind in Hexen played wrong because it used S_GetSoundPlayingInfo(),
+  which has no way of following sound links. And now that I have random
+  sounds, I can't think of an easy way to make it work with those. Fixed it
+  by adding S_IsActorPlayingSomething() and using that instead. Changed a
+  few other places that called S_GetSoundPlayingInfo() to match.
+- Fixed: Animating flats with an ANIMDEFS lump was broken.
+- Fixed: The values returned by MakeKey() changed with each rebuild because
+  I was using the address of get_crc_table() as the CRC table instead of
+  actually calling the function to get the CRC table's location.
+- Changed falling damage so that it can't kill you if you have god mode on.
+- Added the filterstarts mapinfo flag to enable filtering out player starts
+  based on skill/gametype.
+- Fixed: Redefining sounds with a random list (whether it had one before or
+  not) would cause problems because I was still sorting the S_rnd array--a
+  remnant from the time when random lists were found by using binary search
+  on S_rnd instead of by following the sound's link field.
+- Added the sv_ihatesounds cvar for people who think they should be able
+  to shut up the BFG by landing on the ground. It forces all sounds to
+  use channel 1 instead of their preferred channel.
+- Changed crushing ceilings to not restart their sound sequences each time
+  they reach the top or bottom of their path.
+- Added a tag argument to S_StopSoundID() so that it only stops sounds in
+  a certain group. For my purposes, a group is currently defined as "any
+  sectors with the same tag." Actors do not utilise sound groups.
+- Removed S_CheckSound().
+- Added entries to DOOMX and HERETICX to make mirrors and slopes possible
+  without using the Hexen map format. Also added some of EDGE's default
+  linetypes for scrolling, translucency, and 2-unit floor raising.
+
+August 12, 2001
+- Changed the algorithm in W_LumpNameHash() and MakeKey() to a CRC32
+  algorithm because it hashes better. The only problem was that using a CRC,
+  klook and mlook both have the same CRC value, so I had to twiddle MakeKey
+  a little to give them unique keys.
+
+August 11, 2001
+- Added support for sprite frames with 16 rotations ala EDGE. The assignment
+  of rotations is the same as for EDGE: 1,9,2,A,3,B,4,C,5,D,6,E,7,F,8,G.
+- Changed the music streamers to use FSOUND_Stream_Play3DAttrib because of a
+  report that they were actually being positioned with snd_3d true. I can't
+  use snd_3d under NT, where I do most of my development, so I don't know if
+  it made a difference or not.
+- Fixed music recognition so that wave files can be played as music.
+- Fudged about with slope handling in AActor::RunThink and P_CheckSlopeWalk
+  in an effort to let the player walk on some steep slopes that are not very
+  far off the surrounding ground. It is a big hack. I do not like it.
+
+August 10, 2001
+- Fixed drawing of rotated, scaled, and sloped flats.
+- Fixed: PCD_PRINTNUMBER did not update the stack pointer.
+
+August 8, 2001
+- Fixed drawing of scaled and sloped flats.
+- Restored the default radius and height for AInvisibleBridge, since it can no
+  longer inherit them from ABridge (which sets them at game start time).
+
+August 4, 2001
+- The alwaysfake modification for R_FakeFlat() did not work as intended, so I
+  removed it. The changes Lee Killough made for MBF seem to be good enough.
+- Added new Thing_Destroy semantics: a tid of 0 will kill all monsters in the
+  level, just like the massacre cheat.
+- Changed the friendly fire check in P_DamageMobj from (target != source) to
+  (target->player != source->player). This is just so that voodoo doll damage
+  cannot be reduced by turning on teamplay and changing teamdamage.
+
+August 2, 2001
+- Fixed: Items were respawning at the location where they were picked up when
+  they should have respawned where the level author placed them on the map.
+- Changed the criteria for executing thing death specials from MF_COUNTKILL to
+  !MF_SPECIAL. Now you can give a barrel a special, and it will be executed when
+  the barrel is destroyed.
+- Added the print command to print a string from the string table.
+- Added the contributed Italian translation.
+- Fixed: OB_UNDEAD said "revevant" instead of "revenant".
+- Added names for all the new keys I found when looking at the dinput.h from
+  the DX8 SDK.
+- Fixed: Bindings for kp= would not save in the ini file properly.
+- Added rebind command to change the binding of the key that activated it.
+  This is intended to allow the creation of generic sequential aliases. (That
+  is, a series of aliases that do something, then bind a key to the next alias
+  in the sequence.) Like this:
+	alias dumb1 "echo one; rebind dumb2"
+	alias dumb2 "echo two; rebind dumb1"
+
+July 26, 2001
+- Fixed the TMulScale<x> definitions for GCC.
+
+July 25, 2001
+- In I_InitSound(), A3D is no longer the default if snd_3d is true.
+- Moved s_sfxvolume, s_midivolume, and s_musicvolume into their appropriate
+  i_* files and integrated them with the functions they called. Also made
+  their ranges uniform at [0.0,1.0].
+
+July 23, 2001
+- Added some more checks to p_setup.cpp to catch bad maps. In this
+  case, the checks were added for ma_sincity.wad, which has two one-
+  sided linedefs that have -1 as their front sector and will crash if
+  you look at them.
+
+June 8, 2001
+- Fixed: Single files added with -file were recorded with their lump
+  names instead of the file names so if they got closed, they could
+  not be reopened.
+
+June 3, 2001
+- Finished TiMidity++ support for the Win32 version. It has two modes
+  of operations: 1) Just play as normal. This only works if the sound
+  card can play multiple wave streams at a time. 2) The default, have
+  TiMidity output wave data through a pipe and use that to fill an
+  FMOD stream. This will work with all sound cards and offers a little
+  more control over the output. The only problem I could not figure out
+  how to solve was how to make TiMidity quit (safely) when ZDoom wants
+  it to without modifying TiMidity. The solution I ended up using was to
+  have TiMidity start a thread that waits on a special named event and
+  calls exit when the event becomes signalled.
+    Ironically, the whole purpose of being able to use TiMidity for music
+  was that it could provide better music support under Linux, yet the
+  Linux side of things has not even been done yet. When I do write it, it
+  should work fine with an unmodified TiMidity.
+
+June 1, 2001
+- Put back the "<type> operator *()" members of the different cvar
+  classes because VC++ always uses a bitwise copy when passing a class
+  to a varargs function EVEN IF THE COPY CONSTRUCTOR IS DEFINED. This
+  means that something like printf ("%d", dmflags); will actually copy
+  dmflags to the stack instead of just dmflag's value. To make it work
+  as expected, you need to use printf ("%d", (int)dmflags);. Since
+  printf ("%d", *dmflags); is more compact, I decided operator * is
+  useful after all.
+  I just hope the timidity cvars are the only ones I used with printf
+  style functions. I did not see any others when I scanned the source,
+  but that doesn't mean I didn't miss any. :-(
+- Changed the name of the variable passed to cvar callbacks from "var"
+  to "self" to make its use more obvious.
+- Changed the "<type> operator *()" of the different cvar types to
+  "operator <type> ()" so that fetching a cvar's value looks just like
+  fetching any other variable's value.
+
+May 30, 2001
+- Added snd_midiprecache cvar so that people without GUSes can turn off
+  the precaching.
+- Fixed: snd_surround was ignored.
+- Fixed: snd_reset turned off MIDI.
+- Added assembly routines for the different r_detail settings.
+
+May 28, 2001
+- Fixed: LEVEL_SPECOPENDOOR opened the door at a speed of 8*TICRATE instead
+  of 8*FRACUNIT, about 1872 times slower than it should have been.
+
+May 26, 2001
+- Fixed the positioning of y-doubled view windows and changed the x-doubling
+  so that it works with the optimized column drawer and does not need the
+  columnofs table.
+- Fixed: M_FindResponseFile had a poor parser that considered lots of things
+  to be white space that weren't and did not treat quotes specially. Now it
+  uses essentially the same parser as the console.
+- Fixed Heretic/Hexen wind specials so that they can apply even when an
+  actor's current velocity is 0.
+- Added MF3_NOBLOCKMONST flag to indicate which things can cross
+  ML_BLOCKMONSTERS lines (because this is a better way than writing a
+  special case for Heretic's APod).
+- Removed MaxSpecialCross, since it isn't needed anymore.
+
+May 25, 2001
+- Fixed: ATreeDestructible's default list was missing the mass property.
+- Added Hexen's falling damage code and made the two types of falling damage
+  (ZDoom or Hexen) selectable from the level and dmflags. The dmflags falling
+  damage selector can now be used to enable falling damage but not to disable
+  it to avoid cheating in levels meant to be played with falling damage.
+- Added a new dmflag (sv_nopassover) to make thing z-checking work as it
+  did in Doom (that is, not at all, except for missiles).
+- Fixed: Chat macros did not work because Windows sends WM_SYSCHAR instead of
+  WM_CHAR when ALT is held down.
+
+May 14, 2001
+- Added decal groups and generators to DECALDEF.
+- Fixed potential crash when defining decals with SpawnIDs.
+
+May 3, 2001
+- Added lightning scripts, which get executed whenever lightning strikes in
+  a level.
+- Added the OutdoorLightning sector special (197) so that skyboxes can
+  flash outdoor (as opposed to indoor) lightning without fancy scripts.
+
+May 2, 2001
+- Fixed: When teleporting in a non-hub environment, the level's snapshot
+  would stay around if the player had saved while in it. This was especially
+  obvious if the player was moving to the same map he just left.
+- Enabled key repeating in the menus.
+- Added Hexen's lightning and fixed a bug in Hexen's code: It is not safe
+  to assume that the number of sectors that lightning can apply to will
+  remain constant through the level (thanks to ACS).
+
+May 1, 20001
+- Fixed: The SkyBox member of sector_t was not serialized.
+
+April 26, 2001
+- Fixed: When loading savegames, bobbing actors would have semi-random
+  heights because they get loaded in a different memory address than they
+  were saved at. The actor's address is used to determine its phase shift
+  compared to other bobbing actors, so when the actor was restored there
+  was no way to restore the original cycle. The solution is to take out the
+  bob offset before saving and add it back in when restoring.
+- Added some DrawChar functions to DCanvas.
+- Fixed DCanvas::StringWidth() for high ASCII characters.
+- Changed the arrangement of codes in ESpecialGUIKeys to document the
+  standard ASCII codes in the range [1,31].
+- Changed text color escape character from 0x81 to 0x1c, because 0x81 is a
+  printable character (though most Windows fonts seem to leave it undefined).
+- Added support for WM_CHAR messages (they get fired off as EV_GUI_Char), so
+  now you can do all the standard Windows text manipulation stuff when typing
+  text at the console or elsewhere.
+- Fixed: Decals were being saved to savegames but were not restored properly.
+  I think this was also causing crash problems after loading savegames.
+- Changed mouse pointer hiding to change the cursor to an invisible cursor
+  instead of changing its visibility. This is to ensure that it works
+  correctly all the time instead of just most of the time.
+- Removed testing for WM_ACTIVATE in the window procedure. Looking for
+  input focus is what we really want to do where the window's active status
+  was being checked.
+- Got rid of I_Pause/ResumeMouse() and let the code in i_input.cpp decide
+  whether or not the pointer should be visible.
+
+April 25, 2001
+- Changed action command handling so that multiple keys bound to the same
+  action can coexist peacefully. That is, if you are pressing two keys bound
+  to the same action and release one of them, the action will still persist
+  until the second key is also released. This is like Quake.
+- Added a check for key bindings to check if a binding contains the substring
+  "bind". Only if it does is the binding copied before being executed.
+  Previously, the command was always copied, even if it was unneccessary.
+- Changed C_DoCommand()'s argument to a const char *.
+
+April 24, 2001
+- Changed command line handling for console commands so that argv and argc
+  are not calculated until the first time they are needed.
+
+April 23, 2001
+- Added shuffle parameter to playlist command.
+
+April 22, 2001
+- Added playlistprev and playlistnext commands.
+- Pressing F1 at the save/load menu replaces the comment with the actual
+  file name of the savegame.
+- Added GK_ entries for the function keys.
+- Fixed: Quicksaving without saving/loading first crashed.
+- Added reverse tab-completion to the console, when pressing Shift-Tab.
+
+April 21, 2001
+- Fixed: P_GiveAmmo() did not check userinfo.neverswitch before setting the
+  pendingweapon.
+- Got rid of P_GiveWeapon() and moved its functionality into AWeapon::
+  TryPickup() and added some more AWeapon member functions just so that
+  picking up a weapon with sv_weaponstay true will produce all the standard
+  pickup feedback. This breaks the "give weapons" cheat, but you can still
+  summon them, so how bad is that really?
+- Changed P_GroupLines() to warn about lines that lack frontsectors instead of
+  crashing.
+
+April 20, 2001
+- Fixed: In Heretic and Hexen, things are supposed to gib at negative half
+  their original health.
+
+April 17, 2001
+- Fixed: It was possible to stand at the very edge of a steep slope and not
+  fall off of it. It is still possible to "balance" by running away from the
+  edge, but I think that will take more time to fix than it's work (especially
+  if I really do go ahead and rewrite the level geometry collision detection.)
+- Added in-air friction that depends on aircontrol: The greater aircontrol is,
+  the more friction affects things. Only affects players.
+- Made level gravity and aircontrol accessible through MAPINFO as well as ACS.
+- Disabled migration of zdoom.cfg. Perhaps it is better to make a clean break
+  from the old format than to try and import it if zdoom.ini is not found.
+- Fixed: When the status bar face graphic changed and the status bar was
+  scaled, only the area enclosing the new graphic was updated to the screen.
+  It should update the entire face box.
+- Fixed: When a dehacked/bex patch changed a level's name, the change was not
+  reflected in the level infos, so it did not actually become visible.
+
+April 14, 2001
+- Modified S_LookupPlayerSound() to detect player sounds which were defined
+  but did not have any valid lumps and automatically try again using male.
+- Added storesavepic cvar.
+- Added sorting to the savegame menus.
+- Finally tested the savegame menus to make sure that they work with more
+  save games than are visible and discovered that they didn't, so I fixed
+  them so they do work.
+- DCanvas::StringWidth() now knows about '\n' characters and returns the
+  length of the longest line.
+- Changed the savegame menus to display games saved with an incompatible
+  ZDoom version so that the user has a more convenient means of deleting them
+  than by opening the savegames in a hex editor to find out which version each
+  one was saved with.
+- Added "name" support to archives. Basically, names are just managed strings
+  that allow duplicates to be stored by index instead of duplicating the
+  string.
+
+April 13, 2001
+- Fixed: Particles were rendered as if they were being drawn to the main
+  frame buffer, even when they weren't.
+- Fixed: After deleting the last save game, the menu would think you still
+  had a game selected and crashed if you tried to delete again.
+- Discovered the problem with some of Tei Tenga's cameras: They have invalid
+  heights that put them above/below the sector. Copied the viewz clamping
+  from P_CalcHeight() into R_SetupFrame() to compensate. I don't know why
+  they worked in earlier versions.
+- Moved zvox.wad loading to happen after loading the IWAD. There are certain
+  places where the IWAD is assumed to be the second wad loaded.
+
 April 12, 2001
 - Added a new game menu for Hexen that explains you cannot start Hexen from
   a menu yet.

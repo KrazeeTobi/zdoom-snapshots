@@ -144,12 +144,12 @@ END_DEFAULTS
 
 CUSTOM_CVAR (Float, transsouls, 0.75f, CVAR_ARCHIVE)
 {
-	if (*var < 0.25f)
+	if (self < 0.25f)
 	{
-		var = 0.25f;
+		self = 0.25f;
 	}
-	else if (*var > 1.f)
+	else if (self > 1.f)
 	{
-		var = 1.f;
+		self = 1.f;
 	}
 }

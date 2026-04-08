@@ -60,9 +60,9 @@ END_DEFAULTS
 
 void A_WindSound (AActor *self)
 {
-	if (!S_GetSoundPlayingInfo (self, S_FindSound ("world/wind")))
+	if (!S_IsActorPlayingSomething (self, 6))
 	{
-		S_LoopedSound (self, CHAN_BODY, "world/wind", 1, ATTN_NORM);
+		S_LoopedSound (self, 6, "world/wind", 1, ATTN_NORM);
 	}
 }
 
@@ -82,8 +82,8 @@ void A_WaterfallSound (AActor *self)
 // For Heretic, we *do* define "world/waterfall", so it will be audible in
 // Heretic.
 
-	if (!S_GetSoundPlayingInfo (self, S_FindSound ("world/waterfall")))
+	if (!S_IsActorPlayingSomething (self, 6))
 	{
-		S_LoopedSound (self, CHAN_BODY, "world/waterfall", 1, ATTN_NORM);
+		S_LoopedSound (self, 6, "world/waterfall", 1, ATTN_NORM);
 	}
 }

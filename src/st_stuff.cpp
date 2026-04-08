@@ -292,7 +292,7 @@ static BOOL Cht_Music (cheatseq_t *cheat)
 
 	buf[6] = cheat->Args[0];
 	buf[7] = cheat->Args[1];
-	AddCommandString (buf);
+	C_DoCommand (buf);
 	return true;
 }
 
@@ -321,28 +321,26 @@ static BOOL Cht_ChangeLevel (cheatseq_t *cheat)
 
 	cmd[7] = cheat->Args[0];
 	cmd[8] = cheat->Args[1];
-	AddCommandString (cmd);
+	C_DoCommand (cmd);
 	return true;
 }
 
 static BOOL Cht_MyPos (cheatseq_t *cheat)
 {
-	AddCommandString ("toggle idmypos");
+	C_DoCommand ("toggle idmypos");
 	return true;
 }
 
 static BOOL Cht_Ticker (cheatseq_t *cheat)
 {
-	ticker = !*ticker;
-	Printf ("%s\n", GStrings (*ticker ?
-		TXT_CHEATTICKERON : TXT_CHEATTICKEROFF));
+	ticker = !ticker;
+	Printf ("%s\n", GStrings (ticker ? TXT_CHEATTICKERON : TXT_CHEATTICKEROFF));
 	return true;
 }
 
 static BOOL Cht_Sound (cheatseq_t *cheat)
 {
-	noisedebug = !*noisedebug;
-	Printf ("%s\n", GStrings (*noisedebug ?
-		TXT_CHEATSOUNDON : TXT_CHEATSOUNDOFF));
+	noisedebug = !noisedebug;
+	Printf ("%s\n", GStrings (noisedebug ? TXT_CHEATSOUNDON : TXT_CHEATSOUNDOFF));
 	return true;
 }

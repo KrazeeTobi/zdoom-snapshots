@@ -24,8 +24,8 @@ void C_NewModeAdjust (void);
 void C_Ticker (void);
 
 int PrintString (int printlevel, const char *string);
-int VPrintf (int printlevel, const char *format, va_list parms);
-int STACK_ARGS Printf_Bold (const char *format, ...);
+int VPrintf (int printlevel, const char *format, va_list parms) GCCFORMAT(2);
+int STACK_ARGS Printf_Bold (const char *format, ...) GCCPRINTF(1,2);
 
 void C_DrawConsole (void);
 void C_ToggleConsole (void);

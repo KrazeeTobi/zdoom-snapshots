@@ -201,8 +201,7 @@ BOOL P_CheckMissileRange (AActor *actor)
 		
 	if (actor->flags & MF_JUSTHIT)
 	{
-		// the target just hit the enemy,
-		// so fight back!
+		// the target just hit the enemy, so fight back!
 		actor->flags &= ~MF_JUSTHIT;
 		return true;
 	}
@@ -211,8 +210,9 @@ BOOL P_CheckMissileRange (AActor *actor)
 		return false;	// do not attack yet
 				
 	// OPTIMIZE: get this from a global checksight
-	dist = P_AproxDistance ( actor->x-actor->target->x,
-							 actor->y-actor->target->y) - 64*FRACUNIT;
+	// [RH] What?
+	dist = P_AproxDistance (actor->x-actor->target->x,
+							actor->y-actor->target->y) - 64*FRACUNIT;
 	
 	if (actor->MeleeState == NULL)
 		dist -= 128*FRACUNIT;	// no melee attack, so fire more
@@ -234,7 +234,6 @@ BOOL P_Move (AActor *actor)
 {
 	fixed_t tryx, tryy, deltax, deltay, origx, origy;
 	BOOL try_ok;
-	int good;
 	int speed;
 	int movefactor = ORIG_FRICTION_FACTOR;
 	int friction = ORIG_FRICTION;
@@ -338,6 +337,8 @@ BOOL P_Move (AActor *actor)
 		// back out when they shouldn't, and creates secondary stickiness).
 
 		line_t *ld;
+		int good = 0;
+		
 		while (spechit.Pop (ld))
 		{
 			// [RH] let monsters push lines, as well as use them
@@ -799,7 +800,7 @@ void A_Chase (AActor *actor)
 	}
 
 	if (gameinfo.gametype == GAME_Heretic &&
-		(*gameskill == sk_nightmare || (*dmflags & DF_FAST_MONSTERS)))
+		(gameskill == sk_nightmare || (dmflags & DF_FAST_MONSTERS)))
 	{ // Monsters move faster in nightmare mode
 		actor->tics -= actor->tics / 2;
 		if (actor->tics < 3)
@@ -844,7 +845,7 @@ void A_Chase (AActor *actor)
 	if (actor->flags & MF_JUSTATTACKED)
 	{
 		actor->flags &= ~MF_JUSTATTACKED;
-		if ((*gameskill != sk_nightmare) && !(*dmflags & DF_FAST_MONSTERS))
+		if ((gameskill != sk_nightmare) && !(dmflags & DF_FAST_MONSTERS))
 			P_NewChaseDir (actor);
 		return;
 	}
@@ -884,8 +885,8 @@ void A_Chase (AActor *actor)
 		// check for missile attack
 		if (actor->MissileState)
 		{
-			if (*gameskill < sk_nightmare
-				&& actor->movecount && !(*dmflags & DF_FAST_MONSTERS))
+			if (gameskill < sk_nightmare
+				&& actor->movecount && !(dmflags & DF_FAST_MONSTERS))
 			{
 				goto nomissile;
 			}
@@ -928,11 +929,8 @@ void A_Chase (AActor *actor)
 		{
 			sound = actor->ActiveSound;
 		}
-		if (S_CheckSound (sound))
-		{ // [RH] Only play this sound if it won't cut out another of the same type.
-			S_SoundID (actor, CHAN_VOICE, sound, 1,
-				(actor->flags3 & MF3_FULLVOLACTIVE) ? ATTN_NONE : ATTN_IDLE);
-		}
+		S_SoundID (actor, CHAN_VOICE, sound, 1,
+			(actor->flags3 & MF3_FULLVOLACTIVE) ? ATTN_NONE : ATTN_IDLE);
 	}
 }
 
@@ -1053,20 +1051,18 @@ void A_Pain (AActor *actor)
 	// [RH] Vary player pain sounds depending on health (ala Quake2)
 	if (actor->player && actor->player->morphTics == 0)
 	{
-		int l;
-		char nametemp[16];
+		const char *painchoice;
 
 		if (actor->health < 25)
-			l = 25;
+			painchoice = "*pain25";
 		else if (actor->health < 50)
-			l = 50;
+			painchoice = "*pain50";
 		else if (actor->health < 75)
-			l = 75;
+			painchoice = "*pain75";
 		else
-			l = 100;
+			painchoice = "*pain100";
 
-		sprintf (nametemp, "*pain%d", l);
-		S_Sound (actor, CHAN_VOICE, nametemp, 1, ATTN_NORM);
+		S_Sound (actor, CHAN_VOICE, painchoice, 1, ATTN_NORM);
 	}
 	else if (actor->PainSound)
 	{
@@ -1088,6 +1084,10 @@ void A_Die (AActor *actor)
 void A_Detonate (AActor *mo)
 {
 	P_RadiusAttack (mo, mo->target, mo->damage, mo->damage, true, MOD_UNKNOWN);
+	if (mo->z <= mo->floorz + (mo->damage<<FRACBITS))
+	{
+		P_HitFloor (mo);
+	}
 }
 
 //
@@ -1220,13 +1220,13 @@ void A_BossDeath (AActor *actor)
 				return;
 			
 			case LEVEL_SPECOPENDOOR:
-				EV_DoDoor (DDoor::doorOpen, NULL, NULL, 666, 8*TICRATE, 0, NoKey);
+				EV_DoDoor (DDoor::doorOpen, NULL, NULL, 666, 8*FRACUNIT, 0, NoKey);
 				return;
 		}
 	}
 
 	// [RH] If noexit, then don't end the level.
-	if ((*deathmatch || *alwaysapplydmflags) && (*dmflags & DF_NO_EXIT))
+	if ((deathmatch || alwaysapplydmflags) && (dmflags & DF_NO_EXIT))
 		return;
 
 	G_ExitLevel (0);

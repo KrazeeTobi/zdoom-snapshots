@@ -26,6 +26,14 @@
 
 #include <limits.h>
 
+#ifdef _WIN32
+// VC++ does not define PATH_MAX, but the Windows headers do define MAX_PATH.
+// However, we want to avoid including the Windows headers in most of the
+// source files, so we can't use it. So define PATH_MAX to be what MAX_PATH
+// currently is:
+#define PATH_MAX 260
+#endif
+
 #ifndef __BYTEBOOL__
 #define __BYTEBOOL__
 // [RH] Some windows includes already define this
@@ -34,13 +42,6 @@ typedef int BOOL;
 #endif
 typedef unsigned char byte;
 #endif
-
-#ifdef __GNUC__
-#define GCCPRINTF(stri,firstargi)	__attribute__((format(printf,stri,firstargi)))
-#else
-#define GCCPRINTF(a,b)
-#endif
-
 
 #if defined(_MSC_VER) || defined(__WATCOMC__)
 #define STACK_ARGS __cdecl
@@ -90,8 +91,8 @@ typedef DWORD				BITFIELD;
 typedef SDWORD				fixed_t;
 typedef DWORD				dsfixed_t;		// fixedpt used by span drawer
 
-#define FIXED_MAX			0x7fffffff
-#define FIXED_MIN			0x80000000
+#define FIXED_MAX			(signed)(0x7fffffff)
+#define FIXED_MIN			(signed)(0x80000000)
 
 #ifndef NOASM
 #ifndef USEASM
@@ -102,6 +103,18 @@ typedef DWORD				dsfixed_t;		// fixedpt used by span drawer
 #undef USEASM
 #endif
 #endif
+
+
+#ifdef __GNUC__
+#define GCCPRINTF(stri,firstargi)	__attribute__((format(printf,stri,firstargi)))
+#define GCCFORMAT(stri)				__attribute__((format(printf,stri,0)))
+#define GCCNOWARN					__attribute__((unused))
+#else
+#define GCCPRINTF(a,b)
+#define GCCFORMAT(a)
+#define GCCNOWARN
+#endif
+
 
 // [RH] This gets used all over; define it here:
 int STACK_ARGS Printf (int printlevel, const char *, ...) GCCPRINTF(2,3);

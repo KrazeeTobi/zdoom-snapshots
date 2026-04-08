@@ -44,7 +44,7 @@ extern int DisplayWidth, DisplayHeight, DisplayBits;
 //
 // [RH] Made screens more implementation-independant:
 //
-class DCanvas : DObject
+class DCanvas : public DObject
 {
 	DECLARE_ABSTRACT_CLASS (DCanvas, DObject)
 public:
@@ -116,8 +116,8 @@ public:
 	virtual void SetFont (FFont *font);
 
 	// Return width of string in pixels (unscaled)
-	int StringWidth (const char *str) const;
-	inline int StringWidth (const byte *str) const { return StringWidth ((const char *)str); }
+	int StringWidth (const byte *str) const;
+	inline int StringWidth (const char *str) const { return StringWidth ((const byte *)str); }
 
 	// Output some text with the current font
 	inline void DrawText (int normalcolor, int x, int y, const byte *string) const;
@@ -137,6 +137,16 @@ public:
 	inline void DrawTextShadow (int normalcolor, int x, int y, const char *string) const;
 	inline void DrawTextCleanShadow (int normalcolor, int x, int y, const char *string) const;
 	inline void DrawTextCleanShadowMove (int normalcolor, int x, int y, const char *string) const;
+
+	inline void DrawChar (int normalcolor, int x, int y, byte character) const;
+	inline void DrawCharLuc (int normalcolor, int x, int y, byte character, fixed_t trans=0x8000) const;
+	inline void DrawCharClean (int normalcolor, int x, int y, byte character) const;
+	inline void DrawCharCleanLuc (int normalcolor, int x, int y, byte character, fixed_t trans=0x8000) const;
+	inline void DrawCharCleanMove (int normalcolor, int x, int y, byte character) const;
+	inline void DrawCharShadow (int normalcolor, int x, int y, byte character) const;
+	inline void DrawCharCleanShadow (int normalcolor, int x, int y, byte character) const;
+	inline void DrawCharCleanShadowMove (int normalcolor, int x, int y, byte character) const;
+
 
 	// Patch drawing functions
 	void DrawPatchFlipped (const patch_t *patch, int x, int y) const;
@@ -199,6 +209,9 @@ protected:
 
 	virtual void TextWrapper (EWrapperCode drawer, int normalcolor, int x, int y, const byte *string) const;
 	virtual void TextSWrapper (EWrapperCode drawer, int normalcolor, int x, int y, const byte *string) const;
+
+	virtual void CharWrapper (EWrapperCode drawer, int normalcolor, int x, int y, byte character) const;
+	virtual void CharSWrapper (EWrapperCode drawer, int normalcolor, int x, int y, byte character) const;
 
 	virtual void DrawWrapper (EWrapperCode drawer, const patch_t *patch, int x, int y) const;
 	virtual void DrawSWrapper (EWrapperCode drawer, const patch_t *patch, int x, int y, int destwidth, int destheight) const;
@@ -345,6 +358,47 @@ inline void DCanvas::DrawTextCleanShadowMove (int normalcolor, int x, int y, con
 		(x - 160) * CleanXfac + Width / 2,
 		(y - 100) * CleanYfac + Height / 2,
 		(const byte *)string);
+}
+
+inline void DCanvas::DrawChar (int normalcolor, int x, int y, byte character) const
+{
+	CharWrapper (ETWrapper_Normal, normalcolor, x, y, character);
+}
+inline void DCanvas::DrawCharLuc (int normalcolor, int x, int y, byte character, fixed_t trans) const
+{
+	V_TextTrans = trans;
+	CharWrapper (ETWrapper_Translucent, normalcolor, x, y, character);
+}
+inline void DCanvas::DrawCharClean (int normalcolor, int x, int y, byte character) const
+{
+	CharSWrapper (ETWrapper_Normal, normalcolor, x, y, character);
+}
+inline void DCanvas::DrawCharCleanLuc (int normalcolor, int x, int y, byte character, fixed_t trans) const
+{
+	V_TextTrans = trans;
+	CharSWrapper (ETWrapper_Translucent, normalcolor, x, y, character);
+}
+inline void DCanvas::DrawCharCleanMove (int normalcolor, int x, int y, byte character) const
+{
+	CharSWrapper (ETWrapper_Normal, normalcolor,
+		(x - 160) * CleanXfac + Width / 2,
+		(y - 100) * CleanYfac + Height / 2,
+		character);
+}
+inline void DCanvas::DrawCharShadow (int normalcolor, int x, int y, byte character) const
+{
+	CharWrapper (ETWrapper_Shadow, normalcolor, x, y, character);
+}
+inline void DCanvas::DrawCharCleanShadow (int normalcolor, int x, int y, byte character) const
+{
+	CharSWrapper (ETWrapper_Shadow, normalcolor, x, y, character);
+}
+inline void DCanvas::DrawCharCleanShadowMove (int normalcolor, int x, int y, byte character) const
+{
+	CharSWrapper (ETWrapper_Shadow, normalcolor,
+		(x - 160) * CleanXfac + Width / 2,
+		(y - 100) * CleanYfac + Height / 2,
+		character);
 }
 
 inline void DCanvas::DrawPatch (const patch_t *patch, int x, int y) const
@@ -645,7 +699,6 @@ bool V_SetResolution (int width, int height, int bpp);
 
 #ifdef USEASM
 extern "C" void ASM_PatchPitch (void);
-extern "C" void ASM_PatchColSize (void);
 #endif
 
 #endif // __V_VIDEO_H__

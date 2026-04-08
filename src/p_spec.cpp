@@ -206,33 +206,40 @@ static void P_InitAnimDefs ()
 
 static void ParseAnim (byte istex)
 {
+	anim_t sink;
 	short picnum;
 	anim_t *place;
 	byte min, max;
 	int frame;
 
 	SC_MustGetString ();
-	picnum = istex ? R_TextureNumForName (sc_String)
-		: R_FlatNumForName (sc_String);
+	picnum = istex ? R_CheckTextureNumForName (sc_String)
+		: W_CheckNumForName (sc_String, ns_flats) - firstflat;
 
-	for (place = anims; place < lastanim; place++)
-	{
-		if (place->basepic == picnum && place->istexture == istex)
-		{
-			break;
-		}
+	if (picnum == -1)
+	{ // Base pic is not present, so skip this definition
+		place = &sink;
 	}
-
-	if (place == lastanim)
+	else
 	{
-		lastanim++;
-		if (lastanim > anims + maxanims)
+		for (place = anims; place < lastanim; place++)
 		{
-			size_t newmax = maxanims ? maxanims*2 : MAXANIMS;
-			anims = (anim_t *)Realloc (anims, newmax*sizeof(*anims));
-			place = anims + maxanims;
-			lastanim = place + 1;
-			maxanims = newmax;
+			if (place->basepic == picnum && place->istexture == istex)
+			{
+				break;
+			}
+		}
+		if (place == lastanim)
+		{
+			lastanim++;
+			if (lastanim > anims + maxanims)
+			{
+				size_t newmax = maxanims ? maxanims*2 : MAXANIMS;
+				anims = (anim_t *)Realloc (anims, newmax*sizeof(*anims));
+				place = anims + maxanims;
+				lastanim = place + 1;
+				maxanims = newmax;
+			}
 		}
 	}
 
@@ -342,7 +349,8 @@ void P_InitPicAnims (void)
 			if (*anim_p /* .istexture */)
 			{
 				// different episode ?
-				if (R_CheckTextureNumForName (anim_p + 10 /* .startname */) == -1)
+				if (R_CheckTextureNumForName (anim_p + 10 /* .startname */) == -1 ||
+					R_CheckTextureNumForName (anim_p + 1 /* .endname */) == -1)
 					continue;		
 
 				lastanim->basepic = R_TextureNumForName (anim_p + 10 /* .startname */);
@@ -351,7 +359,8 @@ void P_InitPicAnims (void)
 			}
 			else
 			{
-				if (W_CheckNumForName (anim_p + 10 /* .startname */, ns_flats) == -1)
+				if (W_CheckNumForName (anim_p + 10 /* .startname */, ns_flats) == -1 ||
+					W_CheckNumForName (anim_p + 1 /* .startname */, ns_flats) == -1)
 					continue;
 
 				lastanim->basepic = R_FlatNumForName (anim_p + 10 /* .startname */);
@@ -391,14 +400,16 @@ BOOL CheckIfExitIsGood (AActor *self)
 	if (self == NULL)
 		return false;
 
-	if ((*deathmatch || *alwaysapplydmflags) && *dmflags & DF_NO_EXIT)
+	if ((deathmatch || alwaysapplydmflags) && (dmflags & DF_NO_EXIT))
 	{
 		while (self->health > 0)
 			P_DamageMobj (self, self, self, 10000, MOD_EXIT);
 		return false;
 	}
-	if (*deathmatch)
+	if (deathmatch)
+	{
 		Printf ("%s exited the level.\n", self->player->userinfo.netname);
+	}
 	return true;
 }
 
@@ -759,7 +770,7 @@ void P_PlayerInSpecialSector (player_t *player)
 			if (!(level.time & 0x1f))
 				P_DamageMobj (player->mo, NULL, NULL, 20, MOD_UNKNOWN);
 
-			if (player->health <= 10 && (!*deathmatch || !(*dmflags & DF_NO_EXIT)))
+			if (player->health <= 10 && (!deathmatch || !(dmflags & DF_NO_EXIT)))
 				G_ExitLevel(0);
 			break;
 
@@ -900,9 +911,9 @@ void P_UpdateSpecials ()
 	int i;
 	
 	// LEVEL TIMER
-	if (*deathmatch && *timelimit)
+	if (deathmatch && timelimit)
 	{
-		if (level.time >= (int)(*timelimit * TICRATE * 60))
+		if (level.time >= (int)(timelimit * TICRATE * 60))
 		{
 			Printf ("%s\n", GStrings(TXT_TIMELIMIT));
 			G_ExitLevel(0);
@@ -970,12 +981,12 @@ CUSTOM_CVAR (Bool, forcewater, false, CVAR_SERVERINFO)
 	if (gamestate == GS_LEVEL)
 	{
 		int i;
-		byte set = *var ? 2 : 0;
+		byte setTo = self ? 2 : 0;
 
 		for (i = 0; i < numsectors; i++)
 		{
 			if (sectors[i].heightsec && sectors[i].heightsec->waterzone != 1)
-				sectors[i].heightsec->waterzone = set;
+				sectors[i].heightsec->waterzone = setTo;
 		}
 	}
 }
@@ -1244,9 +1255,10 @@ void P_SpawnSpecials (void)
 			for (s = -1; (s = P_FindSectorFromTag(lines[i].args[0],s)) >= 0;)
 			{
 				sectors[s].heightsec = sec;
-				sectors[s].alwaysfake = !!lines[i].args[1];
-				if (*forcewater)
+				if (forcewater)
+				{
 					sec->waterzone = 2;
+				}
 			}
 			break;
 
@@ -1857,7 +1869,7 @@ void DPusher::RunThink ()
 	int radius;
 	int ht;
 
-	if (!*var_pushers)
+	if (!var_pushers)
 		return;
 
 	sec = sectors + m_Affectee;

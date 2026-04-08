@@ -263,7 +263,7 @@ bool P_CheckAmmo (player_t *player)
 	FWeaponInfo **wpinfo;
 	int count;
 
-	if (player->powers[pw_weaponlevel2] && !*deathmatch)
+	if (player->powers[pw_weaponlevel2] && !deathmatch)
 	{
 		wpinfo = wpnlev2info;
 	}

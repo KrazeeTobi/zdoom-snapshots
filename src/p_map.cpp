@@ -41,6 +41,7 @@
 #include "p_trace.h"
 
 #include "s_sound.h"
+#include "decallib.h"
 
 // State.
 #include "doomstat.h"
@@ -86,13 +87,11 @@ sector_t*		tmsector;
 // keep track of the line that lowers the ceiling,
 // so missiles don't explode against sky hack walls
 line_t* 		ceilingline;
+
 line_t			*BlockingLine;
 
 // keep track of special lines as they are hit,
 // but don't process them until the move is proven valid
-// [RH] MaxSpecialCross	grows as needed
-int				MaxSpecialCross = 0;
-
 TArray<line_t *> spechit;
 
 AActor *onmobj; // generic global onmobj...used for landing on pods/players
@@ -251,7 +250,7 @@ int P_GetFriction (const AActor *mo, int *frictionfactor)
 		friction = secfriction (mo->subsector->sector);
 		movefactor = secmovefac (mo->subsector->sector) >> 1;
 	}
-	else if (*var_friction && !(mo->flags & (MF_NOCLIP|MF_NOGRAVITY)))
+	else if (var_friction && !(mo->flags & (MF_NOCLIP|MF_NOGRAVITY)))
 	{	// When the object is straddling sectors with the same
 		// floor height that have different frictions, use the lowest
 		// friction value (muddy has precedence over icy).
@@ -387,7 +386,7 @@ BOOL PIT_CheckLine (line_t *ld)
 	if (!(tmthing->flags & MF_MISSILE) || (ld->flags & ML_BLOCKEVERYTHING))
 	{
 		if ((ld->flags & (ML_BLOCKING|ML_BLOCKEVERYTHING)) || 	// explicitly blocking everything
-			(!tmthing->player && ld->flags & ML_BLOCKMONSTERS))	// block monsters only
+			(!(tmthing->flags3 & MF3_NOBLOCKMONST) && (ld->flags & ML_BLOCKMONSTERS)))	// block monsters only
 		{
 			if (tmthing->flags2 & MF2_BLASTED)
 			{
@@ -509,7 +508,7 @@ BOOL PIT_CheckThing (AActor *thing)
 		return true;	
 	}
 	BlockingMobj = thing;
-	if (tmthing->flags2 & MF2_PASSMOBJ)
+	if (tmthing->flags2 & MF2_PASSMOBJ && !(dmflags & DF_NO_PASSMOBJ))
 	{ // check if a mobj passed over/under another object
 		if (tmthing->flags3 & thing->flags3 & MF3_DONTOVERLAP)
 		{ // Some things prefer not to overlap each other, if possible
@@ -1114,7 +1113,7 @@ BOOL P_TryMove (AActor *thing, fixed_t x, fixed_t y,
 				goto pushline;
 			}
 		}
-		if (!(tmthing->flags2 & MF2_PASSMOBJ))
+		if (!(tmthing->flags2 & MF2_PASSMOBJ) || (dmflags & DF_NO_PASSMOBJ))
 		{
 			thing->z = oldz;
 			return false;
@@ -1494,7 +1493,7 @@ void P_HitSlideLine (line_t* ld)
 	// killough 10/98: only bounce if hit hard (prevents wobbling)
 	icyfloor = 
 		(P_AproxDistance(tmxmove, tmymove) > 4*FRACUNIT) &&
-		*var_friction &&  // killough 8/28/98: calc friction on demand
+		var_friction &&  // killough 8/28/98: calc friction on demand
 		slidemo->z <= slidemo->floorz &&
 		P_GetFriction (slidemo, NULL) > ORIG_FRICTION;
 
@@ -1793,8 +1792,29 @@ bool P_CheckSlopeWalk (AActor *actor, fixed_t &xmove, fixed_t &ymove)
 				}
 				else
 				{
-					xmove = actor->momx = plane->a * 2;
-					ymove = actor->momy = plane->b * 2;
+					const msecnode_t *node;
+					bool dopush = true;
+
+					if (plane->c > STEEPSLOPE*2/3)
+					{
+						for (node = actor->touching_sectorlist; node; node = node->m_tnext)
+						{
+							const sector_t *sec = node->m_sector;
+							if (sec->floorplane.c >= STEEPSLOPE)
+							{
+								if (sec->floorplane.ZatPoint (destx, desty) >= actor->z - 24*FRACUNIT)
+								{
+									dopush = false;
+									break;
+								}
+							}
+						}
+					}
+					if (dopush)
+					{
+						xmove = actor->momx = plane->a * 2;
+						ymove = actor->momy = plane->b * 2;
+					}
 					return false;
 				}
 			}
@@ -2055,7 +2075,7 @@ fixed_t P_AimLineAttack (AActor *t1, angle_t angle, fixed_t distance, fixed_t vr
 	// can't shoot outside view angles
 	if (vrange == 0)
 	{
-		if (t1->player == NULL || *dmflags & DF_NO_FREELOOK)
+		if (t1->player == NULL || dmflags & DF_NO_FREELOOK)
 		{
 			vrange = ANGLE_1*32;
 		}
@@ -2144,14 +2164,25 @@ void P_LineAttack (AActor *t1, angle_t angle, fixed_t distance,
 			if (trace.HitType == TRACE_HitWall &&
 				!(sides[trace.Line->sidenum[trace.Side]].Flags & WALLF_NOAUTODECALS))
 			{
-				static char chipname[] = "BulletChip1";
-				chipname[10] = (M_Random() % 5) + '1';
-				AImpactDecal *decal =
-					AImpactDecal::StaticCreate (chipname, trace.X, trace.Y, trace.Z,
-						sides + trace.Line->sidenum[trace.Side]);
-				if (decal != NULL)
-				{ // randomly flip around x and y
-					decal->renderflags ^= M_Random() & 3;
+				FDecalBase *decalbase = NULL;
+
+				if (t1->player != NULL)
+				{
+					weapontype_t weap = t1->player->readyweapon;
+					if (weap < NUMWEAPONS)
+					{
+						decalbase =
+							((AActor *)wpnlev1info[weap]->type->ActorInfo->Defaults)->DecalGenerator;
+					}
+				}
+				else
+				{
+					decalbase = t1->DecalGenerator;
+				}
+				if (decalbase != NULL)
+				{
+					AImpactDecal::StaticCreate (decalbase->GetDecal (),
+						trace.X, trace.Y, trace.Z, sides + trace.Line->sidenum[trace.Side]);
 				}
 			}
 		}
@@ -2311,7 +2342,7 @@ fixed_t CameraX, CameraY, CameraZ;
 
 void P_AimCamera (AActor *t1)
 {
-	fixed_t distance = (fixed_t)(*chase_dist * FRACUNIT);
+	fixed_t distance = (fixed_t)(chase_dist * FRACUNIT);
 	angle_t angle = (t1->angle - ANG180) >> ANGLETOFINESHIFT;
 	angle_t pitch = (angle_t)(t1->pitch) >> ANGLETOFINESHIFT;
 	FTraceResults trace;
@@ -2321,7 +2352,7 @@ void P_AimCamera (AActor *t1)
 	vy = FixedMul (finecosine[pitch], finesine[angle]);
 	vz = finesine[pitch];
 
-	sz = t1->z - t1->floorclip + t1->height + (fixed_t)(*chase_height * FRACUNIT);
+	sz = t1->z - t1->floorclip + t1->height + (fixed_t)(chase_height * FRACUNIT);
 
 	if (Trace (t1->x, t1->y, sz, t1->subsector->sector,
 		vx, vy, vz, distance, 0, 0, NULL, trace) &&
@@ -2555,24 +2586,23 @@ bool	DamageSource;
 int		bombmod;
 vec3_t	bombvec;
 
-
+//=============================================================================
 //
 // PIT_RadiusAttack
-// "bombsource" is the creature
-// that caused the explosion at "bombspot".
-// [RH] Now it knows about vertical distances and
-//      can thrust things vertically, too.
 //
+// "bombsource" is the creature that caused the explosion at "bombspot".
+// [RH] Now it knows about vertical distances and can thrust things vertically.
+//=============================================================================
 
 // [RH] Damage scale to apply to thing that shot the missile.
 static float selfthrustscale;
 
 CUSTOM_CVAR (Float, splashfactor, 1.f, CVAR_SERVERINFO)
 {
-	if (*var <= 0.f)
-		var = 1.f;
+	if (self <= 0.f)
+		self = 1.f;
 	else
-		selfthrustscale = 1.f / *var;
+		selfthrustscale = 1.f / self;
 }
 
 BOOL PIT_RadiusAttack (AActor *thing)
@@ -2641,7 +2671,7 @@ BOOL PIT_RadiusAttack (AActor *thing)
 		points = bombdamagefloat * (1.f - len * bombdistancefloat) + 1.f;
 		if (thing == bombsource)
 		{
-			points = points * *splashfactor;
+			points = points * splashfactor;
 		}
 		if (thing->player && gameinfo.gametype == GAME_Hexen)
 		{
@@ -2695,7 +2725,7 @@ BOOL PIT_RadiusAttack (AActor *thing)
 		if (P_CheckSight (thing, bombspot, true))
 		{ // OK to damage; target is in direct path
 			int damage = (bombdamage * (bombdistance-dist)/bombdistance) + 1;
-			damage = (int)((float)damage * *splashfactor);
+			damage = (int)((float)damage * splashfactor);
 			if (thing->player && gameinfo.gametype == GAME_Hexen)
 			{
 				damage >>= 2;
@@ -2706,6 +2736,35 @@ BOOL PIT_RadiusAttack (AActor *thing)
 	return true;
 }
 
+//=============================================================================
+//
+// PIT_RadiusDecals
+//
+// Puts decals on walls near a P_RadiusAttack spot.
+//
+//=============================================================================
+
+static const FDecal *RadDecal;
+
+BOOL PIT_RadiusDecals (line_t *ld)
+{
+	int side = P_PointOnLineSide (bombspot->x, bombspot->y, ld);
+
+	if (side != 0 && ld->backsector == NULL)
+		return true;	// exploded behind wall
+
+	float len2 = (float)DMulScale16 (ld->dx,ld->dx, ld->dy,ld->dy);
+	if (len2 == 0.f)
+		return true;	// What kind of crap wall has 0 length?
+
+	float dot = (float)DMulScale16 (bombspot->x - ld->v1->x, ld->dx,  bombspot->y - ld->v1->y, ld->dy);
+	float r = dot / len2;
+
+	if (r < 0.f || r > 1.f)
+		return true;	// Nearest pt on wall's line is not on the wall
+
+	return true;
+}
 
 //
 // P_RadiusAttack
@@ -2736,6 +2795,11 @@ void P_RadiusAttack (AActor *spot, AActor *source, int damage, int distance,
 	for (y = yl; y <= yh; y++)
 		for (x = xl; x <= xh; x++)
 			P_BlockThingsIterator (x, y, PIT_RadiusAttack);
+
+	// [RH] Spray some decals on nearby walls
+	for (y = yl; y <= yh; y++)
+		for (x = xl; x <= xh; x++)
+			P_BlockLinesIterator (x, y, PIT_RadiusDecals);
 }
 
 
@@ -2995,7 +3059,7 @@ void P_DoCrunch (AActor *thing)
 		if ((!(thing->flags&MF_NOBLOOD)) &&
 			(!(thing->flags2&MF2_INVULNERABLE)))
 		{
-			if (*cl_bloodtype <= 1)
+			if (cl_bloodtype <= 1)
 			{
 				AActor *mo;
 
@@ -3005,7 +3069,7 @@ void P_DoCrunch (AActor *thing)
 				mo->momx = PS_Random (pr_changesector) << 12;
 				mo->momy = PS_Random (pr_changesector) << 12;
 			}
-			if (*cl_bloodtype >= 1)
+			if (cl_bloodtype >= 1)
 			{
 				angle_t an;
 
@@ -3195,7 +3259,7 @@ void PIT_CeilingLower (AActor *thing)
 	if (thing->z + thing->height > thing->ceilingz)
 	{
 		intersectors.Clear ();
-		fixed_t oldz = thing->z;
+		//fixed_t oldz = thing->z;
 		thing->z = thing->ceilingz - thing->height;
 		switch (P_PushDown (thing))
 		{

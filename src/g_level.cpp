@@ -31,6 +31,7 @@
 #include "b_bot.h"
 #include "sc_man.h"
 #include "sbar.h"
+#include "a_lightning.h"
 
 #include "gi.h"
 
@@ -177,7 +178,9 @@ static const char *MapInfoMapLevel[] =
 	"nofreelook",
 	"allowjump",
 	"nojump",
-	"fallingdamage",
+	"fallingdamage",		// Hexen falling damage
+	"oldfallingdamage",		// Lesser ZDoom falling damage
+	"forcefallingdamage",	// Skull Tag compatibility name for oldfallingdamage
 	"nofallingdamage",
 	"cdtrack",
 	"cdid",
@@ -190,14 +193,17 @@ static const char *MapInfoMapLevel[] =
 	"warptrans",
 	"vertwallshade",
 	"horizwallshade",
+	"gravity",
+	"aircontrol",
+	"filterstarts",
 	NULL
 };
 
 enum EMIType
 {
-	MITYPE_IGNORE,
 	MITYPE_EATNEXT,
 	MITYPE_INT,
+	MITYPE_FLOAT,
 	MITYPE_HEX,
 	MITYPE_COLOR,
 	MITYPE_MAPNAME,
@@ -241,7 +247,7 @@ MapHandlers[] =
 	{ MITYPE_SCFLAGS,	0, ~LEVEL_SPECACTIONSMASK },
 	{ MITYPE_SCFLAGS,	LEVEL_SPECOPENDOOR, ~LEVEL_SPECACTIONSMASK },
 	{ MITYPE_SCFLAGS,	LEVEL_SPECLOWERFLOOR, ~LEVEL_SPECACTIONSMASK },
-	{ MITYPE_IGNORE,	0, 0 },		// lightning
+	{ MITYPE_SETFLAG,	LEVEL_STARTLIGHTNING, 0 },
 	{ MITYPE_LUMPNAME,	lioffset(fadetable), 0 },
 	{ MITYPE_CLRBYTES,	lioffset(WallVertLight), lioffset(WallHorizLight) },
 	{ MITYPE_SETFLAG,	LEVEL_SNDSEQTOTALCTRL, 0 },
@@ -250,8 +256,10 @@ MapHandlers[] =
 	{ MITYPE_SCFLAGS,	LEVEL_FREELOOK_NO, ~LEVEL_FREELOOK_YES },
 	{ MITYPE_SCFLAGS,	LEVEL_JUMP_YES, ~LEVEL_JUMP_NO },
 	{ MITYPE_SCFLAGS,	LEVEL_JUMP_NO, ~LEVEL_JUMP_YES },
-	{ MITYPE_SCFLAGS,	LEVEL_FALLDMG_YES, ~LEVEL_FALLDMG_NO },
-	{ MITYPE_SCFLAGS,	LEVEL_FALLDMG_NO, ~LEVEL_FALLDMG_YES },
+	{ MITYPE_SCFLAGS,	LEVEL_FALLDMG_HX, ~LEVEL_FALLDMG_ZD },
+	{ MITYPE_SCFLAGS,	LEVEL_FALLDMG_ZD, ~LEVEL_FALLDMG_HX },
+	{ MITYPE_SCFLAGS,	LEVEL_FALLDMG_ZD, ~LEVEL_FALLDMG_HX },
+	{ MITYPE_SCFLAGS,	0, ~(LEVEL_FALLDMG_ZD|LEVEL_FALLDMG_HX) },
 	{ MITYPE_INT,		lioffset(cdtrack), 0 },
 	{ MITYPE_HEX,		lioffset(cdid), 0 },
 	{ MITYPE_EATNEXT,	0, 0 },
@@ -263,6 +271,9 @@ MapHandlers[] =
 	{ MITYPE_EATNEXT,	0, 0 },
 	{ MITYPE_RELLIGHT,	lioffset(WallVertLight), 0 },
 	{ MITYPE_RELLIGHT,	lioffset(WallHorizLight), 0 },
+	{ MITYPE_FLOAT,		lioffset(gravity), 0 },
+	{ MITYPE_FLOAT,		lioffset(aircontrol), 0 },
+	{ MITYPE_SETFLAG,	LEVEL_FILTERSTARTS, 0 },
 };
 
 static const char *MapInfoClusterLevel[] =
@@ -364,10 +375,11 @@ void G_ParseMapInfo ()
 					sprintf (sc_String, "MAP%02d", map);
 					SKYFLATNAME[5] = 0;
 					HexenHack = true;
-					// Hexen levels are automatically nointermission
-					// and even lighting and no auto sound sequences
+					// Hexen levels are automatically nointermission,
+					// no auto sound sequences, and falling damage.
 					levelflags |= LEVEL_NOINTERMISSION
-								| LEVEL_SNDSEQTOTALCTRL;
+								| LEVEL_SNDSEQTOTALCTRL
+								| LEVEL_FALLDMG_HX;
 				}
 				levelindex = FindWadLevelInfo (sc_String);
 				if (levelindex == -1)
@@ -439,9 +451,6 @@ static void ParseMapInfoLower (MapInfoHandler *handlers,
 		handler = handlers + entry;
 		switch (handler->type)
 		{
-		case MITYPE_IGNORE:
-			break;
-
 		case MITYPE_EATNEXT:
 			SC_MustGetString ();
 			break;
@@ -449,6 +458,11 @@ static void ParseMapInfoLower (MapInfoHandler *handlers,
 		case MITYPE_INT:
 			SC_MustGetNumber ();
 			*((int *)(info + handler->data1)) = sc_Number;
+			break;
+
+		case MITYPE_FLOAT:
+			SC_MustGetFloat ();
+			*((float *)(info + handler->data1)) = sc_Float;
 			break;
 
 		case MITYPE_HEX:
@@ -704,7 +718,7 @@ void G_DeferedInitNew (char *mapname)
 
 CCMD (map)
 {
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		if (W_CheckNumForName (argv[1]) == -1)
 			Printf ("No map %s\n", argv[1]);
@@ -764,9 +778,9 @@ void G_InitNew (char *mapname)
 
 	UnlatchCVars ();
 
-	if (*gameskill > sk_nightmare)
+	if (gameskill > sk_nightmare)
 		gameskill = sk_nightmare;
-	else if (*gameskill < sk_baby)
+	else if (gameskill < sk_baby)
 		gameskill = sk_baby;
 
 	UnlatchCVars ();
@@ -784,11 +798,11 @@ void G_InitNew (char *mapname)
 	}
 
 	respawnmonsters =
-		((gameinfo.gametype == GAME_Doom && *gameskill == sk_nightmare)
-		|| (*dmflags & DF_MONSTERS_RESPAWN));
+		((gameinfo.gametype == GAME_Doom && gameskill == sk_nightmare)
+		|| (dmflags & DF_MONSTERS_RESPAWN));
 
 	oldSpeed = GameSpeed;
-	wantFast = (*dmflags & DF_FAST_MONSTERS) || (*gameskill == sk_nightmare);
+	wantFast = (dmflags & DF_FAST_MONSTERS) || (gameskill == sk_nightmare);
 	GameSpeed = wantFast ? SPEED_Fast : SPEED_Normal;
 
 	FActorInfo::StaticGameSet ();
@@ -880,8 +894,8 @@ void G_DoCompleted (void)
 	strncpy (wminfo.lname0, level.info->pname, 8);
 	strncpy (wminfo.current, level.mapname, 8);
 
-	if (*deathmatch &&
-		(*dmflags & DF_SAME_LEVEL) &&
+	if (deathmatch &&
+		(dmflags & DF_SAME_LEVEL) &&
 		!(level.flags & LEVEL_CHANGEMAPCHEAT))
 	{
 		strncpy (wminfo.next, level.mapname, 8);
@@ -939,7 +953,7 @@ void G_DoCompleted (void)
 		EFinishLevelType mode;
 
 		if (thiscluster != nextcluster ||
-			*deathmatch ||
+			deathmatch ||
 			!(thiscluster->flags & CLUSTER_HUB))
 		{
 			if (nextcluster->flags & CLUSTER_HUB)
@@ -964,22 +978,26 @@ void G_DoCompleted (void)
 			}
 		}
 
-		if (mode == FINISH_NextHub)
-		{
-			memset (ACS_WorldVars, 0, sizeof(ACS_WorldVars));
-			P_RemoveDefereds ();
-			G_ClearSnapshots ();
-		}
-		else if (mode == FINISH_SameHub)
-		{
+		if (mode == FINISH_SameHub)
+		{ // Remember the level's state for re-entry.
 			G_SnapshotLevel ();
 		}
-		if (mode == FINISH_NoHub)
-		{ // Reset time to zero if not entering/staying in a hub
-			level.time = 0;
+		else
+		{ // Forget the states of all existing levels.
+			G_ClearSnapshots ();
+
+			if (mode == FINISH_NextHub)
+			{ // Reset world variables and deferred scripts for the new hub.
+				memset (ACS_WorldVars, 0, sizeof(ACS_WorldVars));
+				P_RemoveDefereds ();
+			}
+			else if (mode == FINISH_NoHub)
+			{ // Reset time to zero if not entering/staying in a hub.
+				level.time = 0;
+			}
 		}
 
-		if (!*deathmatch &&
+		if (!deathmatch &&
 			((level.flags & LEVEL_NOINTERMISSION) ||
 			((nextcluster == thiscluster) && (thiscluster->flags & CLUSTER_HUB))))
 		{
@@ -1079,15 +1097,20 @@ void G_DoLoadLevel (int position)
 
 	SN_StopAllSequences ();
 	P_SetupLevel (level.mapname, position);
+
+	// [RH] Start lightning, if MAPINFO tells us to
+	if (level.flags & LEVEL_STARTLIGHTNING)
+	{
+		P_StartLightning ();
+	}
+
 	displayplayer = consoleplayer;		// view the guy you are playing
 	StatusBar->AttachToPlayer (&players[consoleplayer]);
 	gameaction = ga_nothing; 
 	Z_CheckHeap ();
 
 	// clear cmd building stuff
-	for (i = 0; i < NUM_ACTIONS; i++)
-		if (i != ACTION_MLOOK && i != ACTION_KLOOK)
-			Actions[i] = 0;
+	ResetButtonStates ();
 
 	SendWeaponSlot = SendWeaponChoice = 255;
 	SendItemSelect = 0;
@@ -1146,7 +1169,7 @@ void G_WorldDone (void)
 	{
 		nextcluster = FindClusterInfo (FindLevelInfo (nextmap)->cluster);
 
-		if (nextcluster->cluster != level.cluster && !*deathmatch)
+		if (nextcluster->cluster != level.cluster && !deathmatch)
 		{
 			// Only start the finale if the next level's cluster is different
 			// than the current one and we're not in deathmatch.
@@ -1171,8 +1194,7 @@ void G_DoWorldDone (void)
 	gamestate = GS_LEVEL;
 	if (wminfo.next[0] == 0)
 	{
-		// Don't crash if no next map is given,
-		// just repeat the current one.
+		// Don't crash if no next map is given. Just repeat the current one.
 		Printf ("No next map specified.\n");
 	}
 	else
@@ -1192,6 +1214,9 @@ void G_InitLevelLocals ()
 
 	BaseBlendA = 0.0f;		// Remove underwater blend effect, if any
 	NormalLight.Maps = realcolormaps;
+
+	level.gravity = sv_gravity;
+	level.aircontrol = (fixed_t)(sv_aircontrol * 65536.f);
 
 	if ((i = FindWadLevelInfo (level.mapname)) > -1)
 	{
@@ -1219,6 +1244,14 @@ void G_InitLevelLocals ()
 		level.flags |= LEVEL_DEFINEDINMAPINFO;
 		level.WallVertLight = pinfo->WallVertLight;
 		level.WallHorizLight = pinfo->WallHorizLight;
+		if (pinfo->gravity != 0.f)
+		{
+			level.gravity = pinfo->gravity;
+		}
+		if (pinfo->aircontrol != 0.f)
+		{
+			level.aircontrol = (fixed_t)(pinfo->aircontrol * 65536.f);
+		}
 	}
 	else
 	{
@@ -1234,6 +1267,8 @@ void G_InitLevelLocals ()
 		level.WallHorizLight = -8;
 		R_SetDefaultColormap ("COLORMAP");
 	}
+
+	G_AirControlChanged ();
 
 	if (info->level_name)
 	{
@@ -1274,15 +1309,8 @@ void G_InitLevelLocals ()
 		clear |= DF_NO_FREELOOK;
 	if (level.flags & LEVEL_FREELOOK_NO)
 		set |= DF_NO_FREELOOK;
-	if (level.flags & LEVEL_FALLDMG_YES)
-		set |= DF_YES_FALLING;
-	if (level.flags & LEVEL_FALLDMG_NO)
-		clear |= DF_YES_FALLING;
 
-	dmflags = (*dmflags & ~clear) | set;
-
-	level.gravity = *sv_gravity;
-	level.aircontrol = (fixed_t)(*sv_aircontrol * 65536.f);
+	dmflags = (dmflags & ~clear) | set;
 
 	memset (level.vars, 0, sizeof(level.vars));
 
@@ -1505,6 +1533,19 @@ void G_SetLevelStrings (void)
 		strncpy (level.level_name, level.info->level_name, 63);
 }
 
+void G_AirControlChanged ()
+{
+	if (level.aircontrol <= 256)
+	{
+		level.airfriction = FRACUNIT;
+	}
+	else
+	{
+		// Friction is inversely proportional to the amount of control
+		float fric = ((float)level.aircontrol/65536.f) * -0.0941f + 1.0004f;
+		level.airfriction = (fixed_t)(fric * 65536.f);
+	}
+}
 
 void G_SerializeLevel (FArchive &arc, bool hubLoad)
 {
@@ -1517,6 +1558,8 @@ void G_SerializeLevel (FArchive &arc, bool hubLoad)
 		<< level.killed_monsters
 		<< level.gravity
 		<< level.aircontrol;
+
+	G_AirControlChanged ();
 
 	for (i = 0; i < NUM_MAPVARS; i++)
 	{

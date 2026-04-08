@@ -129,7 +129,7 @@ void DCajunMaster::Main (int buf)
 	}
 
 	//Check if player should go observer. Or un observe
-	if (*bot_observer && !observer)
+	if (bot_observer && !observer)
 	{
 		Printf ("%s is now observer\n", players[consoleplayer].userinfo.netname);
 		observer = true;
@@ -138,7 +138,7 @@ void DCajunMaster::Main (int buf)
 		players[consoleplayer].mo->flags2 |= MF2_FLY;
 		players[consoleplayer].mo->LinkToWorld ();
 	}
-	else if (!*bot_observer && observer) //Go back
+	else if (!bot_observer && observer) //Go back
 	{
 		Printf ("%s returned to the fray\n", players[consoleplayer].userinfo.netname);
 		observer = false;
@@ -182,13 +182,13 @@ void DCajunMaster::Init ()
 		}
 	}
 
-	if (ctf && *teamplay == false)
+	if (ctf && teamplay == false)
 		teamplay = true; //Need teamplay for ctf. (which is not done yet)
 
 	t_join = (wanted_botnum + 1) * SPAWN_DELAY; //The + is to let player get away before the bots come in.
 
 	//Determine Combat distance for each weapon.
-	if (*deathmatch)
+	if (deathmatch)
 	{
 		combatdst[wp_fist]         = 1       ;
 		combatdst[wp_pistol]       = 25000000;
@@ -253,8 +253,10 @@ void DCajunMaster::End ()
 
 bool DCajunMaster::SpawnBot (const char *name, int color)
 {
+#if 0
 	int num=0;
 	static bool red; //ctf, spawning helper, spawn first blue then a red ...
+#endif
 	int i;
 
 	//COLORS
@@ -334,11 +336,11 @@ bool DCajunMaster::SpawnBot (const char *name, int color)
 	Net_WriteByte (playernumber);
 	{
 		//Set color.
-		if (color == NOCOLOR && *bot_next_color < NOCOLOR && *bot_next_color >= 0)
+		if (color == NOCOLOR && bot_next_color < NOCOLOR && bot_next_color >= 0)
 		{
 			char concat[256];
 			strcpy (concat, thebot->info);
-			strcat (concat, colors[*bot_next_color]);
+			strcat (concat, colors[bot_next_color]);
 			Net_WriteString (concat);
 		}
 		else
@@ -378,7 +380,7 @@ bool DCajunMaster::SpawnBot (const char *name, int color)
 void DCajunMaster::DoAddBot (int bnum, char *info)
 {
 	D_ReadUserInfoStrings (bnum, (byte **)&info, false);
-	if (!*deathmatch && playerstarts[bnum].type == 0)
+	if (!deathmatch && playerstarts[bnum].type == 0)
 	{
 		Printf ("%s tried to join, but there was no player %d start\n",
 			players[bnum].userinfo.netname, bnum+1);
@@ -507,7 +509,7 @@ void DCajunMaster::ForgetBots ()
 bool DCajunMaster::LoadBots ()
 {
 	bglobal.ForgetBots ();
-#ifndef UNIX
+#ifndef unix
 	if (!FileExists ("zcajun/" BOTFILENAME))
 	{
 		DPrintf ("No " BOTFILENAME ", so no bots\n");

@@ -18,7 +18,7 @@ private:
 		fixed_t destY;
 		angle_t destAngle;
 
-		if (*deathmatch)
+		if (deathmatch)
 		{
 			int selections = deathmatchstarts.Size ();
 			int i = P_Random() % selections;

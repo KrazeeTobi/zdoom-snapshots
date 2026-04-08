@@ -35,7 +35,7 @@ void rt_copy1col_c (int hx, int sx, int yl, int yh)
 		return;
 	count++;
 
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 
@@ -76,7 +76,7 @@ void rt_copy2cols_c (int hx, int sx, int yl, int yh)
 		return;
 	count++;
 
-	dest = (short *)(ylookup[yl] + columnofs[sx]);
+	dest = (short *)(ylookup[yl] + sx);
 	source = (short *)(&dc_temp[yl*4 + hx]);
 	pitch = dc_pitch/sizeof(short);
 
@@ -109,7 +109,7 @@ void rt_copy4cols_c (int sx, int yl, int yh)
 		return;
 	count++;
 
-	dest = (int *)(ylookup[yl] + columnofs[sx]);
+	dest = (int *)(ylookup[yl] + sx);
 	source = (int *)(&dc_temp[yl*4]);
 	pitch = dc_pitch/sizeof(int);
 	
@@ -144,7 +144,7 @@ void rt_map1col_c (int hx, int sx, int yl, int yh)
 	count++;
 
 	colormap = dc_colormap;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 
@@ -179,7 +179,7 @@ void rt_map2cols_c (int hx, int sx, int yl, int yh)
 	count++;
 
 	colormap = dc_colormap;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 
@@ -217,7 +217,7 @@ void rt_map4cols_c (int sx, int yl, int yh)
 	count++;
 
 	colormap = dc_colormap;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4];
 	pitch = dc_pitch;
 	
@@ -264,7 +264,7 @@ void rt_tlate1col (int hx, int sx, int yl, int yh)
 
 	translation = dc_translation;
 	colormap = dc_colormap;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 
@@ -292,7 +292,7 @@ void rt_tlate2cols (int hx, int sx, int yl, int yh)
 
 	translation = dc_translation;
 	colormap = dc_colormap;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 
@@ -321,7 +321,7 @@ void rt_tlate4cols (int sx, int yl, int yh)
 	count++;
 
 	colormap = dc_colormap;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4];
 	pitch = dc_pitch;
 	
@@ -351,7 +351,7 @@ void rt_add1col (int hx, int sx, int yl, int yh)
 
 	DWORD *fg2rgb = dc_srcblend;
 	DWORD *bg2rgb = dc_destblend;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 	colormap = dc_colormap;
@@ -385,7 +385,7 @@ void rt_add2cols (int hx, int sx, int yl, int yh)
 
 	DWORD *fg2rgb = dc_srcblend;
 	DWORD *bg2rgb = dc_destblend;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 	colormap = dc_colormap;
@@ -426,7 +426,7 @@ void rt_add4cols (int sx, int yl, int yh)
 
 	DWORD *fg2rgb = dc_srcblend;
 	DWORD *bg2rgb = dc_destblend;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4];
 	pitch = dc_pitch;
 	colormap = dc_colormap;
@@ -485,7 +485,7 @@ void rt_tlateadd1col (int hx, int sx, int yl, int yh)
 	DWORD *bg2rgb = dc_destblend;
 	translation = dc_translation;
 	colormap = dc_colormap;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 
@@ -521,7 +521,7 @@ void rt_tlateadd2cols (int hx, int sx, int yl, int yh)
 	DWORD *bg2rgb = dc_destblend;
 	translation = dc_translation;
 	colormap = dc_colormap;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 
@@ -564,7 +564,7 @@ void rt_tlateadd4cols (int sx, int yl, int yh)
 	DWORD *bg2rgb = dc_destblend;
 	translation = dc_translation;
 	colormap = dc_colormap;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4];
 	pitch = dc_pitch;
 	
@@ -620,7 +620,7 @@ void rt_shaded1col (int hx, int sx, int yl, int yh)
 
 	fgstart = &Col2RGB8[0][dc_color];
 	colormap = dc_colormap;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 
@@ -651,7 +651,7 @@ void rt_shaded2cols (int hx, int sx, int yl, int yh)
 
 	fgstart = &Col2RGB8[0][dc_color];
 	colormap = dc_colormap;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 
@@ -689,7 +689,7 @@ void rt_shaded4cols (int sx, int yl, int yh)
 
 	fgstart = &Col2RGB8[0][dc_color];
 	colormap = dc_colormap;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4];
 	pitch = dc_pitch;
 	{
@@ -768,7 +768,7 @@ void rt_addclamp1col (int hx, int sx, int yl, int yh)
 
 	DWORD *fg2rgb = dc_srcblend;
 	DWORD *bg2rgb = dc_destblend;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 	colormap = dc_colormap;
@@ -804,7 +804,7 @@ void rt_addclamp2cols (int hx, int sx, int yl, int yh)
 
 	DWORD *fg2rgb = dc_srcblend;
 	DWORD *bg2rgb = dc_destblend;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 	colormap = dc_colormap;
@@ -850,7 +850,7 @@ void rt_addclamp4cols (int sx, int yl, int yh)
 
 	DWORD *fg2rgb = dc_srcblend;
 	DWORD *bg2rgb = dc_destblend;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4];
 	pitch = dc_pitch;
 	colormap = dc_colormap;
@@ -915,7 +915,7 @@ void rt_tlateaddclamp1col (int hx, int sx, int yl, int yh)
 
 	DWORD *fg2rgb = dc_srcblend;
 	DWORD *bg2rgb = dc_destblend;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 	colormap = dc_colormap;
@@ -953,7 +953,7 @@ void rt_tlateaddclamp2cols (int hx, int sx, int yl, int yh)
 
 	DWORD *fg2rgb = dc_srcblend;
 	DWORD *bg2rgb = dc_destblend;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4 + hx];
 	pitch = dc_pitch;
 	colormap = dc_colormap;
@@ -1001,7 +1001,7 @@ void rt_tlateaddclamp4cols (int sx, int yl, int yh)
 
 	DWORD *fg2rgb = dc_srcblend;
 	DWORD *bg2rgb = dc_destblend;
-	dest = ylookup[yl] + columnofs[sx];
+	dest = ylookup[yl] + sx;
 	source = &dc_temp[yl*4];
 	pitch = dc_pitch;
 	colormap = dc_colormap;

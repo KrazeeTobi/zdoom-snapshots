@@ -43,7 +43,7 @@ void I_InitHardware ()
 
 	atterm (I_ShutdownHardware);
 
-	Video->SetWindowedScale (*vid_winscale);
+	Video->SetWindowedScale (vid_winscale);
 }
 
 /** Remaining code is common to Win32 and Linux **/
@@ -67,7 +67,7 @@ DFrameBuffer *I_SetMode (int &width, int &height, DFrameBuffer *old)
 		fs = true;
 		break;
 	case DISPLAY_Both:
-		fs = *fullscreen;
+		fs = fullscreen;
 		break;
 	}
 	DFrameBuffer *res = Video->CreateFrameBuffer (width, height, fs, old);
@@ -88,7 +88,7 @@ bool I_CheckResolution (int width, int height, int bits)
 {
 	int twidth, theight;
 
-	Video->FullscreenChanged (*fullscreen);
+	Video->FullscreenChanged (fullscreen);
 	Video->StartModeIterator (bits);
 	while (Video->NextMode (&twidth, &theight))
 	{
@@ -105,7 +105,7 @@ void I_ClosestResolution (int *width, int *height, int bits)
 	int iteration;
 	DWORD closest = 4294967295u;
 
-	Video->FullscreenChanged (*fullscreen ? true : false);
+	Video->FullscreenChanged (fullscreen ? true : false);
 	for (iteration = 0; iteration < 2; iteration++)
 	{
 		Video->StartModeIterator (bits);
@@ -155,7 +155,7 @@ extern int NewWidth, NewHeight, NewBits, DisplayBits;
 
 CUSTOM_CVAR (Bool, fullscreen, true, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 {
-	if (Video->FullscreenChanged (*var))
+	if (Video->FullscreenChanged (self))
 	{
 		NewWidth = screen->GetWidth();
 		NewHeight = screen->GetHeight();
@@ -166,13 +166,13 @@ CUSTOM_CVAR (Bool, fullscreen, true, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 
 CUSTOM_CVAR (Float, vid_winscale, 1.f, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 {
-	if (*var < 1.f)
+	if (self < 1.f)
 	{
-		var = 1.f;
+		self = 1.f;
 	}
 	else if (Video)
 	{
-		Video->SetWindowedScale (*var);
+		Video->SetWindowedScale (self);
 		NewWidth = screen->GetWidth();
 		NewHeight = screen->GetHeight();
 		NewBits = DisplayBits;

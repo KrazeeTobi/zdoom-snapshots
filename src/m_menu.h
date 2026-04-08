@@ -145,8 +145,8 @@ typedef struct value_s {
 typedef struct
 {
 	// -1 = no cursor here, 1 = ok, 2 = arrows ok
-	byte		status;
-	byte		fulltext;	// [RH] Menu name is text, not a graphic
+	SBYTE		status;
+	BYTE		fulltext;	// [RH] Menu name is text, not a graphic
 	
 	// hotkey in menu
 	char		alphaKey;						

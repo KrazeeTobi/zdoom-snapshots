@@ -40,7 +40,7 @@ CCMD (toggleconsole)
 
 BOOL CheckCheatmode ()
 {
-	if (((*gameskill == sk_nightmare) || netgame || *deathmatch) && (*sv_cheats == 0.0))
+	if (((gameskill == sk_nightmare) || netgame || deathmatch) && (sv_cheats == 0.0))
 	{
 		Printf ("You must run the server with '+set sv_cheats 1' to enable this command.\n");
 		return true;
@@ -152,7 +152,7 @@ CCMD (chase)
 	{
 		int i;
 
-		if (*chasedemo)
+		if (chasedemo)
 		{
 			chasedemo = false;
 			for (i = 0; i < MAXPLAYERS; i++)
@@ -167,7 +167,7 @@ CCMD (chase)
 	}
 	else
 	{
-		if (*deathmatch && CheckCheatmode ())
+		if (deathmatch && CheckCheatmode ())
 			return;
 
 		Net_WriteByte (DEM_GENERICCHEAT);
@@ -180,7 +180,7 @@ CCMD (idclev)
 	if (CheckCheatmode ())
 		return;
 
-	if ((argc > 1) && (*(argv[1] + 2) == 0) && *(argv[1] + 1) && *argv[1])
+	if ((argv.argc() > 1) && (*(argv[1] + 2) == 0) && *(argv[1] + 1) && *argv[1])
 	{
 		int epsd, map;
 		char buf[2];
@@ -225,7 +225,7 @@ CCMD (changemap)
 		return;
 	}
 
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		if (W_CheckNumForName (argv[1]) == -1)
 		{
@@ -241,20 +241,11 @@ CCMD (changemap)
 
 CCMD (give)
 {
-	char *name;
-
-	if (CheckCheatmode ())
+	if (CheckCheatmode () || argv.argc() < 2)
 		return;
 
-	if (argc < 2)
-		return;
-
-	if ( (name = BuildString (argc - 1, argv + 1)) )
-	{
-		Net_WriteByte (DEM_GIVECHEAT);
-		Net_WriteString (name);
-		delete[] name;
-	}
+	Net_WriteByte (DEM_GIVECHEAT);
+	Net_WriteString (argv.AllButFirstArg ());
 }
 
 CCMD (gameversion)
@@ -262,12 +253,32 @@ CCMD (gameversion)
 	Printf ("%d.%d : " __DATE__ "\n", VERSION / 100, VERSION % 100);
 }
 
+CCMD (print)
+{
+	if (argv.argc() != 2)
+	{
+		Printf ("print <name>: Print a string from the string table\n");
+		return;
+	}
+	GStrings.LoadNames ();
+	int strnum = GStrings.FindString (argv[1]);
+	if (strnum < 0)
+	{
+		Printf ("%s unknown\n", argv[1]);
+	}
+	else
+	{
+		Printf ("%s\n", GStrings(strnum));
+	}
+	GStrings.FlushNames ();
+}
+
 CCMD (exec)
 {
 	FILE *f;
 	char cmd[4096];
 
-	if (argc < 2)
+	if (argv.argc() < 2)
 		return;
 
 	if ( (f = fopen (argv[1], "r")) )
@@ -300,9 +311,11 @@ CCMD (dumpheap)
 {
 	int lo = PU_STATIC, hi = PU_CACHE;
 
-	if (argc >= 2) {
+	if (argv.argc() >= 2)
+	{
 		lo = atoi (argv[1]);
-		if (argc >= 3) {
+		if (argv.argc() >= 3)
+		{
 			hi = atoi (argv[2]);
 		}
 	}
@@ -325,7 +338,7 @@ CCMD (logfile)
 		Logfile = NULL;
 	}
 
-	if (argc >= 2)
+	if (argv.argc() >= 2)
 	{
 		if ( (Logfile = fopen (argv[1], "w")) )
 		{
@@ -343,17 +356,25 @@ bool P_StartScript (AActor *who, line_t *where, int script, char *map, int lineS
 
 CCMD (puke)
 {
-	if (argc < 2 || argc > 5) {
+	int argc = argv.argc();
+
+	if (argc < 2 || argc > 5)
+	{
 		Printf (" puke <script> [arg1] [arg2] [arg3]\n");
-	} else {
+	}
+	else
+	{
 		int script = atoi (argv[1]);
 		int arg0=0, arg1=0, arg2=0;
 
-		if (argc > 2) {
+		if (argc > 2)
+		{
 			arg0 = atoi (argv[2]);
-			if (argc > 3) {
+			if (argc > 3)
+			{
 				arg1 = atoi (argv[3]);
-				if (argc > 4) {
+				if (argc > 4)
+				{
 					arg2 = atoi (argv[4]);
 				}
 			}
@@ -364,9 +385,7 @@ CCMD (puke)
 
 CCMD (error)
 {
-	char *text = BuildString (argc - 1, argv + 1);
-	char *textcopy = copystring (text);
-	delete[] text;
+	char *textcopy = copystring (argv.AllButFirstArg ());
 	I_Error (textcopy);
 }
 
@@ -383,9 +402,9 @@ CCMD (dir)
 		return;
 	}
 
-	if (argc == 1 || chdir (argv[1]))
+	if (argv.argc() == 1 || chdir (argv[1]))
 	{
-		match = argc == 1 ? (char *)"./*" : argv[1];
+		match = argv.argc() == 1 ? (char *)"./*" : argv[1];
 
 		ExtractFilePath (match, dir);
 		if (dir[0])
@@ -438,7 +457,7 @@ CCMD (fov)
 	player_t *player = m_Instigator ? m_Instigator->player
 		: &players[consoleplayer];
 
-	if (argc != 2)
+	if (argv.argc() != 2)
 		Printf ("fov is %g\n", player->DesiredFOV);
 	else
 		player->DesiredFOV = atof (argv[1]);

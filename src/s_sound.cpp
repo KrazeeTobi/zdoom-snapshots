@@ -22,7 +22,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _WIN32
 #include <io.h>
+#endif
 #include <fcntl.h>
 #include "m_alloc.h"
 
@@ -92,6 +94,7 @@ typedef struct
 	float		volume;
 	int			pitch;
 	int			priority;
+	int			tag;
 	bool		loop;
 	bool		is3d;
 	bool		constz;
@@ -112,8 +115,8 @@ static void S_StopChannel (int cnum);
 static void CalcPosVel (fixed_t *pt, AActor *mover, int constz, float pos[3],
 	float vel[3]);
 static void S_StartSound (fixed_t *pt, AActor *mover, int channel,
-	int sound_id, float volume, float attenuation, BOOL looping);
-static void S_ActivatePlayList ();
+	int sound_id, float volume, float attenuation, BOOL looping, int tag=0);
+static void S_ActivatePlayList (bool goBack);
 
 // PRIVATE DATA DEFINITIONS ------------------------------------------------
 
@@ -121,6 +124,7 @@ static int MAX_SND_DIST;
 static channel_t *Channel;			// the set of channels available
 static BOOL		mus_paused;			// whether songs are paused
 static MusPlayingInfo mus_playing;	// music currently being played
+static char		*LastSong;			// last music that was played
 static byte		*SoundCurve;
 static int		nextcleanup;
 static FPlayList *PlayList;
@@ -131,49 +135,14 @@ static FPlayList *PlayList;
 int sfx_sawup, sfx_sawidl, sfx_sawful, sfx_sawhit;
 int sfx_itemup, sfx_tink;
 
-int sfx_plasma, sfx_chngun, sfx_chainguy, sfx_empty;
+int sfx_empty;
 
 int numChannels;
 
 CVAR (Bool, snd_surround, true, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)	// [RH] Use surround sounds?
 FBoolCVar noisedebug ("noise", false, 0);	// [RH] Print sound debugging info?
 CVAR (Int, snd_channels, 12, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)	// number of channels available
-
-//==========================================================================
-//
-// CVAR snd_sfxvolume
-//
-// Maximum volume of a sound effect. Internal default is max out of 0-15.
-//==========================================================================
-
-CUSTOM_CVAR (Int, snd_sfxvolume, 8, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
-{
-	S_SetSfxVolume (*var);
-}
-
-//==========================================================================
-//
-// CVAR snd_musicvolume
-//
-// Maximum volume of MOD/MP3 music.
-//==========================================================================
-
-CUSTOM_CVAR (Int, snd_musicvolume, 9, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
-{
-	S_SetMusicVolume (*var);
-}
-
-//==========================================================================
-//
-// CVAR snd_midivolume
-//
-// Maximum volume of MIDI/MUS music.
-//==========================================================================
-
-CUSTOM_CVAR (Float, snd_midivolume, 0.5f, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
-{
-	I_SetMIDIVolume (*var);
-}
+CVAR (Bool, sv_ihatesounds, false, 0)
 
 // CODE --------------------------------------------------------------------
 
@@ -255,15 +224,15 @@ void S_NoiseDebug (void)
 			strcpy (temp, lumpinfo[Channel[i].sfxinfo->lumpnum].name);
 			temp[8] = 0;
 			screen->DrawText (color, 0, y, temp);
-			sprintf (temp, "%d", ox / FRACUNIT);
+			sprintf (temp, "%ld", ox / FRACUNIT);
 			screen->DrawText (color, 70, y, temp);
-			sprintf (temp, "%d", oy / FRACUNIT);
+			sprintf (temp, "%ld", oy / FRACUNIT);
 			screen->DrawText (color, 120, y, temp);
 			sprintf (temp, "%g", Channel[i].volume);
 			screen->DrawText (color, 170, y, temp);
 			sprintf (temp, "%d", Channel[i].priority);
 			screen->DrawText (color, 200, y, temp);
-			sprintf (temp, "%d", P_AproxDistance2 (players[consoleplayer].camera, ox, oy) / FRACUNIT);
+			sprintf (temp, "%ld", P_AproxDistance2 (players[consoleplayer].camera, ox, oy) / FRACUNIT);
 			screen->DrawText (color, 240, y, temp);
 			sprintf (temp, "%d", Channel[i].entchannel);
 			screen->DrawText (color, 280, y, temp);
@@ -284,7 +253,7 @@ void S_NoiseDebug (void)
 // music volume, allocates channel buffer, and sets S_sfx lookup.
 //==========================================================================
 
-void S_Init (int sfxVolume, int musicVolume)
+void S_Init ()
 {
 	int i;
 	int curvelump;
@@ -293,18 +262,15 @@ void S_Init (int sfxVolume, int musicVolume)
 	SoundCurve = (byte *)W_CacheLumpNum (curvelump, PU_STATIC);
 	MAX_SND_DIST = W_LumpLength (curvelump);
 
-	Printf ("S_Init: default sfx volume %d\n", sfxVolume);
+	Printf ("S_Init\n");
 
 	// [RH] Read in sound sequences
 	S_ParseSndSeq ();
 
-	S_SetSfxVolume (sfxVolume);
-	S_SetMusicVolume (musicVolume);
-
 	// Allocating the internal channels for mixing
 	// (the maximum numer of sounds rendered
 	// simultaneously) within zone memory.
-	numChannels = *snd_channels;
+	numChannels = snd_channels;
 	Channel = (channel_t *) Z_Malloc (numChannels*sizeof(channel_t), PU_STATIC, 0);
 	for (i = 0; i < numChannels; i++)
 	{
@@ -319,7 +285,7 @@ void S_Init (int sfxVolume, int musicVolume)
 	for (i=0 ; i<numChannels ; i++)
 		Channel[i].sfxinfo = 0;
 	
-	// no sounds are playing, and they are not mus_paused
+	// no sounds are playing, and they are not paused
 	mus_paused = 0;
 
 	// Note that sounds have not been cached (yet).
@@ -331,8 +297,8 @@ void S_Init (int sfxVolume, int musicVolume)
 //
 // S_Start
 //
-// Per level startup code. Kills playing sounds at start of level,
-// determines music if any, and changes music.
+// Per level startup code. Kills playing sounds at start of level
+// and starts new music.
 //==========================================================================
 
 void S_Start ()
@@ -406,7 +372,7 @@ static void CalcPosVel (fixed_t *pt, AActor *mover, int constz,
 //==========================================================================
 
 static void S_StartSound (fixed_t *pt, AActor *mover, int channel,
-	int sound_id, float volume, float attenuation, BOOL looping)
+	int sound_id, float volume, float attenuation, BOOL looping, int tag)
 {
 	sfxinfo_t *sfx;
 	int dist, vol;
@@ -440,7 +406,14 @@ static void S_StartSound (fixed_t *pt, AActor *mover, int channel,
 	{
 		pt = NULL;
 	}
-	channel &= 7;
+	if (sv_ihatesounds)
+	{ // For people who just can't play without a silent BFG.
+		channel = 1;
+	}
+	else
+	{
+		channel &= 7;
+	}
 	if (volume > 1)
 		volume = 1;
 
@@ -451,7 +424,7 @@ static void S_StartSound (fixed_t *pt, AActor *mover, int channel,
 	}
 	else if (attenuation < 0)
 	{
-		sep = -1;
+		sep = snd_surround ? -1 : NONE_SEP;
 		dist = 0;
 	}
 	else
@@ -535,7 +508,7 @@ static void S_StartSound (fixed_t *pt, AActor *mover, int channel,
 	}
 	priority = basepriority * (PRIORITY_MAX_ADJUST - (dist/DIST_ADJUST));
 
-	if (!S_StopSoundID (sound_id, priority))
+	if (!S_StopSoundID (sound_id, priority, tag))
 		return;	// other sounds have greater priority
 
 	if (pt)
@@ -694,6 +667,7 @@ static void S_StartSound (fixed_t *pt, AActor *mover, int channel,
 	Channel[i].x = x;
 	Channel[i].y = y;
 	Channel[i].z = z;
+	Channel[i].tag = tag;
 	Channel[i].loop = looping ? true : false;
 
 	if (sfx->usefulness < 0)
@@ -720,9 +694,9 @@ void S_SoundID (AActor *ent, int channel, int sound_id, float volume, int attenu
 	S_StartSound (&ent->x, ent, channel, sound_id, volume, SELECT_ATTEN(attenuation), false);
 }
 
-void S_SoundID (fixed_t *pt, int channel, int sound_id, float volume, int attenuation)
+void S_SoundID (fixed_t *pt, int channel, int sound_id, float volume, int attenuation, int tag)
 {
-	S_StartSound (pt, NULL, channel, sound_id, volume, SELECT_ATTEN(attenuation), false);
+	S_StartSound (pt, NULL, channel, sound_id, volume, SELECT_ATTEN(attenuation), false, tag);
 }
 
 //==========================================================================
@@ -738,9 +712,9 @@ void S_LoopedSoundID (AActor *ent, int channel, int sound_id, float volume, int 
 	S_StartSound (&ent->x, ent, channel, sound_id, volume, SELECT_ATTEN(attenuation), true);
 }
 
-void S_LoopedSoundID (fixed_t *pt, int channel, int sound_id, float volume, int attenuation)
+void S_LoopedSoundID (fixed_t *pt, int channel, int sound_id, float volume, int attenuation, int tag)
 {
-	S_StartSound (pt, NULL, channel, sound_id, volume, SELECT_ATTEN(attenuation), true);
+	S_StartSound (pt, NULL, channel, sound_id, volume, SELECT_ATTEN(attenuation), true, tag);
 }
 
 //==========================================================================
@@ -750,7 +724,7 @@ void S_LoopedSoundID (fixed_t *pt, int channel, int sound_id, float volume, int 
 //==========================================================================
 
 void S_StartNamedSound (AActor *ent, fixed_t *pt, int channel, 
-	const char *name, float volume, float attenuation, BOOL looping)
+	const char *name, float volume, float attenuation, BOOL looping, int tag=0)
 {
 	int sfx_id;
 	
@@ -765,9 +739,9 @@ void S_StartNamedSound (AActor *ent, fixed_t *pt, int channel,
 		DPrintf ("Unknown sound %s\n", name);
 
 	if (ent)
-		S_StartSound (&ent->x, ent, channel, sfx_id, volume, attenuation, looping);
+		S_StartSound (&ent->x, ent, channel, sfx_id, volume, attenuation, looping, tag);
 	else
-		S_StartSound (pt, NULL, channel, sfx_id, volume, attenuation, looping);
+		S_StartSound (pt, NULL, channel, sfx_id, volume, attenuation, looping, tag);
 }
 
 //==========================================================================
@@ -786,9 +760,9 @@ void S_Sound (AActor *ent, int channel, const char *name, float volume, int atte
 	S_StartNamedSound (ent, NULL, channel, name, volume, SELECT_ATTEN(attenuation), false);
 }
 
-void S_Sound (fixed_t *pt, int channel, const char *name, float volume, int attenuation)
+void S_Sound (fixed_t *pt, int channel, const char *name, float volume, int attenuation, int tag)
 {
-	S_StartNamedSound (NULL, pt, channel, name, volume, SELECT_ATTEN(attenuation), false);
+	S_StartNamedSound (NULL, pt, channel, name, volume, SELECT_ATTEN(attenuation), false, tag);
 }
 
 void S_Sound (fixed_t x, fixed_t y, int channel, const char *name, float volume, int attenuation)
@@ -815,32 +789,30 @@ void S_LoopedSound (AActor *ent, int channel, const char *name, float volume, in
 //
 // S_StopSoundID
 //
-// from Hexen (albeit, modified somewhat)
-// Stops more than limit copies of the sound from playing at once.
+// from Hexen (albeit, modified a bit)
+// Stops more than <limit> copies of the sound from playing at once.
 //==========================================================================
 
-BOOL S_StopSoundID (int sound_id, int priority)
+BOOL S_StopSoundID (int sound_id, int priority, int tag)
 {
 	int i;
 	int lp; //least priority
 	int limit;
 	int found;
 
-	if (sound_id == sfx_plasma ||
-		sound_id == sfx_chngun ||
-		sound_id == sfx_chainguy)
+	if (tag == 0)
 	{
-		limit = numChannels / 2 + 1;
+		return true;
 	}
-	else
-	{
-		limit = 2;
-	}
+
+	limit = 2;
 	lp = -1;
 	found = 0;
 	for (i = 0; i < numChannels; i++)
 	{
-		if (Channel[i].sound_id == sound_id && Channel[i].sfxinfo)
+		if (Channel[i].sound_id == sound_id &&
+			Channel[i].sfxinfo &&
+			Channel[i].tag == tag)
 		{
 			found++; //found one.  Now, should we replace it??
 			if (priority > Channel[i].priority)
@@ -876,11 +848,15 @@ void S_StopSound (fixed_t *pt, int channel)
 {
 	int i;
 
-	for (i = 0; i < numChannels; i++)
-		if (Channel[i].sfxinfo
-			&& Channel[i].pt == pt
-			&& Channel[i].entchannel == channel)
+	for (i = 0; i < numChannels; ++i)
+	{
+		if (Channel[i].sfxinfo &&
+			Channel[i].pt == pt &&
+			(sv_ihatesounds || Channel[i].entchannel == channel))
+		{
 			S_StopChannel (i);
+		}
+	}
 }
 
 void S_StopSound (AActor *ent, int channel)
@@ -962,30 +938,30 @@ bool S_GetSoundPlayingInfo (AActor *ent, int sound_id)
 
 //==========================================================================
 //
-// S_CheckSound
+// S_IsActorPlayingSomething
 //
-// Will playing this sound not cut out any other playing copies?
 //==========================================================================
 
-bool S_CheckSound (int sound_id)
+bool S_IsActorPlayingSomething (AActor *actor, int channel)
 {
 	int i;
-	int count;
 
-	for (i = count = 0; i < numChannels; i++)
+	if (sv_ihatesounds)
 	{
-		if (Channel[i].sound_id == sound_id)
+		channel = 0;
+	}
+
+	for (i = 0; i < numChannels; ++i)
+	{
+		if (Channel[i].pt == &actor->x)
 		{
-			if (++count == 2)
-				return false;
+			if (channel == 0 || Channel[i].entchannel == channel)
+			{
+				return true;
+			}
 		}
 	}
-	return true;
-}
-
-bool S_CheckSound (const char *sound)
-{
-	return S_CheckSound (S_FindSound (sound));
+	return false;
 }
 
 //==========================================================================
@@ -1041,10 +1017,10 @@ void S_UpdateSounds (void *listener_p)
 		!I_QrySongPlaying (mus_playing.handle))
 	{
 		PlayList->Advance ();
-		S_ActivatePlayList ();
+		S_ActivatePlayList (false);
 	}
 
-	for (i = 0; i < numChannels; i++)
+	for (i = 0; i < numChannels; ++i)
 	{
 		if (!Channel[i].sfxinfo)
 			continue;
@@ -1141,46 +1117,13 @@ void S_UpdateSounds (void *listener_p)
 
 //==========================================================================
 //
-// S_SetMusicVolume
-//
-//==========================================================================
-
-void S_SetMusicVolume (int volume)
-{
-	if (volume < 0 || volume > 64)
-	{
-		Printf ("Attempt to set music volume at %d\n", volume);
-	}
-	else
-	{
-		I_SetMusicVolume (volume);
-	}
-}
-
-//==========================================================================
-//
-// S_SetSfxVolume
-//
-//==========================================================================
-
-void S_SetSfxVolume (int volume)
-{
-
-	if (volume < 0 || volume > 127)
-		Printf ("Attempt to set sfx volume at %d\n", volume);
-	else
-		I_SetSfxVolume (volume);
-}
-
-//==========================================================================
-//
 // S_ActivatePlayList
 //
 // Plays the next song in the playlist. If no songs in the playlist can be
 // played, then it is deleted.
 //==========================================================================
 
-void S_ActivatePlayList ()
+void S_ActivatePlayList (bool goBack)
 {
 	int startpos, pos;
 
@@ -1188,12 +1131,12 @@ void S_ActivatePlayList ()
 	S_StopMusic (true);
 	while (!S_ChangeMusic (PlayList->GetSong (pos), 0, false, true))
 	{
-		pos = PlayList->Advance ();
+		pos = goBack ? PlayList->Backup () : PlayList->Advance ();
 		if (pos == startpos)
 		{
 			delete PlayList;
 			PlayList = NULL;
-			Printf ("Can't play anything in the playlist.\n");
+			Printf ("Cannot play anything in the playlist.\n");
 			return;
 		}
 	}
@@ -1308,8 +1251,12 @@ bool S_ChangeMusic (const char *musicname, int order, bool looping, bool force)
 		}
 		else
 		{
+#ifdef _WIN32
 			lseek (handle, 0, SEEK_END);
 			len = tell (handle);
+#else
+			len = lseek (handle, 0, SEEK_END);
+#endif
 			lseek (handle, 0, SEEK_SET);
 			pos = 0;
 		}
@@ -1352,12 +1299,11 @@ bool S_ChangeMusic (const char *musicname, int order, bool looping, bool force)
 
 void S_RestartMusic ()
 {
-	if (mus_playing.name)
+	if (LastSong != NULL)
 	{
-		char *name = mus_playing.name;
-		mus_playing.name = NULL;
-		S_ChangeMusic (name, mus_playing.baseorder, mus_playing.loop, true);
-		delete[] name;
+		S_ChangeMusic (LastSong, mus_playing.baseorder, mus_playing.loop, true);
+		delete[] LastSong;
+		LastSong = NULL;
 	}
 }
 
@@ -1401,7 +1347,12 @@ void S_StopMusic (bool force)
 		I_StopSong(mus_playing.handle);
 		I_UnRegisterSong(mus_playing.handle);
 
-		delete[] mus_playing.name;
+		if (LastSong)
+		{
+			delete[] LastSong;
+		}
+
+		LastSong = mus_playing.name;
 		mus_playing.name = NULL;
 		mus_playing.handle = 0;
 	}
@@ -1452,7 +1403,7 @@ static void S_StopChannel (int cnum)
 
 CCMD (playsound)
 {
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		S_Sound (CHAN_AUTO, argv[1], 1.f, ATTN_NONE);
 	}
@@ -1470,7 +1421,7 @@ CCMD (idmus)
 	char *map;
 	int l;
 
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		if (gameinfo.flags & GI_MAPxx)
 		{
@@ -1511,14 +1462,14 @@ CCMD (idmus)
 
 CCMD (changemus)
 {
-	if (argc > 1)
+	if (argv.argc() > 1)
 	{
 		if (PlayList)
 		{
 			delete PlayList;
 			PlayList = NULL;
 		}
-		S_ChangeMusic (argv[1], argc > 2 ? atoi (argv[2]) : 0);
+		S_ChangeMusic (argv[1], argv.argc() > 2 ? atoi (argv[2]) : 0);
 	}
 }
 
@@ -1549,7 +1500,7 @@ CCMD (cd_play)
 {
 	char musname[16];
 
-	if (argc == 1)
+	if (argv.argc() == 1)
 		strcpy (musname, ",CD,");
 	else
 		sprintf (musname, ",CD,%d", atoi(argv[1]));
@@ -1619,13 +1570,15 @@ CCMD (cd_resume)
 
 CCMD (playlist)
 {
+	int argc = argv.argc();
+
 	if (argc < 2 || argc > 3)
 	{
-		Printf ("playlist <playlist.m3u> [position]\n");
+		Printf ("playlist <playlist.m3u> [<position>|shuffle]\n");
 	}
 	else
 	{
-		if (PlayList)
+		if (PlayList != NULL)
 		{
 			PlayList->ChangeList (argv[1]);
 		}
@@ -1642,9 +1595,16 @@ CCMD (playlist)
 		{
 			if (argc == 3)
 			{
-				PlayList->SetPosition (atoi (argv[2]));
+				if (stricmp (argv[2], "shuffle") == 0)
+				{
+					PlayList->Shuffle ();
+				}
+				else
+				{
+					PlayList->SetPosition (atoi (argv[2]));
+				}
 			}
-			S_ActivatePlayList ();
+			S_ActivatePlayList (false);
 		}
 	}
 }
@@ -1655,16 +1615,52 @@ CCMD (playlist)
 //
 //==========================================================================
 
-CCMD (playlistpos)
+static bool CheckForPlaylist ()
 {
 	if (PlayList == NULL)
 	{
 		Printf ("No playlist is playing.\n");
+		return false;
 	}
-	else if (argc > 1)
+	return true;
+}
+
+CCMD (playlistpos)
+{
+	if (CheckForPlaylist() && argv.argc() > 1)
 	{
 		PlayList->SetPosition (atoi (argv[1]) - 1);
-		S_ActivatePlayList ();
+		S_ActivatePlayList (false);
+	}
+}
+
+//==========================================================================
+//
+// CCMD playlistnext
+//
+//==========================================================================
+
+CCMD (playlistnext)
+{
+	if (CheckForPlaylist())
+	{
+		PlayList->Advance ();
+		S_ActivatePlayList (false);
+	}
+}
+
+//==========================================================================
+//
+// CCMD playlistprev
+//
+//==========================================================================
+
+CCMD (playlistprev)
+{
+	if (CheckForPlaylist())
+	{
+		PlayList->Backup ();
+		S_ActivatePlayList (true);
 	}
 }
 
@@ -1676,11 +1672,7 @@ CCMD (playlistpos)
 
 CCMD (playliststatus)
 {
-	if (PlayList == NULL)
-	{
-		Printf ("No playlist is playing.\n");
-	}
-	else
+	if (CheckForPlaylist ())
 	{
 		Printf ("Song %d of %d:\n%s\n",
 			PlayList->GetPosition () + 1,

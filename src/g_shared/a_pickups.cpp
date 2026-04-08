@@ -124,6 +124,10 @@ void A_RestoreSpecialThing1 (AActor *thing)
 void A_RestoreSpecialThing2 (AActor *thing)
 {
 	thing->flags |= MF_SPECIAL;
+	if (!(thing->GetDefault()->flags & MF_NOGRAVITY))
+	{
+		thing->flags &= ~MF_NOGRAVITY;
+	}
 	thing->SetState (thing->SpawnState);
 }
 
@@ -162,6 +166,10 @@ void A_RestoreSpecialDoomThing (AActor *self)
 {
 	self->renderflags &= ~RF_INVISIBLE;
 	self->flags |= MF_SPECIAL;
+	if (!(self->GetDefault()->flags & MF_NOGRAVITY))
+	{
+		self->flags &= ~MF_NOGRAVITY;
+	}
 	if (static_cast<AInventory *>(self)->DoRespawn ())
 	{
 		self->SetState (self->SpawnState);
@@ -171,7 +179,7 @@ void A_RestoreSpecialDoomThing (AActor *self)
 }
 
 /***************************************************************************/
-/* AInventory implementation												   */
+/* AInventory implementation											   */
 /***************************************************************************/
 
 FState AInventory::States[] =
@@ -202,8 +210,8 @@ END_DEFAULTS
 
 bool AInventory::ShouldRespawn ()
 {
-	return (*deathmatch || *alwaysapplydmflags) && 
-		   (*dmflags & DF_ITEMS_RESPAWN);
+	return (deathmatch || alwaysapplydmflags) && 
+		   (dmflags & DF_ITEMS_RESPAWN);
 }
 
 //----------------------------------------------------------------------------
@@ -214,12 +222,45 @@ bool AInventory::ShouldRespawn ()
 
 void AInventory::Hide ()
 {
-	flags &= ~MF_SPECIAL;
+	flags = (flags & ~MF_SPECIAL) | MF_NOGRAVITY;
 	renderflags |= RF_INVISIBLE;
 	if (gameinfo.gametype == GAME_Doom)
 		SetState (&States[S_HIDEDOOMISH]);
 	else
 		SetState (&States[S_HIDESPECIAL]);
+
+	// Move item back to its original location
+	fixed_t _x, _y;
+	sector_t *sec;
+
+	_x = SpawnPoint[0] << FRACBITS;
+	_y = SpawnPoint[1] << FRACBITS;
+	sec = R_PointInSubsector (_x, _y)->sector;
+
+	SetOrigin (_x, _y, sec->floorplane.ZatPoint (_x, _y));
+	P_CheckPosition (this, _x, _y);
+
+	if (flags & MF_SPAWNCEILING)
+	{
+		z = ceilingz - height - (SpawnPoint[2] << FRACBITS);
+	}
+	else if (flags2 & MF2_SPAWNFLOAT)
+	{
+		fixed_t space = ceilingz - height - floorz;
+		if (space > 48*FRACUNIT)
+		{
+			space -= 40*FRACUNIT;
+			z = ((space * P_Random(pr_spawnmobj))>>8) + floorz + 40*FRACUNIT;
+		}
+		else
+		{
+			z = floorz;
+		}
+	}
+	else
+	{
+		z = (SpawnPoint[2] << FRACBITS) + floorz;
+	}
 }
 
 void AInventory::Touch (AActor *toucher)

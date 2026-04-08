@@ -21,11 +21,12 @@ enum
 								// but can be set from the command line
 	CVAR_LATCH			= 16,	// save changes until server restart
 	CVAR_UNSETTABLE		= 32,	// can unset this var from console
-	CVAR_DEMOSAVE		= 64,	// save the value of this FBaseCVar in a demo
+	CVAR_DEMOSAVE		= 64,	// save the value of this cvar in a demo
 	CVAR_ISDEFAULT		= 128,	// is cvar unchanged since creation?
 	CVAR_AUTO			= 256,	// allocated; needs to be freed when destroyed
 	CVAR_NOINITCALL		= 512,	// don't call callback at game start
 	CVAR_GLOBALCONFIG	= 1024,	// cvar is saved to global config section
+	CVAR_VIDEOCONFIG	= 2048, // cvar is saved to video config section
 };
 
 union UCVarValue
@@ -60,6 +61,7 @@ public:
 	inline const char *GetName () const { return Name; }
 	inline DWORD GetFlags () const { return Flags; }
 
+	void CmdSet (const char *newval);
 	void ForceSet (UCVarValue value, ECVarType type);
 	void SetGenericRep (UCVarValue value, ECVarType type);
 	void ResetToDefault ();
@@ -80,7 +82,10 @@ public:
 	static void EnableCallbacks ();
 	static void ResetColors ();		// recalc color cvars' indices after screen change
 
+	static void ListVars (const char *filter);
+
 protected:
+	FBaseCVar () {}
 	virtual void DoSet (UCVarValue value, ECVarType type) = 0;
 
 	static bool ToBool (UCVarValue value, ECVarType type);
@@ -96,16 +101,14 @@ protected:
 	DWORD Flags;
 
 private:
-	FBaseCVar (const char *name, DWORD flags);
 	FBaseCVar (const FBaseCVar &var);
+	FBaseCVar (const char *name, DWORD flags);
 
 	void (*m_Callback)(FBaseCVar &);
 	FBaseCVar *m_Next;
 
 	static bool m_UseCallback;
 	static bool m_DoNoSet;
-
-	friend void Cmd_cvarlist (int, char **, const char *, AActor *);
 
 	// Writes all cvars that could effect demo sync to *demo_p. These are
 	// cvars that have either CVAR_SERVERINFO or CVAR_DEMOSAVE set.
@@ -120,6 +123,7 @@ private:
 
 	// Finds a named cvar
 	friend FBaseCVar *FindCVar (const char *var_name, FBaseCVar **prev);
+	friend FBaseCVar *FindCVarSub (const char *var_name, int namelen);
 
 	// Called from G_InitNew()
 	friend void UnlatchCVars (void);
@@ -148,7 +152,8 @@ public:
 
 	inline bool operator= (bool boolval)
 		{ UCVarValue val; val.Bool = boolval; SetGenericRep (val, CVAR_Bool); return boolval; }
-	inline bool operator* () { return Value; }
+	inline operator bool () const { return Value; }
+	inline bool operator *() const { return Value; }
 
 protected:
 	virtual void DoSet (UCVarValue value, ECVarType type);
@@ -172,7 +177,8 @@ public:
 
 	int operator= (int intval)
 		{ UCVarValue val; val.Int = intval; SetGenericRep (val, CVAR_Int); return intval; }
-	inline int operator* () { return Value; }
+	inline operator int () const { return Value; }
+	inline int operator *() const { return Value; }
 
 protected:
 	virtual void DoSet (UCVarValue value, ECVarType type);
@@ -198,7 +204,8 @@ public:
 
 	float operator= (float floatval)
 		{ UCVarValue val; val.Float = floatval; SetGenericRep (val, CVAR_Float); return floatval; }
-	inline float operator* () { return Value; }
+	inline operator float () const { return Value; }
+	inline float operator *() const { return Value; }
 
 protected:
 	virtual void DoSet (UCVarValue value, ECVarType type);
@@ -222,7 +229,8 @@ public:
 
 	char *operator= (char *stringrep)
 		{ UCVarValue val; val.String = stringrep; SetGenericRep (val, CVAR_String); return stringrep; }
-	inline const char *operator* () { return Value; }
+	inline operator const char * () const { return Value; }
+	inline const char *operator *() const { return Value; }
 
 protected:
 	virtual void DoSet (UCVarValue value, ECVarType type);
@@ -242,8 +250,9 @@ public:
 	virtual UCVarValue GetGenericRepDefault (ECVarType type) const;
 	virtual void SetGenericRepDefault (UCVarValue value, ECVarType type);
 
-	inline int operator* () { return Value; }
-	inline int GetIndex () { return Index; }
+	inline operator DWORD () const { return Value; }
+	inline DWORD operator *() const { return Value; }
+	inline int GetIndex () const { return Index; }
 
 protected:
 	virtual void DoSet (UCVarValue value, ECVarType type);
@@ -269,7 +278,8 @@ public:
 
 	bool operator= (bool boolval)
 		{ UCVarValue val; val.Bool = boolval; SetGenericRep (val, CVAR_Bool); return boolval; }
-	inline int operator* () { return (*ValueVar & BitVal); }
+	inline operator int () const { return (ValueVar & BitVal); }
+	inline int operator *() const { return (ValueVar & BitVal); }
 
 protected:
 	virtual void DoSet (UCVarValue value, ECVarType type);
@@ -300,7 +310,7 @@ void C_RestoreCVars (void);
 #define CUSTOM_CVAR(type,name,def,flags) \
 	static void cvarfunc_##name(F##type##CVar &); \
 	F##type##CVar name (#name, def, flags, cvarfunc_##name); \
-	static void cvarfunc_##name(F##type##CVar &var)
+	static void cvarfunc_##name(F##type##CVar &self)
 
 #define CVAR(type,name,def,flags) \
 	F##type##CVar name (#name, def, flags);

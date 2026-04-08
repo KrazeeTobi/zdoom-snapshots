@@ -295,7 +295,7 @@ void R_MapTiltedPlane (int y, int x1)
 	uz = plane_su[2] + plane_su[1]*(centery-y) + plane_su[0]*(x1-centerx);
 	vz = plane_sv[2] + plane_sv[1]*(centery-y) + plane_sv[0]*(x1-centerx);
 
-	fb = ylookup[y] + columnofs[x1];
+	fb = ylookup[y] + x1;
 
 #if 0		// The "perfect" reference version of this routine. Pretty slow.
 			// Use it only to see how things are supposed to look.
@@ -400,7 +400,7 @@ void R_MapTiltedPlane (int y, int x1)
 
 void R_MapColoredPlane (int y, int x1)
 {
-	memset (ylookup[y] + columnofs[x1], ds_color, spanend[y] - x1 + 1);
+	memset (ylookup[y] + x1, ds_color, spanend[y] - x1 + 1);
 }
 
 //==========================================================================
@@ -444,24 +444,27 @@ void R_ClearPlanes (bool fullclear)
 
 //==========================================================================
 //
+// new_visplane
+//
 // New function, by Lee Killough
-// [RH] top and bottom buffers get allocated immediately
-//		after the visplane.
+// [RH] top and bottom buffers get allocated immediately after the visplane.
 //
 //==========================================================================
 
-static visplane_t *new_visplane(unsigned hash)
+static visplane_t *new_visplane (unsigned hash)
 {
 	visplane_t *check = freetail;
 
-	if (!check)
+	if (check == NULL)
 	{
 		check = (visplane_t *)Calloc (1, sizeof(*check) + sizeof(*check->top)*(SCREENWIDTH*2));
 		check->bottom = &check->top[SCREENWIDTH+2];
 	}
-	else
-		if (!(freetail = freetail->next))
-			freehead = &freetail;
+	else if (NULL == (freetail = freetail->next))
+	{
+		freehead = &freetail;
+	}
+
 	check->next = visplanes[hash];
 	visplanes[hash] = check;
 	return check;
@@ -738,7 +741,7 @@ static void R_DrawSky (visplane_t *pl)
 	dc_texturemid = skytexturemid;
 	_skypl = pl;
 
-	if (!*r_columnmethod)
+	if (!r_columnmethod)
 	{
 		for (x = pl->minx; x <= pl->maxx; x++)
 		{
@@ -850,7 +853,7 @@ void R_DrawPlanes ()
 			if (pl->minx > pl->maxx)
 				continue;
 
-			if (*r_drawflat)
+			if (r_drawflat)
 			{ // [RH] no texture mapping
 				ds_color += 4;
 				R_MapVisPlane (pl, R_MapColoredPlane);
@@ -912,7 +915,7 @@ void R_DrawPlanes ()
 				basecolormap = pl->colormap;
 				planeshade = LIGHT2SHADE(pl->lightlevel + r_actualextralight);
 
-				if (*r_drawflat || (pl->height.a == 0 && pl->height.b == 0) && !*tilt)
+				if (r_drawflat || (pl->height.a == 0 && pl->height.b == 0) && !tilt)
 				{
 					R_DrawNormalPlane (pl);
 				}
@@ -960,7 +963,7 @@ void R_DrawSkyBoxes ()
 	ptrdiff_t savedvissprite_p = vissprite_p - vissprites;
 	ptrdiff_t savedds_p = ds_p - drawsegs;
 	ptrdiff_t savedlastopening = lastopening;
-	float savedvisibility = *r_visibility;
+	float savedvisibility = r_visibility;
 
 	int i;
 	visplane_t *pl;
@@ -1016,7 +1019,7 @@ void R_DrawSkyBoxes ()
 		R_RenderBSPNode (numnodes - 1);
 		R_DrawPlanes ();
 
-		if (*r_particles)
+		if (r_particles)
 		{
 			// [RH] add all the particles
 			int i = ActiveParticles;
@@ -1056,11 +1059,24 @@ void R_DrawSkyBoxes ()
 
 void R_DrawSkyPlane (visplane_t *pl)
 {
+	int sky1tex, sky2tex;
+
+	if (level.flags & LEVEL_SWAPSKIES)
+	{
+		sky1tex = sky2texture;
+		sky2tex = sky1texture;
+	}
+	else
+	{
+		sky1tex = sky1texture;
+		sky2tex = sky2texture;
+	}
+
 	if (pl->picnum == skyflatnum)
 	{	// use sky1
-		frontskytex = texturetranslation[sky1texture];
+		frontskytex = texturetranslation[sky1tex];
 		if (level.flags & LEVEL_DOUBLESKY)
-			backskytex = texturetranslation[sky2texture];
+			backskytex = texturetranslation[sky2tex];
 		else
 			backskytex = -1;
 		skyflip = 0;
@@ -1069,7 +1085,7 @@ void R_DrawSkyPlane (visplane_t *pl)
 	}
 	else if (pl->picnum == PL_SKYFLAT)
 	{	// use sky2
-		frontskytex = texturetranslation[sky2texture];
+		frontskytex = texturetranslation[sky2tex];
 		backskytex = -1;
 		skyflip = 0;
 		frontpos = sky2pos;
@@ -1083,7 +1099,15 @@ void R_DrawSkyPlane (visplane_t *pl)
 		const side_t *s = *l->sidenum + sides;
 
 		// Texture comes from upper texture of reference sidedef
-		frontskytex = texturetranslation[s->toptexture];
+		// [RH] If swapping skies, then use the lower sidedef
+		if (level.flags & LEVEL_SWAPSKIES)
+		{
+			frontskytex = texturetranslation[s->bottomtexture];
+		}
+		else
+		{
+			frontskytex = texturetranslation[s->toptexture];
+		}
 		backskytex = -1;
 
 		// Horizontal offset is turned into an angle offset,
@@ -1203,6 +1227,7 @@ void R_DrawTiltedPlane (visplane_t *pl)
 {
 	float lxscale, lyscale;
 	float xscale, yscale;
+	fixed_t ixscale, iyscale;
 	angle_t ang;
 	vec3_t p, m, n;
 	fixed_t zeroheight;
@@ -1215,6 +1240,8 @@ void R_DrawTiltedPlane (visplane_t *pl)
 	lyscale = FIXED2FLOAT(pl->yscale);
 	xscale = 64.f/lxscale;
 	yscale = 64.f/lyscale;
+	ixscale = quickertoint(xscale*65536.f);
+	iyscale = quickertoint(yscale*65536.f);
 	zeroheight = pl->height.ZatPoint (0, 0);
 
 	pviewx = MulScale6 (pl->xoffs, pl->xscale);
@@ -1229,24 +1256,24 @@ void R_DrawTiltedPlane (visplane_t *pl)
 	ang = (ANG180 - viewangle - pl->angle) >> ANGLETOFINESHIFT;
 	m[0] = yscale * FIXED2FLOAT(finecosine[ang]);
 	m[2] = yscale * FIXED2FLOAT(finesine[ang]);
-//	m[1] = FIXED2FLOAT(pl->height.ZatPoint (0, 64*pl->yscale) - pl->height.ZatPoint (0,0));
+//	m[1] = FIXED2FLOAT(pl->height.ZatPoint (0, iyscale) - pl->height.ZatPoint (0,0));
 //	VectorScale2 (m, 64.f/VectorLength(m));
 
 	// n is the u direction vector in view space
 	ang = (ang + (ANG90>>ANGLETOFINESHIFT)) & FINEMASK;
 	n[0] = -xscale * FIXED2FLOAT(finecosine[ang]);
 	n[2] = -xscale * FIXED2FLOAT(finesine[ang]);
-//	n[1] = FIXED2FLOAT(pl->height.ZatPoint (64*pl->xscale, 0) - pl->height.ZatPoint (0,0));
+//	n[1] = FIXED2FLOAT(pl->height.ZatPoint (ixscale, 0) - pl->height.ZatPoint (0,0));
 //	VectorScale2 (n, 64.f/VectorLength(n));
 
 	ang = pl->angle >> ANGLETOFINESHIFT;
 	m[1] = FIXED2FLOAT(pl->height.ZatPoint (
-		MulScale10 (pl->xscale, finesine[ang]),
-		MulScale10 (pl->yscale, finecosine[ang])) - zeroheight);
+		MulScale16 (iyscale, finesine[ang]),
+		MulScale16 (iyscale, finecosine[ang])) - zeroheight);
 	ang = (pl->angle + ANGLE_90) >> ANGLETOFINESHIFT;
 	n[1] = FIXED2FLOAT(pl->height.ZatPoint (
-		MulScale10 (pl->xscale, finesine[ang]),
-		MulScale10 (pl->yscale, finecosine[ang])) - zeroheight);
+		MulScale16 (ixscale, finesine[ang]),
+		MulScale16 (ixscale, finecosine[ang])) - zeroheight);
 
 	CrossProduct (p, m, plane_su);
 	CrossProduct (p, n, plane_sv);

@@ -104,7 +104,7 @@ bool P_GiveAmmo (player_t *player, ammotype_t ammo, int count)
 	{
 		return false;
 	}
-	if (*gameskill == sk_baby || *gameskill == sk_nightmare)
+	if (gameskill == sk_baby || gameskill == sk_nightmare)
 	{ // extra ammo in baby mode and nightmare mode
 		if (gameinfo.gametype == GAME_Doom)
 			count <<= 1;
@@ -124,68 +124,70 @@ bool P_GiveAmmo (player_t *player, ammotype_t ammo, int count)
 		// ammo of the type just given
 		return true;
 	}
-	switch (gameinfo.gametype)
+	if (!player->userinfo.neverswitch)
 	{
-	case GAME_Doom:
-		switch (ammo)
+		switch (gameinfo.gametype)
 		{
-		case am_clip:
-			if (player->readyweapon == wp_fist)
+		case GAME_Doom:
+			switch (ammo)
 			{
-				if (player->weaponowned[wp_chaingun])
-					player->pendingweapon = wp_chaingun;
-				else
-					player->pendingweapon = wp_pistol;
+			case am_clip:
+				if (player->readyweapon == wp_fist)
+				{
+					if (player->weaponowned[wp_chaingun])
+						player->pendingweapon = wp_chaingun;
+					else
+						player->pendingweapon = wp_pistol;
+				}
+				break;
+				
+			case am_shell:
+				if (player->readyweapon == wp_fist
+					|| player->readyweapon == wp_pistol)
+				{
+					if (player->weaponowned[wp_shotgun])
+						player->pendingweapon = wp_shotgun;
+				}
+				break;
+				
+			case am_cell:
+				if (player->readyweapon == wp_fist
+					|| player->readyweapon == wp_pistol)
+				{
+					if (player->weaponowned[wp_plasma])
+						player->pendingweapon = wp_plasma;
+				}
+				break;
+				
+			case am_misl:
+				if (player->readyweapon == wp_fist)
+				{
+					if (player->weaponowned[wp_missile])
+						player->pendingweapon = wp_missile;
+				}
+			default:
+				break;
 			}
 			break;
-			
-		case am_shell:
-			if (player->readyweapon == wp_fist
-				|| player->readyweapon == wp_pistol)
+
+		case GAME_Heretic:
+			if (player->readyweapon == wp_staff
+				|| player->readyweapon == wp_gauntlets)
 			{
-				if (player->weaponowned[wp_shotgun])
-					player->pendingweapon = wp_shotgun;
+				if (player->weaponowned[GetAmmoChange[ammo]])
+				{
+					player->pendingweapon = GetAmmoChange[ammo];
+				}
 			}
 			break;
-			
-		case am_cell:
-			if (player->readyweapon == wp_fist
-				|| player->readyweapon == wp_pistol)
-			{
-				if (player->weaponowned[wp_plasma])
-					player->pendingweapon = wp_plasma;
-			}
+
+		case GAME_Hexen:
 			break;
-			
-		case am_misl:
-			if (player->readyweapon == wp_fist)
-			{
-				if (player->weaponowned[wp_missile])
-					player->pendingweapon = wp_missile;
-			}
+
 		default:
-			break;
+			break;	// Silence GCC
 		}
-		break;
-
-	case GAME_Heretic:
-		if (player->readyweapon == wp_staff
-			|| player->readyweapon == wp_gauntlets)
-		{
-			if (player->weaponowned[GetAmmoChange[ammo]])
-			{
-				player->pendingweapon = GetAmmoChange[ammo];
-			}
-		}
-		break;
-
-	case GAME_Hexen:
-		break;
-
-	default:
-		break;	// Silence GCC
 	}
-
 	return true;
 }
 
@@ -197,21 +199,27 @@ bool P_GiveAmmo (player_t *player, ammotype_t ammo, int count)
 //
 //--------------------------------------------------------------------------
 
-bool P_GiveWeapon (player_t *player, weapontype_t weapon, BOOL dropped)
+bool AWeapon::TryPickup (AActor *toucher)
 {
 	bool gaveammo;
 	bool gaveweapon;
+	weapontype_t weapon = OldStyleID ();
+	player_t *player = toucher->player;
 
+	// Only players can pick up weapons
 	// [RH] Don't get the weapon if no graphics for it
-	if (!wpnlev1info[weapon])
+	if (player == NULL || !wpnlev1info[weapon] || weapon >= NUMWEAPONS)
+	{
 		return false;
+	}
+
 	FState *state = wpnlev1info[weapon]->readystate;
 	if (state->GetFrame() >= sprites[state->sprite.index].numframes)
 		return false;
 
 	if (multiplayer &&
-		((!*deathmatch && !*alwaysapplydmflags) || *dmflags & DF_WEAPONS_STAY) &&
-		!dropped)
+		((!deathmatch && !alwaysapplydmflags) || (dmflags & DF_WEAPONS_STAY)) &&
+		!(flags & MF_DROPPED))
 	{
 		// leave placed weapons forever on (cooperative) net games
 		if (player->weaponowned[weapon])
@@ -221,20 +229,19 @@ bool P_GiveWeapon (player_t *player, weapontype_t weapon, BOOL dropped)
 		player->weaponowned[weapon] = true;
 
 		P_GiveAmmo (player, wpnlev1info[weapon]->ammo,
-			(*deathmatch && gameinfo.gametype == GAME_Doom) ?
+			(deathmatch && gameinfo.gametype == GAME_Doom) ?
 				wpnlev1info[weapon]->ammogive*5/2 :
 				wpnlev1info[weapon]->ammogive);
 
 		if (!player->userinfo.neverswitch)
 			player->pendingweapon = weapon;
 
-		S_Sound (player->mo, CHAN_ITEM, "misc/w_pkup", 1, ATTN_NORM);
-		return false;
+		return true;
 	}
 		
 	if (wpnlev1info[weapon]->ammo != am_noammo)
 	{
-		if (gameinfo.gametype == GAME_Doom && dropped)
+		if (gameinfo.gametype == GAME_Doom && (flags & MF_DROPPED))
 		{ // give one clip with a dropped weapon,
 		  // two clips with a found weapon
 			gaveammo = P_GiveAmmo (player, wpnlev1info[weapon]->ammo,
@@ -264,6 +271,22 @@ bool P_GiveWeapon (player_t *player, weapontype_t weapon, BOOL dropped)
 	}
 		
 	return (gaveweapon || gaveammo);
+}
+
+bool AWeapon::ShouldStay ()
+{
+	if (multiplayer &&
+		((!deathmatch && !alwaysapplydmflags) || (dmflags & DF_WEAPONS_STAY)) &&
+		!(flags & MF_DROPPED))
+	{
+		return true;
+	}
+	return false;
+}
+
+weapontype_t AWeapon::OldStyleID () const
+{
+	return NUMWEAPONS;
 }
 
 /* Weapon slots ***********************************************************/
@@ -319,7 +342,7 @@ weapontype_t FWeaponSlot::PickWeapon (player_t *player)
 	int i, j;
 	FWeaponInfo **infos;
 
-	infos = (player->powers[pw_weaponlevel2] && *deathmatch) ?
+	infos = (player->powers[pw_weaponlevel2] && deathmatch) ?
 		wpnlev2info : wpnlev1info;
 
 	for (i = 0; i < MAX_WEAPONS_PER_SLOT; i++)
@@ -416,7 +439,7 @@ weapontype_t PickNextWeapon (player_s *player)
 		int i;
 		FWeaponInfo **infos;
 		
-		infos = (player->powers[pw_weaponlevel2] && *deathmatch) ?
+		infos = (player->powers[pw_weaponlevel2] && deathmatch) ?
 			wpnlev2info : wpnlev1info;
 
 		for (i = 1; i < NUM_WEAPON_SLOTS * MAX_WEAPONS_PER_SLOT + 1; i++)
@@ -448,7 +471,7 @@ weapontype_t PickPrevWeapon (player_s *player)
 		int i;
 		FWeaponInfo **infos;
 		
-		infos = (player->powers[pw_weaponlevel2] && *deathmatch) ?
+		infos = (player->powers[pw_weaponlevel2] && deathmatch) ?
 			wpnlev2info : wpnlev1info;
 
 		for (i = 1; i < NUM_WEAPON_SLOTS * MAX_WEAPONS_PER_SLOT + 1; i++)

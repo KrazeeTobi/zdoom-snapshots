@@ -66,6 +66,7 @@ HINSTANCE		hInstance;
 
 extern float mb_used;
 extern UINT TimerPeriod;
+extern HCURSOR TheArrowCursor, TheInvisibleCursor;
 
 #define MAX_TERMS	16
 void (STACK_ARGS *TermFuncs[MAX_TERMS])(void);
@@ -150,13 +151,16 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE nothing, LPSTR cmdline, int n
 				 GetSystemMetrics (SM_CYCAPTION) + 12 * 32;
 		width  = GetSystemMetrics (SM_CXFIXEDFRAME) * 2 + 8 * 78;
 
+		TheInvisibleCursor = LoadCursor (hInstance, MAKEINTRESOURCE(IDC_INVISIBLECURSOR));
+		TheArrowCursor = LoadCursor (NULL, IDC_ARROW);
+
 		WndClass.style			= 0;
 		WndClass.lpfnWndProc	= WndProc;
 		WndClass.cbClsExtra		= 0;
 		WndClass.cbWndExtra		= 0;
 		WndClass.hInstance		= hInstance;
 		WndClass.hIcon			= LoadIcon (hInstance, MAKEINTRESOURCE(IDI_ICON1));
-		WndClass.hCursor		= LoadCursor (NULL, IDC_ARROW);
+		WndClass.hCursor		= TheArrowCursor;
 		WndClass.hbrBackground	= NULL;
 		WndClass.lpszMenuName	= NULL;
 		WndClass.lpszClassName	= (LPCTSTR)WinClassName;

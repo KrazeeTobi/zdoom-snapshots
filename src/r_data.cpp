@@ -504,14 +504,17 @@ void R_InitTextures (void)
 		mpatch = &mtexture->patches[0];
 		patch = &texture->patches[0];
 
-		for (j=0 ; j<texture->patchcount ; j++, mpatch++, patch++)
+		for (j = 0; j < texture->patchcount; j++, mpatch++, patch++)
 		{
 			patch->originx = SHORT(mpatch->originx);
 			patch->originy = SHORT(mpatch->originy);
 			patch->patch = patchlookup[SHORT(mpatch->patch)];
 			if (patch->patch == -1)
 			{
-				Printf ("R_InitTextures: Missing patch in texture %s\n", texture->name);
+				char name[9];
+				memcpy (name, texture->name, 8);
+				name[8] = 0;
+				Printf ("R_InitTextures: Missing patch in texture %s\n", name);
 				errors++;
 			}
 		}

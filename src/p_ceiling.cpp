@@ -94,27 +94,27 @@ void DCeiling::RunThink ()
 		
 		if (res == pastdest)
 		{
-			SN_StopSequence (m_Sector);
 			switch (m_Type)
 			{
 			case ceilCrushAndRaise:
 				m_Direction = -1;
 				m_Speed = m_Speed1;
-				PlayCeilingSound ();
+				//PlayCeilingSound ();
 				break;
 				
 			// movers with texture change, change the texture then get removed
 			case genCeilingChgT:
 			case genCeilingChg0:
 				m_Sector->special = m_NewSpecial;
+				// fall through
 			case genCeilingChg:
 				m_Sector->ceilingpic = m_Texture;
 				// fall through
 			default:
+				SN_StopSequence (m_Sector);
 				Destroy ();
 				break;
 			}
-			
 		}
 		break;
 		
@@ -124,14 +124,13 @@ void DCeiling::RunThink ()
 		
 		if (res == pastdest)
 		{
-			SN_StopSequence (m_Sector);
 			switch (m_Type)
 			{
 			case ceilCrushAndRaise:
 			case ceilCrushRaiseAndStay:
 				m_Speed = m_Speed2;
 				m_Direction = 1;
-				PlayCeilingSound ();
+				//PlayCeilingSound ();
 				break;
 
 			// in the case of ceiling mover/changer, change the texture
@@ -139,10 +138,12 @@ void DCeiling::RunThink ()
 			case genCeilingChgT:
 			case genCeilingChg0:
 				m_Sector->special = m_NewSpecial;
+				// fall through
 			case genCeilingChg:
 				m_Sector->ceilingpic = m_Texture;
 				// fall through
 			default:
+				SN_StopSequence (m_Sector);
 				Destroy ();
 				break;
 			}

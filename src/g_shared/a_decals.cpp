@@ -22,6 +22,42 @@ void ADecal::Destroy ()
 	Super::Destroy ();
 }
 
+void ADecal::SerializeChain (FArchive &arc, AActor **firstptr)
+{
+	DWORD numInChain;
+	AActor *fresh;
+
+	if (arc.IsLoading ())
+	{
+		numInChain = arc.ReadCount ();
+		
+		while (numInChain--)
+		{
+			arc << fresh;
+			*firstptr = fresh;
+			fresh->sprev = firstptr;
+			firstptr = &fresh->snext;
+		}
+	}
+	else
+	{
+		numInChain = 0;
+		fresh = *firstptr;
+		while (fresh != NULL)
+		{
+			fresh = fresh->snext;
+			++numInChain;
+		}
+		arc.WriteCount (numInChain);
+		fresh = *firstptr;
+		while (numInChain--)
+		{
+			arc << fresh;
+			fresh = fresh->snext;
+		}
+	}
+}
+
 void ADecal::BeginPlay ()
 {
 	Super::BeginPlay ();
@@ -120,13 +156,13 @@ static AActor *LastImpact;
 
 CUSTOM_CVAR (Int, cl_maxdecals, 1024, CVAR_ARCHIVE)
 {
-	if (*var < 0)
+	if (self < 0)
 	{
-		var = 0;
+		self = 0;
 	}
 	else
 	{
-		while (ImpactCount > *var)
+		while (ImpactCount > self)
 		{
 			FirstImpact->Destroy ();
 		}
@@ -158,22 +194,31 @@ void AImpactDecal::BeginPlay ()
 
 AImpactDecal *AImpactDecal::StaticCreate (const char *name, fixed_t x, fixed_t y, fixed_t z, side_t *wall)
 {
-	AImpactDecal *actor = NULL;
-	if (*cl_maxdecals > 0)
+	if (cl_maxdecals > 0)
 	{
 		const FDecal *decal = DecalLibrary.GetDecalByName (name);
 
 		if (decal != NULL)
 		{
-			if (ImpactCount >= *cl_maxdecals)
-			{
-				FirstImpact->Destroy ();
-			}
-			ImpactCount++;
-			actor = Spawn<AImpactDecal> (x, y, z);
-			actor->StickToWall (wall);
-			decal->ApplyToActor (actor);
+			return StaticCreate (decal, x, y, z, wall);
 		}
+	}
+	return NULL;
+}
+
+AImpactDecal *AImpactDecal::StaticCreate (const FDecal *decal, fixed_t x, fixed_t y, fixed_t z, side_t *wall)
+{
+	AImpactDecal *actor = NULL;
+	if (decal != NULL && cl_maxdecals > 0)
+	{
+		if (ImpactCount >= cl_maxdecals)
+		{
+			FirstImpact->Destroy ();
+		}
+		ImpactCount++;
+		actor = Spawn<AImpactDecal> (x, y, z);
+		actor->StickToWall (wall);
+		decal->ApplyToActor (actor);
 	}
 	return actor;
 }

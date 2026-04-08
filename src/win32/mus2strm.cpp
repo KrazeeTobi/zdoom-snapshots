@@ -24,15 +24,25 @@
 #include "m_swap.h"
 
 #define last(e)         ((unsigned char)(e & 0x80))
-#define event_type(e)   ((unsigned char)((e & 0x7F) >> 4))
 #define channel(e)      ((unsigned char)(e & 0x0F))
 
+#define MUSMAGIC		"MUS\032"
 
 #define NOTMUSFILE		1		/* Not a MUS file */
 #define MUSFILECOR		2		/* MUS file corrupted */
 #define TOOMCHAN		3		/* Too many channels */
 #define MEMALLOC		4		/* Memory allocation error */
 
+extern OUTSTREAMSTATE ots;
+
+struct Track
+{
+	unsigned long	 current;
+	char			 vel;
+	long			 DeltaTime;
+	unsigned char	 LastEvent;
+	char			*data;		/* Primary data */
+};
 
 // Description of the input MUS file
 //
@@ -71,32 +81,32 @@ static char MUSvelocity[16];
 
 static DWORD		ReadTime (void);
 static char			FirstChannelAvailable (signed char MUS2MIDchannel[]);
-static BOOL			ReadMUSheader (MUSheader *MUSh);
-static BOOL			GetTrackEvent (MUSheader *MUSh, MEVENT *me);
+static BOOL			ReadMUSheader (MUSHeader *MUSh);
+static BOOL			GetTrackEvent (MUSHeader *MUSh, MEVENT *me);
 static int			DoConversion (byte *in, DWORD insize, int division);
 
 
-static BOOL ReadMUSheader (MUSheader *mush)
+static BOOL ReadMUSheader (MUSHeader *mush)
 {
 	if (ifs.cbLeft < sizeof(*mush))
 		return FALSE;
 
 	memcpy (mush, ifs.pFilePointer, sizeof(*mush));
 
-	if (strncmp (mush->ID, MUSMAGIC, 4))
+	if (strncmp (mush->Magic, MUSMAGIC, 4))
 		return FALSE;
 
-	mush->ScoreLength = SHORT(mush->ScoreLength);
-	mush->ScoreStart = SHORT(mush->ScoreStart);
-	mush->channels = SHORT(mush->channels);
-	mush->SecChannels = SHORT(mush->SecChannels);
-	mush->InstrCnt = SHORT(mush->InstrCnt);
+	mush->SongLen = SHORT(mush->SongLen);
+	mush->SongStart = SHORT(mush->SongStart);
+	mush->NumChans = SHORT(mush->NumChans);
+	mush->NumSecondaryChans = SHORT(mush->NumSecondaryChans);
+	mush->NumInstruments = SHORT(mush->NumInstruments);
 
-	if (ifs.cbLeft < mush->ScoreStart)
+	if (ifs.cbLeft < mush->SongStart)
 		return FALSE;
 
-	ifs.cbLeft -= mush->ScoreStart;
-	ifs.pFilePointer += mush->ScoreStart;
+	ifs.cbLeft -= mush->SongStart;
+	ifs.pFilePointer += mush->SongStart;
 
 	return TRUE;
 }
@@ -129,7 +139,7 @@ static char FirstChannelAvailable (signed char MUS2MIDchannel[])
 	return max == 8 ? 10 : max+1;
 }
 
-static BOOL GetTrackEvent (MUSheader *MUSh, MEVENT *me)
+static BOOL GetTrackEvent (MUSHeader *MUSh, MEVENT *me)
 {
 	byte event, data;
 	int MUSchannel, MIDIchannel;
@@ -148,74 +158,74 @@ static BOOL GetTrackEvent (MUSheader *MUSh, MEVENT *me)
 	else
 		MIDIchannel = MUS2MIDchannel[MUSchannel];
 
-	if (event_type(event) <= MUS_CTRLCHANGE) {
+	if ((event & 0x70) <= MUS_CTRLCHANGE)
+	{
 		if (ifs.cbLeft < 1)
 			return FALSE;
 		data = *(ifs.pFilePointer++);
 		ifs.cbLeft--;
 	}
 
-	switch (event_type(event))
+	switch (event & 0x70)
 	{
-		case MUS_RELEASE:
-			me->cbEvent = 3;
-			me->abEvent[0] = MIDI_NOTEOFF | MIDIchannel;
-			me->abEvent[1] = data;
-			me->abEvent[2] = 64;
-			break;
+	case MUS_NOTEOFF:
+		me->cbEvent = 3;
+		me->abEvent[0] = MIDI_NOTEOFF | MIDIchannel;
+		me->abEvent[1] = data;
+		me->abEvent[2] = 64;
+		break;
 
-		case MUS_PLAY:
-			me->cbEvent = 3;
-			me->abEvent[0] = MIDI_NOTEON | MIDIchannel;
-			me->abEvent[1] = data & 0x7f;
-			if (data & 0x80) {
-				if (ifs.cbLeft < 1)
-					return FALSE;
-				else {
-					MUSvelocity[MUSchannel] = *(ifs.pFilePointer++);
-					ifs.cbLeft--;
-				}
+	case MUS_NOTEON:
+		me->cbEvent = 3;
+		me->abEvent[0] = MIDI_NOTEON | MIDIchannel;
+		me->abEvent[1] = data & 0x7f;
+		if (data & 0x80) {
+			if (ifs.cbLeft < 1)
+				return FALSE;
+			else {
+				MUSvelocity[MUSchannel] = *(ifs.pFilePointer++);
+				ifs.cbLeft--;
 			}
-			me->abEvent[2] = MUSvelocity[MUSchannel];
-			break;
+		}
+		me->abEvent[2] = MUSvelocity[MUSchannel];
+		break;
 
-		case MUS_PITCHBEND:
-			me->cbEvent = 3;
-			me->abEvent[0] = MIDI_PITCHBEND | MIDIchannel;
-			me->abEvent[1] = (data & 1) << 6;
-			me->abEvent[2] = data >> 1;
-			break ;
+	case MUS_PITCHBEND:
+		me->cbEvent = 3;
+		me->abEvent[0] = MIDI_PITCHBEND | MIDIchannel;
+		me->abEvent[1] = (data & 1) << 6;
+		me->abEvent[2] = data >> 1;
+		break ;
 
-		case MUS_SYSEVENT:
+	case MUS_SYSEVENT:
+		me->cbEvent = 3;
+		me->abEvent[0] = MIDI_CTRLCHANGE | MIDIchannel;
+		me->abEvent[1] = MUS2MIDcontrol[data];
+		me->abEvent[2] = data == 12 ? MUSh->NumChans+1 : 0;
+		break;
+
+	case MUS_CTRLCHANGE:
+		if (ifs.cbLeft < 1)
+			return FALSE;
+		ifs.cbLeft--;
+		if (data) {
 			me->cbEvent = 3;
 			me->abEvent[0] = MIDI_CTRLCHANGE | MIDIchannel;
 			me->abEvent[1] = MUS2MIDcontrol[data];
-			me->abEvent[2] = data == 12 ? MUSh->channels+1 : 0;
-			break;
+			me->abEvent[2] = *(ifs.pFilePointer++);
+		} else {
+			me->cbEvent = 2;
+			me->abEvent[0] = MIDI_PRGMCHANGE | MIDIchannel;
+			me->abEvent[1] = *(ifs.pFilePointer++);
+		}
+		break ;
 
-		case MUS_CTRLCHANGE:
-			if (ifs.cbLeft < 1)
-				return FALSE;
-			ifs.cbLeft--;
-			if (data) {
-				me->cbEvent = 3;
-				me->abEvent[0] = MIDI_CTRLCHANGE | MIDIchannel;
-				me->abEvent[1] = MUS2MIDcontrol[data];
-				me->abEvent[2] = *(ifs.pFilePointer++);
-			} else {
-				me->cbEvent = 2;
-				me->abEvent[0] = MIDI_PRGMCHANGE | MIDIchannel;
-				me->abEvent[1] = *(ifs.pFilePointer++);
-			}
-			break ;
+	case MUS_SCOREEND:
+		ifs.endEncountered = TRUE;
+		break;
 
-		case MUS_UNKNOWN1:
-		case MUS_UNKNOWN2:
-			return FALSE;
-
-		case MUS_END:
-			ifs.endEncountered = TRUE;
-			break;
+	default:
+		return FALSE;
 	}
 
 	me->tkEvent = ifs.tkNextEventDue;
@@ -237,7 +247,7 @@ static int DoConversion (byte *in, DWORD insize, int division)
 		tempoSet
 	};
 
-	MUSheader MUSh;
+	MUSHeader MUSh;
 	int i;
 
 	memset (UsedPatches, 0, sizeof(UsedPatches));
@@ -251,7 +261,7 @@ static int DoConversion (byte *in, DWORD insize, int division)
 	if (!ReadMUSheader (&MUSh))
 		return NOTMUSFILE;
 
-	if (MUSh.channels > 15)			/* <=> MUSchannels+drums > 16 */
+	if (MUSh.NumChans > 15)			/* <=> MUSchannels+drums > 16 */
 		return TOOMCHAN;
 
 	for (i = 0; i < 16; i++) {

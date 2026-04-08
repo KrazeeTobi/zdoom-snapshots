@@ -128,9 +128,11 @@ static menuitem_t OptionItems[] =
 	{ more,		"Set video mode",		{NULL},					{0.0}, {0.0},	{0.0}, {(value_t *)SetVidMode} },
 	{ redtext,	" ",					{NULL},					{0.0}, {0.0},	{0.0}, {NULL} },
 	{ slider,	"Mouse speed",			{&mouse_sensitivity},	{0.5}, {2.5},	{0.1}, {NULL} },
+#ifdef _WIN32
 	{ slider,	"MIDI music volume",	{&snd_midivolume},		{0.0}, {1.0},	{0.05}, {NULL} },
-	{ slider,	"MOD music volume",		{&snd_musicvolume},		{0.0}, {64.0},	{1.0}, {NULL} },
-	{ slider,	"Sound volume",			{&snd_sfxvolume},		{0.0}, {15.0},	{1.0}, {NULL} },
+#endif
+	{ slider,	"MOD music volume",		{&snd_musicvolume},		{0.0}, {1.0},	{0.05}, {NULL} },
+	{ slider,	"Sound volume",			{&snd_sfxvolume},		{0.0}, {1.0},	{0.05}, {NULL} },
 	{ discrete,	"Always Run",			{&cl_run},				{2.0}, {0.0},	{0.0}, {OnOff} },
 	{ discrete, "Always Mouselook",		{&freelook},			{2.0}, {0.0},	{0.0}, {OnOff} },
 	{ discrete, "Invert Mouse",			{&invertmouse},			{2.0}, {0.0},	{0.0}, {OnOff} },
@@ -145,7 +147,7 @@ menu_t OptionMenu = {
 	{ 'M','_','O','P','T','T','T','L' },
 	"OPTIONS",
 	0,
-	16,
+	sizeof(OptionItems)/sizeof(OptionItems[0]),
 	177,
 	OptionItems,
 };
@@ -459,7 +461,8 @@ menu_t ModesMenu = {
 static FIntCVar *flagsvar;
 
 static menuitem_t DMFlagsItems[] = {
-	{ bitflag,	"Falling damage",		{(FBaseCVar *)DF_YES_FALLING},		{0}, {0}, {0}, {NULL} },
+	{ bitflag,	"Falling damage (old)",	{(FBaseCVar *)DF_FORCE_FALLINGZD},	{0}, {0}, {0}, {NULL} },
+	{ bitflag,	"Falling damage (Hexen)", {(FBaseCVar *)DF_FORCE_FALLINGHX},{0}, {0}, {0}, {NULL} },
 	{ bitflag,	"Weapons stay (DM)",	{(FBaseCVar *)DF_WEAPONS_STAY},		{0}, {0}, {0}, {NULL} },
 	{ bitflag,	"Allow powerups (DM)",	{(FBaseCVar *)DF_NO_ITEMS},			{1}, {0}, {0}, {NULL} },
 	{ bitflag,	"Allow health (DM)",	{(FBaseCVar *)DF_NO_HEALTH},		{1}, {0}, {0}, {NULL} },
@@ -484,7 +487,7 @@ static menu_t DMFlagsMenu = {
 	{ 'M','_','G','M','P','L','A','Y' },
 	"GAMEPLAY OPTIONS",
 	0,
-	19,
+	20,
 	0,
 	DMFlagsItems,
 };
@@ -571,7 +574,7 @@ void M_OptInit (void)
 //
 void M_ChangeMessages ()
 {
-	if (*show_messages)
+	if (show_messages)
 	{
 		Printf (128, "%s\n", GStrings(MSGOFF));
 		show_messages = false;
@@ -591,7 +594,7 @@ CCMD (togglemessages)
 void M_SizeDisplay (int diff)
 {
 	// changing screenblocks automatically resizes the display
-	screenblocks = *screenblocks + diff;
+	screenblocks = screenblocks + diff;
 }
 
 CCMD (sizedown)
@@ -818,7 +821,7 @@ void M_OptDrawer ()
 
 				if (flagsvar)
 				{
-					if (**flagsvar & item->a.flagmask)
+					if (*flagsvar & item->a.flagmask)
 						str = value[1].name;
 					else
 						str = value[0].name;
@@ -922,7 +925,6 @@ void M_OptResponder (event_t *ev)
 			C_ChangeBinding (item->e.command, ev->data1);
 			M_BuildKeyList (CurrentMenu->items, CurrentMenu->numitems);
 		}
-		I_PauseMouse ();
 		WaitingForKey = 0;
 		CurrentMenu->items[0].label = OldMessage;
 		CurrentMenu->items[0].type = OldType;
@@ -945,7 +947,7 @@ void M_OptResponder (event_t *ev)
 		(ch == GK_LEFT || ch == GK_RIGHT || ch == '\r')
 		&& !demoplayback)
 	{
-		*flagsvar = **flagsvar ^ item->a.flagmask;
+		*flagsvar = *flagsvar ^ item->a.flagmask;
 		return;
 	}
 
@@ -1233,7 +1235,7 @@ void M_OptResponder (event_t *ev)
 				NewWidth = SCREENWIDTH;
 				NewHeight = SCREENHEIGHT;
 			}
-			NewBits = BitTranslate[*DummyDepthCvar];
+			NewBits = BitTranslate[DummyDepthCvar];
 			setmodeneeded = true;
 			S_Sound (CHAN_VOICE, "menu/choose", 1, ATTN_NONE);
 			SetModesMenu (NewWidth, NewHeight, NewBits);
@@ -1266,7 +1268,6 @@ void M_OptResponder (event_t *ev)
 		}
 		else if (item->type == control)
 		{
-			I_ResumeMouse ();
 			WaitingForKey = 1;
 			OldMessage = CurrentMenu->items[0].label;
 			OldType = CurrentMenu->items[0].type;
@@ -1304,7 +1305,7 @@ void M_OptResponder (event_t *ev)
 				OldWidth = SCREENWIDTH;
 				OldHeight = SCREENHEIGHT;
 				OldBits = DisplayBits;
-				NewBits = BitTranslate[*DummyDepthCvar];
+				NewBits = BitTranslate[DummyDepthCvar];
 				setmodeneeded = true;
 				testingmode = I_GetTime() + 5 * TICRATE;
 				S_Sound (CHAN_VOICE, "menu/choose", 1, ATTN_NONE);
@@ -1336,7 +1337,7 @@ static void UpdateStuff (void)
 
 void Reset2Defaults (void)
 {
-	AddCommandString ("unbindall; binddefaults");
+	C_SetDefaultBindings ();
 	C_SetCVarsToDefaults ();
 	UpdateStuff();
 }
@@ -1399,7 +1400,7 @@ static void BuildModesList (int hiwidth, int hiheight, int hi_bits)
 	int	 i, c;
 	int	 width, height, showbits;
 
-	showbits = BitTranslate[*DummyDepthCvar];
+	showbits = BitTranslate[DummyDepthCvar];
 
 	I_StartModeIterator (showbits);
 
@@ -1455,7 +1456,7 @@ static BOOL GetSelectedSize (int line, int *width, int *height)
 	}
 	else
 	{
-		I_StartModeIterator (BitTranslate[*DummyDepthCvar]);
+		I_StartModeIterator (BitTranslate[DummyDepthCvar]);
 
 		stopat = (line - VM_RESSTART) * 3 + ModesItems[line].a.selmode + 1;
 

@@ -1,12 +1,17 @@
 /* i_sound.cpp: System interface for sound, uses fmod.dll
 */
 
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <mmsystem.h>
 #include "resource.h"
 extern HWND Window;
 extern HINSTANCE hInstance;
+#else
+#define FALSE 0
+#define TRUE 1
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,7 +51,10 @@ static const char *OutputNames[] =
 	"No sound",
 	"Windows Multimedia",
 	"DirectSound",
-	"A3D"
+	"A3D",
+	"OSS (Open Sound System)",
+	"ESD (Enlightenment Sound Daemon)",
+	"ALSA (Advanced Linux Sound Architecture)"
 };
 static const char *MixerNames[] =
 {
@@ -60,7 +68,7 @@ static const char *MixerNames[] =
 	"Quality PPro MMX"
 };
 
-EXTERN_CVAR (Int, snd_sfxvolume)
+EXTERN_CVAR (Float, snd_sfxvolume)
 CVAR (Int, snd_samplerate, 44100, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR (Int, snd_buffersize, 0, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR (Int, snd_driver, 0, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
@@ -69,7 +77,7 @@ CVAR (Bool, snd_3d, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 
 // killough 2/21/98: optionally use varying pitched sounds
 CVAR (Bool, snd_pitched, false, CVAR_ARCHIVE)
-#define PITCH(f,x) (*snd_pitched ? ((f)*(x))/128 : (f))
+#define PITCH(f,x) (snd_pitched ? ((f)*(x))/128 : (f))
 
 // Maps sfx channels onto FMOD channels
 static struct ChanMap
@@ -484,26 +492,32 @@ void UncheckSound (sfxinfo_t *sfx, BOOL looped)
 //
 // SFX API
 //
- 
-void I_SetSfxVolume (int volume)
+
+//==========================================================================
+//
+// CVAR snd_sfxvolume
+//
+// Maximum volume of a sound effect.
+//==========================================================================
+
+CUSTOM_CVAR (Float, snd_sfxvolume, 0.5f, CVAR_ARCHIVE|CVAR_GLOBALCONFIG|CVAR_NOINITCALL)
 {
-	// volume range is 0-15, but FMOD wants 0-255
-	FSOUND_SetSFXMasterVolume ((volume << 4) | volume);
-	// FMOD apparently resets absolute volume channels when setting master vol
-	snd_musicvolume.Callback ();
+	if (self < 0.f)
+		self = 0.f;
+	else if (self > 1.f)
+		self = 1.f;
+	else
+	{
+		FSOUND_SetSFXMasterVolume ((int)(self * 255.f));
+		// FMOD apparently resets absolute volume channels when setting master vol
+		snd_musicvolume.Callback ();
+	}
 }
 
-
-//
-// Starting a sound means adding it
-//		to the current list of active sounds
-//		in the internal channels.
-// As the SFX info struct contains
-//		e.g. a pointer to the raw data,
-//		it is ignored.
 //
 // vol range is 0-255
 // sep range is 0-255, -1 for surround, -2 for full vol middle
+//
 long I_StartSound (sfxinfo_t *sfx, int vol, int sep, int pitch, int channel, BOOL looping)
 {
 	if (_nosound)
@@ -739,6 +753,7 @@ void I_LoadSound (sfxinfo_t *sfx)
 	}
 }
 
+#ifdef _WIN32
 // [RH] Dialog procedure for the error dialog that appears if FMOD
 //		could not be initialized for some reason.
 BOOL CALLBACK InitBoxCallback (HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -757,6 +772,7 @@ BOOL CALLBACK InitBoxCallback (HWND hwndDlg, UINT message, WPARAM wParam, LPARAM
 	}
 	return FALSE;
 }
+#endif
 
 static char FModLog (char success)
 {
@@ -773,8 +789,16 @@ static char FModLog (char success)
 
 void I_InitSound ()
 {
+#ifdef _WIN32
+	static const FSOUND_OUTPUTTYPES outtypes[2] =
+	{ FSOUND_OUTPUT_DSOUND, FSOUND_OUTPUT_WINMM };
+	const int maxtrynum = 2;
+#else
 	static const FSOUND_OUTPUTTYPES outtypes[3] =
-		{ FSOUND_OUTPUT_DSOUND, FSOUND_OUTPUT_WINMM, FSOUND_OUTPUT_DSOUND };
+	{ FSOUND_OUTPUT_ALSA, FSOUND_OUTPUT_OSS, FSOUND_OUTPUT_ESD };
+	const int maxtrynum = 3;
+#endif
+	bool trya3d = false;
 
 	/* Get command line options: */
 	_nosound = !!Args.CheckParm ("-nosfx") || !!Args.CheckParm ("-nosound");
@@ -786,35 +810,52 @@ void I_InitSound ()
 
 	int outindex;
 	int trynum;
-	bool trya3d = false;
 
-	if (stricmp (*snd_output, "dsound") == 0)
+#ifdef _WIN32
+	if (stricmp (snd_output, "dsound") == 0)
 	{
 		outindex = 0;
 	}
-	else if (stricmp (*snd_output, "winmm") == 0)
+	else if (stricmp (snd_output, "winmm") == 0)
 	{
 		outindex = 1;
 	}
 	else
 	{
 		outindex = (OSPlatform == os_WinNT) ? 1 : 0;
-		if (*snd_3d || stricmp (*snd_output, "a3d") == 0)
+		if (stricmp (snd_output, "a3d") == 0)
 		{
 			trya3d = true;
 		}
 	}
-
+#else
+	if (stricmp (snd_output, "oss") == 0)
+	{
+		outindex = 2;
+	}
+	else if (stricmp (snd_output, "esd") == 0 ||
+			 stricmp (snd_output, "esound") == 0)
+	{
+		outindex = 1;
+	}
+	else
+	{
+		outindex = 0;
+	}
+#endif
+	
 	Printf ("I_InitSound: Initializing FMOD\n");
+#ifdef _WIN32
 	FSOUND_SetHWND (Window);
+#endif
 
 	while (!_nosound)
 	{
 		trynum = 0;
-		while (trynum < 2)
+		while (trynum < maxtrynum)
 		{
 			long outtype = trya3d ? FSOUND_OUTPUT_A3D
-				: outtypes[outindex+trynum];
+				: outtypes[(outindex+trynum) % maxtrynum];
 
 			Printf ("  Setting %s output", OutputNames[outtype]);
 			FModLog (FSOUND_SetOutput (outtype));
@@ -828,12 +869,12 @@ void I_InitSound ()
 				}
 				else
 				{
-					trynum++;
+					++trynum;
 				}
 				continue;
 			}
 			Printf ("  Setting driver %d", *snd_driver);
-			FModLog (FSOUND_SetDriver (*snd_driver));
+			FModLog (FSOUND_SetDriver (snd_driver));
 			if (FSOUND_GetOutput() != outtype)
 			{
 				Printf ("   Output changed to %s\n   Trying driver 0",
@@ -842,14 +883,15 @@ void I_InitSound ()
 				FModLog (FSOUND_SetDriver (0));
 			}
 //			FSOUND_GetDriverCaps (FSOUND_GetDriver(), &DriverCaps);
-			if (*snd_buffersize)
+			if (snd_buffersize)
 			{
 				Printf ("  Setting buffer size %d", *snd_buffersize);
-				FModLog (FSOUND_SetBufferSize (*snd_buffersize));
+				FModLog (FSOUND_SetBufferSize (snd_buffersize));
 			}
 //FSOUND_SetMinHardwareChannels (32);
 			Printf ("  Initialization");
-			if (!FModLog (FSOUND_Init (*snd_samplerate, 64, 0)))
+			if (!FModLog (FSOUND_Init (snd_samplerate, 64,
+				FSOUND_INIT_USEDEFAULTMIDISYNTH)))
 			{
 				if (trya3d)
 				{
@@ -869,6 +911,7 @@ void I_InitSound ()
 		{ // Initialized successfully
 			break;
 		}
+#ifdef _WIN32
 		// If sound cannot be initialized, give the user some options.
 		switch (DialogBox (hInstance,
 						   MAKEINTRESOURCE(IDD_FMODINITFAILED),
@@ -883,13 +926,17 @@ void I_InitSound ()
 			exit (0);
 			break;
 		}
+#else
+		Printf ("Sound init failed. Using nosound.\n");
+		_nosound = true;
+#endif
 	}
 
 	if (!_nosound)
 	{
 		Enable_FSOUND_IO_Loader ();
 		OutputType = FSOUND_GetOutput ();
-		if (*snd_3d)
+		if (snd_3d)
 		{
 			Sound3D = true;
 			//FSOUND_Reverb_SetEnvironment (FSOUND_PRESET_GENERIC);
@@ -904,6 +951,7 @@ void I_InitSound ()
 		{
 			Sound3D = false;
 		}
+		snd_sfxvolume.Callback ();
 
 		static bool didthis = false;
 		if (!didthis)

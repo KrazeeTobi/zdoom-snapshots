@@ -123,7 +123,6 @@ void SexMessage (const char *from, char *to, int gender, const char *victim, con
 		{ 3, 3, 3 },
 		{ 2, 2, 3 }
 	};
-	int gendermsg;
 	const char *subst = NULL;
 
 	do
@@ -134,6 +133,8 @@ void SexMessage (const char *from, char *to, int gender, const char *victim, con
 		}
 		else
 		{
+			int gendermsg;
+			
 			switch (from[1])
 			{
 			default:	gendermsg = -1;	break;
@@ -186,7 +187,7 @@ void ClientObituary (AActor *self, AActor *inflictor, AActor *attacker)
 	if (inflictor && inflictor->player == self->player)
 		MeansOfDeath = MOD_UNKNOWN;
 
-	if (multiplayer && !*deathmatch)
+	if (multiplayer && !deathmatch)
 		MeansOfDeath |= MOD_FRIENDLY_FIRE;
 
 	friendly = MeansOfDeath & MOD_FRIENDLY_FIRE;
@@ -310,7 +311,7 @@ void AActor::Die (AActor *source, AActor *inflictor)
 	// [RH] If the thing has a special, execute and remove it
 	//		Note that the thing that killed it is considered
 	//		the activator of the script.
-	if ((flags & MF_COUNTKILL) && special)
+	if (special && !(flags & MF_SPECIAL) && special)
 	{
 		LineSpecials[special] (NULL, source, args[0], args[1], args[2], args[3], args[4]);
 		special = 0;
@@ -335,7 +336,7 @@ void AActor::Die (AActor *source, AActor *inflictor)
 				char buff[256];
 
 				player->fragcount--;
-				if (*deathmatch && player->spreecount >= 5 && *cl_showsprees)
+				if (deathmatch && player->spreecount >= 5 && cl_showsprees)
 				{
 					SexMessage (GStrings(SPREEKILLSELF), buff,
 						player->userinfo.gender, player->userinfo.netname,
@@ -348,7 +349,7 @@ void AActor::Die (AActor *source, AActor *inflictor)
 			{
 				++source->player->fragcount;
 				++source->player->spreecount;
-				if (*deathmatch && *cl_showsprees)
+				if (deathmatch && cl_showsprees)
 				{
 					const char *spreemsg;
 					char buff[256];
@@ -401,9 +402,9 @@ void AActor::Die (AActor *source, AActor *inflictor)
 					source->player->multicount = 1;
 				}
 
-				if (*deathmatch &&
+				if (deathmatch &&
 					source->player->mo == players[consoleplayer].camera &&
-					*cl_showmultikills)
+					cl_showmultikills)
 				{
 					const char *multimsg;
 
@@ -439,8 +440,8 @@ void AActor::Die (AActor *source, AActor *inflictor)
 			source->player->lastkilltime = level.time;
 
 			// [RH] Implement fraglimit
-			if (*deathmatch && *fraglimit &&
-				*fraglimit == source->player->fragcount)
+			if (deathmatch && fraglimit &&
+				fraglimit == source->player->fragcount)
 			{
 				Printf ("%s\n", GStrings(TXT_FRAGLIMIT));
 				G_ExitLevel (0);
@@ -515,7 +516,9 @@ void AActor::Die (AActor *source, AActor *inflictor)
 	{ // Ice death
 		SetState (IDeathState);
 	}
-	else if (health < -GetDefault()->health && XDeathState)
+	else if (XDeathState &&
+		health < (gameinfo.gametype == GAME_Doom
+				  ? -GetDefault()->health : -GetDefault()->health/2))
 	{ // Extreme death
 		SetState (XDeathState);
 	}
@@ -547,7 +550,7 @@ void P_AutoUseHealth(player_t *player, int saveHealth)
 
 	normalCount = player->inventory[arti_health];
 	superCount = player->inventory[arti_superhealth];
-	if ((*gameskill == sk_baby) && (normalCount*25 >= saveHealth))
+	if ((gameskill == sk_baby) && (normalCount*25 >= saveHealth))
 	{ // Use quartz flasks
 		count = (saveHealth+24)/25;
 		for(i = 0; i < count; i++)
@@ -565,7 +568,7 @@ void P_AutoUseHealth(player_t *player, int saveHealth)
 			P_PlayerRemoveArtifact (player, arti_superhealth);
 		}
 	}
-	else if ((*gameskill == sk_baby)
+	else if ((gameskill == sk_baby)
 		&& (superCount*100+normalCount*25 >= saveHealth))
 	{ // Use mystic urns and quartz flasks
 		count = (saveHealth+24)/25;
@@ -652,7 +655,7 @@ void P_DamageMobj (AActor *target, AActor *inflictor, AActor *source, int damage
 		return;
 	}
 	player = target->player;
-	if (player && *gameskill == sk_baby)
+	if (player && gameskill == sk_baby)
 	{
 		// Take half damage in trainer mode
 		damage >>= 1;
@@ -665,7 +668,7 @@ void P_DamageMobj (AActor *target, AActor *inflictor, AActor *source, int damage
 			return;
 	}
 	// Push the target unless the source's weapon's kickback is 0.
-	// (i.e. Guantets/Chainsaw)
+	// (i.e. Guantlets/Chainsaw)
 	if (inflictor
 		&& !(target->flags & MF_NOCLIP)
 		&& (!source || !source->player || !(inflictor->flags2 & MF2_NODMGTHRUST)))
@@ -743,12 +746,12 @@ void P_DamageMobj (AActor *target, AActor *inflictor, AActor *source, int damage
 		}
 
 		// [RH] Avoid friendly fire if enabled
-		if (target != source && target->IsTeammate (source))
+		if (source != NULL && player != source->player && target->IsTeammate (source))
 		{
 			MeansOfDeath |= MOD_FRIENDLY_FIRE;
 			if (damage < 10000)
 			{ // Still allow telefragging :-(
-				damage = (int)((float)damage * *teamdamage);
+				damage = (int)((float)damage * teamdamage);
 				if (damage <= 0)
 					return;
 			}
@@ -814,7 +817,7 @@ void P_DamageMobj (AActor *target, AActor *inflictor, AActor *source, int damage
 			}
 		}
 		if (damage >= player->health
-			&& ((*gameskill == sk_baby) || *deathmatch)
+			&& ((gameskill == sk_baby) || deathmatch)
 			&& !player->morphTics)
 		{ // Try to use some inventory health
 			P_AutoUseHealth (player, damage - player->health + 1);
@@ -972,7 +975,7 @@ void P_PoisonDamage (player_t *player, AActor *source, int damage,
 	{ // target is invulnerable
 		return;
 	}
-	if (player && *gameskill == sk_baby)
+	if (player && gameskill == sk_baby)
 	{
 		// Take half damage in trainer mode
 		damage >>= 1;
@@ -983,7 +986,7 @@ void P_PoisonDamage (player_t *player, AActor *source, int damage,
 		return;
 	}
 	if (damage >= player->health
-		&& ((*gameskill == sk_baby) || *deathmatch)
+		&& ((gameskill == sk_baby) || deathmatch)
 		&& !player->morphTics)
 	{ // Try to use some inventory health
 		P_AutoUseHealth (player, damage - player->health+1);
@@ -1035,7 +1038,7 @@ BOOL CheckCheatmode ();
 
 CCMD (kill)
 {
-	if (argc > 1 && !stricmp (argv[1], "monsters"))
+	if (argv.argc() > 1 && !stricmp (argv[1], "monsters"))
 	{
 		// Kill all the monsters
 		if (CheckCheatmode ())

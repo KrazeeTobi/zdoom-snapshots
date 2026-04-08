@@ -59,6 +59,10 @@
 
 void G_PlayerReborn (int player);
 
+// PRIVATE FUNCTION PROTOTYPES ---------------------------------------------
+
+static void PlayerLandedOnThing (AActor *mo, AActor *onmobj);
+
 // EXTERNAL DATA DECLARATIONS ----------------------------------------------
 
 extern cycle_t BotSupportCycles;
@@ -73,7 +77,7 @@ static bool SpawningMapThing;
 
 CUSTOM_CVAR (Float, sv_gravity, 800.f, CVAR_SERVERINFO)
 {
-	level.gravity = *var;
+	level.gravity = self;
 }
 
 CVAR (Float, sv_friction, 0.90625f, CVAR_SERVERINFO);
@@ -100,7 +104,7 @@ fixed_t FloatBobOffsets[64] =
 
 fixed_t FloatBobDiffs[64] =
 {
-	51389, 50894, 49909, 48444,
+	51389, 51389, 50894, 49909, 48444,
 	46511, 44131, 41326, 38123,
 	34553, 30649, 26451, 21998,
 	17334, 12501, 7550, 2524,
@@ -115,7 +119,7 @@ fixed_t FloatBobDiffs[64] =
 	2524, 7550, 12501, 17334,
 	21998, 26451, 30650, 34552,
 	38123, 41326, 44131, 46511,
-	48444, 49909, 50895, 51389
+	48444, 49909, 50895
 };
 
 CVAR (Int, cl_pufftype, 0, CVAR_ARCHIVE);
@@ -143,6 +147,12 @@ AActor::~AActor ()
 void AActor::Serialize (FArchive &arc)
 {
 	Super::Serialize (arc);
+
+	if (flags2 & MF2_FLOATBOB)
+	{ // Serialize the center of bobbing rather than the current position
+		z -= FloatBobOffsets[((int)this/4 + level.time - 1) & 63];
+	}
+
 	arc << x
 		<< y
 		<< z
@@ -214,9 +224,18 @@ void AActor::Serialize (FArchive &arc)
 		<< IDeathState
 		<< RaiseState
 		<< gear
-		<< dropoffz;
+		<< dropoffz
+		<< SpawnPoint[0] << SpawnPoint[1] << SpawnPoint[2]
+		<< SpawnAngle << SpawnFlags;
 	arc.SerializePointer (translationtables, (BYTE **)&translation, 256);
-	spawnpoint.Serialize (arc);
+
+	if (flags2 & MF2_FLOATBOB)
+	{
+		int offs = (int)this/4 + level.time;
+		if (arc.IsLoading())
+			--offs;
+		z += FloatBobOffsets[offs & 63];
+	}
 
 	if (arc.IsLoading ())
 	{
@@ -571,22 +590,6 @@ void P_XYMovement (AActor *mo, bool bForceSlide)
 
 	fixed_t maxmove = (mo->waterlevel < 2) || (mo->flags & MF_MISSILE) ? MAXMOVE : MAXMOVE/4;
 
-	xmove = mo->momx = clamp (mo->momx, -maxmove, maxmove);
-	ymove = mo->momy = clamp (mo->momy, -maxmove, maxmove);
-
-	if ((xmove | ymove) == 0)
-	{
-		if (mo->flags & MF_SKULLFLY)
-		{
-			// the skull slammed into something
-			mo->flags &= ~MF_SKULLFLY;
-			mo->momx = mo->momy = mo->momz = 0;
-
-			mo->SetState (mo->SeeState);
-		}
-		return;
-	}
-
 	if (mo->flags2 & MF2_WINDTHRUST)
 	{
 		int special = mo->subsector->sector->special;
@@ -605,6 +608,22 @@ void P_XYMovement (AActor *mo, bool bForceSlide)
 				P_ThrustMobj (mo, ANG180, windTab[special-49]);
 				break;
 		}
+	}
+
+	xmove = mo->momx = clamp (mo->momx, -maxmove, maxmove);
+	ymove = mo->momy = clamp (mo->momy, -maxmove, maxmove);
+
+	if ((xmove | ymove) == 0)
+	{
+		if (mo->flags & MF_SKULLFLY)
+		{
+			// the skull slammed into something
+			mo->flags &= ~MF_SKULLFLY;
+			mo->momx = mo->momy = mo->momz = 0;
+
+			mo->SetState (mo->SeeState);
+		}
+		return;
 	}
 
 	player = mo->player;
@@ -783,7 +802,18 @@ void P_XYMovement (AActor *mo, bool bForceSlide)
 
 	if (mo->z > mo->floorz && !(mo->flags2 & MF2_ONMOBJ) &&
 		!(mo->flags2 & MF2_FLY)	&& !mo->waterlevel)
-	{ // no friction when falling
+	{ // [RH] Friction when falling is available for larger aircontrols
+		if (player != NULL && level.airfriction != FRACUNIT)
+		{
+			mo->momx = FixedMul (mo->momx, level.airfriction);
+			mo->momy = FixedMul (mo->momy, level.airfriction);
+
+			if (player->mo == mo)		//  Not voodoo dolls
+			{
+				player->momx = FixedMul (player->momx, level.airfriction);
+				player->momy = FixedMul (player->momy, level.airfriction);
+			}
+		}
 		return;
 	}
 
@@ -1013,11 +1043,7 @@ void P_ZMovement (AActor *mo)
 					// Squat down.
 					// Decrease viewheight for a moment after hitting the ground (hard),
 					// and utter appropriate sound.
-					mo->player->deltaviewheight = mo->momz >> 3;
-					if (!mo->player->morphTics)
-					{
-						S_Sound (mo, CHAN_AUTO, "*land", 1, ATTN_NORM);
-					}
+					PlayerLandedOnThing (mo, NULL);
 				}
 			}
 			mo->momz = 0;
@@ -1086,9 +1112,21 @@ void P_ZMovement (AActor *mo)
 static void PlayerLandedOnThing (AActor *mo, AActor *onmobj)
 {
 	mo->player->deltaviewheight = mo->momz>>3;
+	P_FallingDamage (mo);
+	if (mo->momz < -23*FRACUNIT)
+	{
+	}
 	if (!mo->player->morphTics)
 	{
-		S_Sound (mo, CHAN_AUTO, "*land", 1, ATTN_IDLE);
+		if (mo->momz < (fixed_t)(level.gravity * mo->subsector->sector->gravity * -983.04f))
+		{
+			S_Sound (mo, CHAN_VOICE, "*grunt", 1, ATTN_NORM);
+		}
+		if (onmobj != NULL ||
+			!Terrains[P_GetThingFloorType (mo)].IsLiquid)
+		{
+			S_Sound (mo, CHAN_AUTO, "*land", 1, ATTN_NORM);
+		}
 	}
 //	mo->player->centering = true;
 }
@@ -1103,11 +1141,10 @@ void P_NightmareRespawn (AActor *mobj)
 	fixed_t x, y, z;
 	subsector_t *ss;
 	AActor *mo;
-	mapthing2_t *mthing;
 	AActor *info = mobj->GetDefault();
 
-	x = mobj->spawnpoint.x << FRACBITS;
-	y = mobj->spawnpoint.y << FRACBITS;
+	x = mobj->SpawnPoint[0] << FRACBITS;
+	y = mobj->SpawnPoint[1] << FRACBITS;
 	// something is occupying it's position?
 	if (!P_CheckPosition (mobj, x, y)) 
 		return;		// no respawn
@@ -1121,29 +1158,31 @@ void P_NightmareRespawn (AActor *mobj)
 	Spawn ("TeleportFog", x, y, ONFLOORZ);
 
 	// spawn the new monster
-	mthing = &mobj->spawnpoint;
-
 	if (info->flags & MF_SPAWNCEILING)
 		z = ONCEILINGZ;
 	else if (info->flags2 & MF2_SPAWNFLOAT)
 		z = FLOATRANDZ;
 	else if (info->flags2 & MF2_FLOATBOB)
-		z = mthing->z << FRACBITS;
+		z = mobj->SpawnPoint[2] << FRACBITS;
 	else
 		z = ONFLOORZ;
 
 	// spawn it
 	// inherit attributes from deceased one
 	mo = Spawn (RUNTIME_TYPE(mobj), x, y, ONFLOORZ);
-	mo->spawnpoint = mobj->spawnpoint;
-	mo->angle = ANG45 * (mthing->angle/45);
+	mo->SpawnPoint[0] = mobj->SpawnPoint[0];
+	mo->SpawnPoint[1] = mobj->SpawnPoint[1];
+	mo->SpawnPoint[2] = mobj->SpawnPoint[2];
+	mo->SpawnAngle = mobj->SpawnAngle;
+	mo->SpawnFlags = mobj->SpawnFlags;
+	mo->angle = ANG45 * (mobj->SpawnAngle/45);
 
 	if (z == ONFLOORZ)
-		mo->z += mthing->z << FRACBITS;
+		mo->z += mo->SpawnPoint[2] << FRACBITS;
 	else if (z == ONCEILINGZ)
-		mo->z -= mthing->z << FRACBITS;
+		mo->z -= mo->SpawnPoint[2] << FRACBITS;
 
-	if (mthing->flags & MTF_AMBUSH)
+	if (mobj->SpawnFlags & MTF_AMBUSH)
 		mo->flags |= MF_AMBUSH;
 
 	mo->reactiontime = 18;
@@ -1537,26 +1576,44 @@ void AActor::RunThink ()
 
 	// [RH] If standing on a steep slope, fall down it
 	if (!(flags & (MF_NOCLIP|MF_NOGRAVITY)) &&
-		subsector->sector->floorplane.c < STEEPSLOPE)
+		momz <= 0 &&
+		floorz == z &&
+		floorsector->floorplane.c < STEEPSLOPE &&
+		floorsector->floorplane.ZatPoint (x, y) <= floorz)
 	{
-		fixed_t thefloor = subsector->sector->floorplane.ZatPoint (x, y);
-		if (thefloor == floorz && thefloor == z && momz <= 0)
+		const msecnode_t *node;
+		bool dopush = true;
+
+		if (floorsector->floorplane.c > STEEPSLOPE*2/3)
 		{
-			momx += subsector->sector->floorplane.a;
-			momy += subsector->sector->floorplane.b;
+			for (node = touching_sectorlist; node; node = node->m_tnext)
+			{
+				const sector_t *sec = node->m_sector;
+				if (sec->floorplane.c >= STEEPSLOPE)
+				{
+					if (sec->floorplane.ZatPoint (x, y) >= z - 24*FRACUNIT)
+					{
+						dopush = false;
+						break;
+					}
+				}
+			}
+		}
+		if (dopush)
+		{
+			momx += floorsector->floorplane.a;
+			momy += floorsector->floorplane.b;
 		}
 	}
 
 	// Handle X and Y momemtums
 	BlockingMobj = NULL;
-	if ((momx | momy) || (flags & MF_SKULLFLY))
-	{
-		P_XYMovement (this, bForceSlide);
-
-		if (ObjectFlags & OF_MassDestruction)
-			return;		// actor was destroyed
+	P_XYMovement (this, bForceSlide);
+	if (ObjectFlags & OF_MassDestruction)
+	{ // actor was destroyed
+		return;
 	}
-	else if (flags2 & MF2_BLASTED)
+	if ((momx | momy) == 0 && (flags2 & MF2_BLASTED))
 	{ // Reset to not blasted when momentums are gone
 		flags2 &= ~MF2_BLASTED;
 		if (!(flags & MF_ICECORPSE))
@@ -1567,11 +1624,11 @@ void AActor::RunThink ()
 
 	if (flags2 & MF2_FLOATBOB)
 	{ // Floating item bobbing motion
-		z = z + FloatBobDiffs[((int)this/4 + level.time) & 63];
+		z += FloatBobDiffs[((int)this/4 + level.time) & 63];
 	}
 	if ((z != floorz && !(flags2 & MF2_FLOATBOB)) || momz || BlockingMobj)
 	{	// Handle Z momentum and gravity
-		if (flags2 & MF2_PASSMOBJ)
+		if ((flags2 & MF2_PASSMOBJ) && !(dmflags & DF_NO_PASSMOBJ))
 		{
 			if (!(onmo = P_CheckOnmobj (this)))
 			{
@@ -1769,7 +1826,7 @@ AActor *AActor::StaticSpawn (const TypeInfo *type, fixed_t ix, fixed_t iy, fixed
 
 	pr_class_t rngclass = bglobal.m_Thinking ? pr_botspawnmobj : pr_spawnmobj;
 
-	if (*gameskill == sk_nightmare)
+	if (gameskill == sk_nightmare)
 		actor->reactiontime = 0;
 	
 	actor->lastlook = P_Random (rngclass) % MAXPLAYERS;
@@ -1814,8 +1871,7 @@ AActor *AActor::StaticSpawn (const TypeInfo *type, fixed_t ix, fixed_t iy, fixed
 		}
 	}
 	if (actor->flags2 & MF2_FLOATBOB)
-	{
-		// Prime the bobber
+	{ // Prime the bobber
 		actor->z += FloatBobOffsets[((int)actor/4 + level.time - 1) & 63];
 	}
 	if (actor->flags2 & MF2_FLOORCLIP)
@@ -2023,14 +2079,14 @@ void P_SpawnPlayer (mapthing2_t *mthing)
 	players[consoleplayer].camera = players[displayplayer].mo;
 
 	// [RH] Allow chasecam for demo watching
-	if ((demoplayback || demonew) && *chasedemo)
+	if ((demoplayback || demonew) && chasedemo)
 		p->cheats = CF_CHASECAM;
 
 	// setup gun psprite
 	P_SetupPsprites (p);
 
 	// give all cards in death match mode
-	if (*deathmatch)
+	if (deathmatch)
 		for (i = 0; i < NUMKEYS; i++)
 			p->keys[i] = true;
 
@@ -2079,13 +2135,6 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 	if (mthing->type == 0 || mthing->type == -1)
 		return;
 
-	// count deathmatch start positions
-	if (mthing->type == 11)
-	{
-		deathmatchstarts.Push (*mthing);
-		return;
-	}
-
 	// [RH] Record polyobject-related things
 	if (HexenHack)
 	{
@@ -2120,7 +2169,63 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 	}
 
 	// check for players specially
+	int pnum = -1;
+
 	if (mthing->type <= 4 && mthing->type > 0)
+	{
+		pnum = mthing->type - 1;
+	}
+	else
+	{
+		const int base = (gameinfo.gametype == GAME_Hexen) ? 9100 : 4001;
+
+		if (mthing->type >= base && mthing->type <= base + MAXPLAYERS - 4)
+		{
+			pnum = mthing->type - base + 4;
+		}
+	}
+
+	if (mthing->type != 11 &&
+		((level.flags & LEVEL_FILTERSTARTS) || pnum == -1))
+	{
+		if (deathmatch) 
+		{
+			if (!(mthing->flags & MTF_DEATHMATCH))
+				return;
+		}
+		else if (multiplayer)
+		{
+			if (!(mthing->flags & MTF_COOPERATIVE))
+				return;
+		}
+		else
+		{
+			if (!(mthing->flags & MTF_SINGLE))
+				return;
+		}
+	}
+
+	if ((level.flags & LEVEL_FILTERSTARTS) || pnum == -1)
+	{ // check for apropriate skill level
+		if (gameskill == sk_baby)
+			bit = 1;
+		else if (gameskill == sk_nightmare)
+			bit = 4;
+		else
+			bit = 1 << (gameskill - 1);
+
+		if (!(mthing->flags & bit))
+			return;
+	}
+
+	// count deathmatch start positions
+	if (mthing->type == 11)
+	{
+		deathmatchstarts.Push (*mthing);
+		return;
+	}
+
+	if (pnum != -1)
 	{
 		// [RH] Only spawn spots that match position.
 		if (mthing->args[0] != position)
@@ -2128,30 +2233,13 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 
 		// save spots for respawning in network games
 		playerstarts[mthing->type-1] = *mthing;
-		if (!*deathmatch)
+		if (!deathmatch)
 			P_SpawnPlayer (mthing);
 
 		return;
 	}
-	else
-	{
-		const int base = (gameinfo.gametype == GAME_Hexen) ? 9100 : 4001;
 
-		if (mthing->type >= base && mthing->type <= base + MAXPLAYERS - 4)
-		{ // [RH] Multiplayer starts for players 5-?
-
-			// [RH] Only spawn spots that match position.
-			if (mthing->args[0] != position)
-				return;
-
-			playerstarts[mthing->type - base + 4] = *mthing;
-			if (!*deathmatch)
-				P_SpawnPlayer (mthing);
-			return;
-		}
-	}
-
-	// [RH] sound sequence overrides
+	// [RH] sound sequence overriders
 	if (mthing->type >= 1400 && mthing->type < 1410)
 	{
 		R_PointInSubsector (mthing->x<<FRACBITS,
@@ -2178,33 +2266,6 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 		}
 		return;
 	}
-
-	if (*deathmatch) 
-	{
-		if (!(mthing->flags & MTF_DEATHMATCH))
-			return;
-	}
-	else if (multiplayer)
-	{
-		if (!(mthing->flags & MTF_COOPERATIVE))
-			return;
-	}
-	else
-	{
-		if (!(mthing->flags & MTF_SINGLE))
-			return;
-	}
-
-	// check for apropriate skill level
-	if (*gameskill == sk_baby)
-		bit = 1;
-	else if (*gameskill == sk_nightmare)
-		bit = 4;
-	else
-		bit = 1 << (*gameskill - 1);
-
-	if (!(mthing->flags & bit))
-		return;
 
 	// [RH] Determine if it is an old ambient thing, and if so,
 	//		map it to MT_AMBIENT with the proper parameter.
@@ -2245,11 +2306,11 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 	const AActor *info = GetDefaultByType (i);
 
 	// don't spawn keycards and players in deathmatch
-	if (*deathmatch && info->flags & MF_NOTDMATCH)
+	if (deathmatch && info->flags & MF_NOTDMATCH)
 		return;
 
 	// [RH] don't spawn extra weapons in coop
-	if (multiplayer && !*deathmatch)
+	if (multiplayer && !deathmatch)
 	{
 		if (i->IsDescendantOf (RUNTIME_CLASS(AWeapon)))
 		{
@@ -2259,16 +2320,16 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 	}
 				
 	// don't spawn any monsters if -nomonsters
-	if (*dmflags & DF_NO_MONSTERS
+	if (dmflags & DF_NO_MONSTERS
 		&& (i->IsDescendantOf (RUNTIME_CLASS(ALostSoul)) || (info->flags & MF_COUNTKILL)) )
 	{
 		return;
 	}
 	
 	// [RH] Other things that shouldn't be spawned depending on dmflags
-	if (*deathmatch || *alwaysapplydmflags)
+	if (deathmatch || alwaysapplydmflags)
 	{
-		if (*dmflags & DF_NO_HEALTH)
+		if (dmflags & DF_NO_HEALTH)
 		{
 			if (i->IsDescendantOf (RUNTIME_CLASS(AHealth)))
 				return;
@@ -2279,12 +2340,12 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 			if (strcmp (i->Name, "Megasphere") == 0)
 				return;
 		}
-		if (*dmflags & DF_NO_ITEMS)
+		if (dmflags & DF_NO_ITEMS)
 		{
 			if (i->IsDescendantOf (RUNTIME_CLASS(AArtifact)))
 				return;
 		}
-		if (*dmflags & DF_NO_ARMOR)
+		if (dmflags & DF_NO_ARMOR)
 		{
 			if (i->IsDescendantOf (RUNTIME_CLASS(AArmor)))
 				return;
@@ -2313,7 +2374,12 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 		mobj->z += mthing->z << FRACBITS;
 	else if (z == ONCEILINGZ)
 		mobj->z -= mthing->z << FRACBITS;
-	mobj->spawnpoint = *mthing;
+
+	mobj->SpawnPoint[0] = mthing->x;
+	mobj->SpawnPoint[1] = mthing->y;
+	mobj->SpawnPoint[2] = mthing->z;
+	mobj->SpawnAngle = mthing->angle;
+	mobj->SpawnFlags = (BYTE)mthing->flags;
 
 	// [RH] Set the thing's special
 	mobj->special = mthing->special;
@@ -2367,7 +2433,7 @@ void P_SpawnPuff (fixed_t x, fixed_t y, fixed_t z, angle_t dir, int updown, bool
 
 			puff->SetState (state);
 		}
-		if (*cl_pufftype && updown != 3)
+		if (cl_pufftype && updown != 3)
 		{
 			P_DrawSplash2 (32, x, y, z, dir, updown, 1);
 			puff->renderflags |= RF_INVISIBLE;
@@ -2393,7 +2459,7 @@ void P_SpawnBlood (fixed_t x, fixed_t y, fixed_t z, angle_t dir, int damage)
 {
 	AActor *th;
 
-	if (*cl_bloodtype <= 1)
+	if (cl_bloodtype <= 1)
 	{
 		z += PS_Random (pr_spawnblood) << 10;
 		th = Spawn<ABlood> (x, y, z);
@@ -2412,7 +2478,7 @@ void P_SpawnBlood (fixed_t x, fixed_t y, fixed_t z, angle_t dir, int damage)
 		}
 	}
 
-	if (*cl_bloodtype >= 1)
+	if (cl_bloodtype >= 1)
 		P_DrawSplash2 (32, x, y, z, dir, 2, 0);
 }
 
@@ -2513,7 +2579,7 @@ bool P_HitWater (AActor *thing, sector_t *sec)
 	if (thing->flags3 & MF3_DONTSPLASH)
 		return false;
 
-	AActor *mo;
+	AActor *mo = NULL;
 	FSplashDef *splash;
 	int terrainnum = TerrainTypes[sec->floorpic];
 	int splashnum = Terrains[terrainnum].Splash;
@@ -2839,9 +2905,9 @@ bool AActor::IsTeammate (AActor *other)
 {
 	if (!player || !other || !other->player)
 		return false;
-	if (!*deathmatch)
+	if (!deathmatch)
 		return true;
-	if (*teamplay && other->player->userinfo.team != TEAM_None &&
+	if (teamplay && other->player->userinfo.team != TEAM_None &&
 		player->userinfo.team == other->player->userinfo.team)
 	{
 		return true;
@@ -2871,21 +2937,12 @@ FArchive &operator<< (FArchive &arc, FSoundIndex &snd)
 {
 	if (arc.IsStoring ())
 	{
-		arc.WriteString (snd.Index ? S_sfx[snd.Index].name : NULL);
+		arc.WriteName (snd.Index ? S_sfx[snd.Index].name : NULL);
 	}
 	else
 	{
-		char *name = NULL;
-		arc << name;
-		if (name != NULL)
-		{
-			snd.Index = S_FindSound (name);
-			delete[] name;
-		}
-		else
-		{
-			snd.Index = 0;
-		}
+		const char *name = arc.ReadName ();;
+		snd.Index = name != NULL ? S_FindSound (name) : 0;
 	}
 	return arc;
 }

@@ -86,7 +86,7 @@ typedef void (*voidfunc_)();
 #define ADD_WORD_PROP(prop,val) extern BYTE prop##_1, prop##_2[2]; BYTE prop##_1 = prop|ADEFTYPE_Word; BYTE prop##_2[2] = { BREAK_WORD(val) };
 #define ADD_LONG_PROP(prop,val) extern BYTE prop##_1, prop##_2[4]; BYTE prop##_1 = prop|ADEFTYPE_Long; BYTE prop##_2[4] = { BREAK_LONG(val) };
 #define ADD_STRING_PROP(prop1,prop2,val) extern BYTE prop1##_1, prop1##_2[]; BYTE prop1##_1 = prop1; BYTE prop1##_2[] = val;
-
+	
 #define AT_GAME_SET(ns) \
 	extern void ns##_gs(); \
 	voidfunc_ ns##_gsr __attribute__((section("greg"))) = ns##_gs; \
@@ -96,7 +96,7 @@ typedef void (*voidfunc_)();
 
 #define AT_SPEED_SET(ns,varname) \
 	extern void ns##_ss(EGameSpeed); \
-	void (*ns##_gsr)(EGameSpeed) __attribute__((section(".sreg"))) = ns##_ss; \
+	void (*ns##_gsr)(EGameSpeed) __attribute__((section("sreg"))) = ns##_ss; \
 	void ns##_ss (EGameSpeed varname)
 
 #else
@@ -190,6 +190,10 @@ public:
 #define PROP_RaiseState(x)		ADD_BYTE_PROP(ADEF_RaiseState,x)
 
 #define PROP_SKIP_SUPER			ADD_BYTE_PROP(ADEF_SkipSuper,0)
+#ifndef __GNUC__
 #define PROP_STATE_BASE(x)		ADD_LONG_PROP(ADEF_StateBase,((int)RUNTIME_CLASS(x)))
+#else
+#define PROP_STATE_BASE(x)		ADD_STRING_PROP(ADEF_StateBase,"\x29",#x)
+#endif
 
 #endif //__INFOMACROS_H__

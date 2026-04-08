@@ -26,7 +26,6 @@
 
 
 extern "C" byte*		ylookup[MAXHEIGHT];
-extern "C" int			columnofs[MAXWIDTH];
 
 extern "C" int			dc_pitch;		// [RH] Distance between rows
 
@@ -168,8 +167,6 @@ void	R_FillColumnP (void);
 void	R_FillColumnHorizP (void);
 void	R_FillSpan (void);
 
-extern "C" int				ds_colsize;		// [RH] Distance between columns
-
 extern "C" int				ds_y;
 extern "C" int				ds_x1;
 extern "C" int				ds_x2;
@@ -192,9 +189,6 @@ extern byte*			dc_translation;
 
 // [RH] Double view pixels by detail mode
 void R_DetailDouble (void);
-
-
-void R_InitBuffer (int width, int height);
 
 
 // Initialize color translation tables,

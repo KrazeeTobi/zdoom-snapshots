@@ -13,7 +13,7 @@
 // HEADER FILES ------------------------------------------------------------
 
 #include <stdlib.h>
-#ifndef UNIX
+#ifndef unix
 #include <io.h>
 #endif
 #include <ctype.h>
@@ -36,6 +36,7 @@
 #include "z_zone.h"
 #include "cmdlib.h"
 #include "w_wad.h"
+#include "m_crc32.h"
 
 // MACROS ------------------------------------------------------------------
 
@@ -189,6 +190,8 @@ void W_AddFile (char *filename)
 	// [RH] Determine if file is a WAD based on its signature, not its name.
 	read (handle, &header, sizeof(header));
 
+	wadhandle.Name = copystring (name);
+
 	if (header.identification == IWAD_ID || header.identification == PWAD_ID)
 	{ // This is a WAD file
 
@@ -231,7 +234,6 @@ void W_AddFile (char *filename)
 	if (fileinfo2free)
 		delete[] fileinfo2free;
 
-	wadhandle.Name = copystring (name);
 	wadhandle.Handle = handle;
 	wadhandle.FirstLump = startlump;
 	wadhandle.LastLump = numlumps - 1;
@@ -584,31 +586,25 @@ void *W_CacheLumpNum (int lump, int tag)
 //
 // W_LumpNameHash
 //
-// [RH] This is from Boom.
-//		NOTE: s should already be uppercase.
-//		This is different from the BOOM version.
+// NOTE: s should already be uppercase, in contrast to the BOOM version.
 //
 // Hash function used for lump names.
 // Must be mod'ed with table size.
 // Can be used for any 8-character names.
-// by Lee Killough
 //
 //==========================================================================
 
-unsigned W_LumpNameHash (const char *s)
+DWORD W_LumpNameHash (const char *s)
 {
-	unsigned hash;
+	const DWORD *table = GetCRCTable ();;
+	DWORD hash = 0xffffffff;
+	int i;
 
-	(void) ((hash =			 s[0], s[1]) &&
-			(hash = hash*3 + s[1], s[2]) &&
-			(hash = hash*2 + s[2], s[3]) &&
-			(hash = hash*2 + s[3], s[4]) &&
-			(hash = hash*2 + s[4], s[5]) &&
-			(hash = hash*2 + s[5], s[6]) &&
-			(hash = hash*2 + s[6],
-			 hash = hash*2 + s[7])
-			);
-	return hash;
+	for (i = 8; i > 0 && *s; --i, ++s)
+	{
+		hash = CRC1 (hash, *s, table);
+	}
+	return hash ^ 0xffffffff;
 }
 
 //==========================================================================

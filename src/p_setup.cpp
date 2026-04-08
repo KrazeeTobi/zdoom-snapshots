@@ -650,6 +650,11 @@ void P_FinishLoadingLineDefs ()
 		float dy = FIXED2FLOAT(ld->v2->y - ld->v1->y);
 		SBYTE light;
 
+		if (ld->frontsector == NULL)
+		{
+			Printf (PRINT_HIGH, "Line %d has no front sector\n", linenum);
+		}
+
 		// [RH] Set some new sidedef properties
 		len = (int)sqrtf (dx*dx + dy*dy);
 		light = dy == 0 ? level.WallHorizLight :
@@ -848,7 +853,15 @@ void P_LoadSideDefs2 (int lump)
 		// killough 4/11/98: refined to allow colormaps to work as wall
 		// textures if invalid as colormaps but valid as textures.
 
-		sd->sector = sec = &sectors[SHORT(msd->sector)];
+		if ((unsigned)SHORT(msd->sector)>=numsectors)
+		{
+			Printf (PRINT_HIGH, "Sidedef %d has a bad sector\n", i);
+			sd->sector = NULL;
+		}
+		else
+		{
+			sd->sector = sec = &sectors[SHORT(msd->sector)];
+		}
 		switch (sidetemp[i].special)
 		{
 		case Transfer_Heights:	// variable colormap via 242 linedef
@@ -1212,7 +1225,7 @@ void P_LoadBlockMap (int lump)
 {
 	int count;
 	
-	if (*genblockmap ||
+	if (genblockmap ||
 		(count = W_LumpLength(lump)/2) >= 0x10000 ||
 		Args.CheckParm("-blockmap") ||
 		W_LumpLength (lump) == 0)
@@ -1273,7 +1286,7 @@ void P_GroupLines ()
 	line_t* 			li;
 	sector_t*			sector;
 	DBoundingBox		bbox;
-	int 				block;
+	bool				flaggedNoFronts = false;
 		
 	// look up sector number for each subsector
 	for (i = 0; i < numsubsectors; i++)
@@ -1284,14 +1297,30 @@ void P_GroupLines ()
 	total = 0;
 	for (i = 0; i < numlines; i++, li++)
 	{
-		li->frontsector->linecount++;
-		total++;
+		if (li->frontsector == NULL)
+		{
+			if (!flaggedNoFronts)
+			{
+				flaggedNoFronts = true;
+				Printf ("The following lines do not have a frontsector:\n");
+			}
+			Printf (" %d\n", i);
+		}
+		else
+		{
+			li->frontsector->linecount++;
+			total++;
+		}
 
 		if (li->backsector && li->backsector != li->frontsector)
 		{
 			li->backsector->linecount++;
 			total++;
 		}
+	}
+	if (flaggedNoFronts)
+	{
+		I_Error ("This map contains errors that must be fixed.\n");
 	}
 		
 	// build line tables for each sector		
@@ -1319,7 +1348,10 @@ void P_GroupLines ()
 		// set the soundorg to the middle of the bounding box
 		sector->soundorg[0] = (bbox.Right()+bbox.Left())/2;
 		sector->soundorg[1] = (bbox.Top()+bbox.Bottom())/2;
-				
+		
+#if 0
+		int block;
+
 		// adjust bounding box to map blocks
 		block = (bbox.Top()-bmaporgy+MAXRADIUS)>>MAPBLOCKSHIFT;
 		block = block >= bmapheight ? bmapheight-1 : block;
@@ -1336,6 +1368,7 @@ void P_GroupLines ()
 		block = (bbox.Left()-bmaporgx-MAXRADIUS)>>MAPBLOCKSHIFT;
 		block = block < 0 ? 0 : block;
 		//sector->blockbox.Left()=block;
+#endif
 	}
 }
 
@@ -1477,7 +1510,7 @@ void P_SetupLevel (char *lumpname, int position)
 	PO_Init ();	// Initialize the polyobjs
 
 	// if deathmatch, randomly spawn the active players
-	if (*deathmatch)
+	if (deathmatch)
 	{
 		for (i=0 ; i<MAXPLAYERS ; i++)
 		{

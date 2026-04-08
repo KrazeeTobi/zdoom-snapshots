@@ -601,7 +601,7 @@ void F_CastDrawer (void)
 	sprdef = &sprites[castsprite];
 	sprframe = &sprdef->spriteframes[caststate->GetFrame()];
 	lump = sprframe->lump[0];
-	flip = (BOOL)sprframe->flip[0];
+	flip = (BOOL)sprframe->flip & 1;
 						
 	patch = (patch_t *)W_CacheLumpNum (lump, PU_CACHE);
 	if (flip)

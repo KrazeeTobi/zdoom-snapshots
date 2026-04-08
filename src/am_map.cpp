@@ -529,7 +529,7 @@ static void AM_initColors (BOOL overlayed)
 		NotSeenColor = TSWallColor = am_ovunseencolor.GetIndex ();
 		IntraTeleportColor = InterTeleportColor = am_ovtelecolor.GetIndex ();
 	}
-	else if (*am_usecustomcolors)
+	else if (am_usecustomcolors)
 	{
 		/* Use the custom colors in the am_* cvars */
 		Background = am_backcolor.GetIndex ();
@@ -546,7 +546,7 @@ static void AM_initColors (BOOL overlayed)
 		InterTeleportColor = am_interlevelcolor.GetIndex ();
 		IntraTeleportColor = am_intralevelcolor.GetIndex ();
 
-		DWORD ba = *am_backcolor;
+		DWORD ba = am_backcolor;
 
 		int r = RPART(ba) - 16;
 		int g = GPART(ba) - 16;
@@ -733,11 +733,11 @@ CCMD (togglemap)
 	if (!automapactive)
 	{
 		AM_Start ();
-		viewactive = (*am_overlay != 0.f);
+		viewactive = (am_overlay != 0.f);
 	}
 	else
 	{
-		if (*am_overlay && viewactive)
+		if (am_overlay && viewactive)
 		{
 			viewactive = false;
 			SB_state = screen->GetPageCount ();
@@ -1561,7 +1561,7 @@ void AM_drawGrid (int color)
 	{
 		ml.a.x = x;
 		ml.b.x = x;
-		if (*am_rotate)
+		if (am_rotate)
 		{
 			AM_rotatePoint (&ml.a.x, &ml.a.y);
 			AM_rotatePoint (&ml.b.x, &ml.b.y);
@@ -1583,7 +1583,7 @@ void AM_drawGrid (int color)
 	{
 		ml.a.y = y;
 		ml.b.y = y;
-		if (*am_rotate)
+		if (am_rotate)
 		{
 			AM_rotatePoint (&ml.a.x, &ml.a.y);
 			AM_rotatePoint (&ml.b.x, &ml.b.y);
@@ -1608,7 +1608,7 @@ void AM_drawWalls ()
 		l.b.x = lines[i].v2->x;
 		l.b.y = lines[i].v2->y;
 
-		if (*am_rotate)
+		if (am_rotate)
 		{
 			AM_rotatePoint (&l.a.x, &l.a.y);
 			AM_rotatePoint (&l.b.x, &l.b.y);
@@ -1756,7 +1756,7 @@ void AM_drawPlayers ()
 
 	if (!multiplayer)
 	{
-		if (*am_rotate)
+		if (am_rotate)
 			angle = ANG90;
 		else
 			angle = players[consoleplayer].camera->angle;
@@ -1779,7 +1779,7 @@ void AM_drawPlayers ()
 		mpoint_t pt;
 
 		if (!playeringame[i] ||
-			(*deathmatch && !demoplayback) && p != players[consoleplayer].camera->player)
+			(deathmatch && !demoplayback) && p != players[consoleplayer].camera->player)
 		{
 			continue;
 		}
@@ -1794,7 +1794,7 @@ void AM_drawPlayers ()
 		pt.y = p->mo->y;
 		angle = p->mo->angle;
 
-		if (*am_rotate)
+		if (am_rotate)
 		{
 			AM_rotatePoint (&pt.x, &pt.y);
 			angle -= players[consoleplayer].camera->angle - ANG90;
@@ -1822,7 +1822,7 @@ void AM_drawThings (int color)
 			p.y = t->y;
 			angle = t->angle;
 
-			if (*am_rotate)
+			if (am_rotate)
 			{
 				AM_rotatePoint (&p.x, &p.y);
 				angle += ANG90 - players[consoleplayer].camera->angle;
@@ -1853,7 +1853,7 @@ void AM_drawMarks ()
 			pt.x = markpoints[i].x;
 			pt.y = markpoints[i].y;
 
-			if (*am_rotate)
+			if (am_rotate)
 				AM_rotatePoint (&pt.x, &pt.y);
 
 			fx = CXMTOF(pt.x);
@@ -1897,7 +1897,7 @@ void AM_Drawer ()
 		f_w = realviewwidth;
 		f_h = realviewheight;
 		f_p = screen->GetPitch ();
-		WeightingScale = (int)(*am_ovtrans * 256.f);
+		WeightingScale = (int)(am_ovtrans * 256.f);
 		if (WeightingScale < 0 || WeightingScale >= 256)
 		{
 			WeightingScale = 0;

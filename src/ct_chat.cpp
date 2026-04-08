@@ -114,53 +114,58 @@ void CT_Stop ()
 
 BOOL CT_Responder (event_t *ev)
 {
-	if (chatmodeon && ev->type == EV_GUI_Event && 
-		(ev->subtype == EV_GUI_KeyDown || ev->subtype == EV_GUI_KeyRepeat))
+	if (chatmodeon && ev->type == EV_GUI_Event)
 	{
-		// send a macro
-		if ((ev->data3 & GKM_ALT) && (ev->data1 >= '0' && ev->data1 <= '9'))
+		if (ev->subtype == EV_GUI_KeyDown || ev->subtype == EV_GUI_KeyRepeat)
 		{
-			ShoveChatStr (**chat_macros[ev->data1 - '0'], chatmodeon - 1);
-			CT_Stop ();
-			return true;
-		}
-		if (ev->data1 == '\r')
-		{
-			ShoveChatStr ((char *)ChatQueue, chatmodeon - 1);
-			CT_Stop ();
-			return true;
-		}
-		else if (ev->data1 == GK_ESCAPE)
-		{
-			CT_Stop ();
-			return true;
-		}
-		else if (ev->data1 == '\b')
-		{
-			CT_BackSpace ();
-			return true;
-		}
-		else if (ev->data1 == 'C' && (ev->data3 & GKM_CTRL))
-		{
-			I_PutInClipboard ((char *)ChatQueue);
-		}
-		else if (ev->data1 == 'V' && (ev->data3 & GKM_CTRL))
-		{
-			char *clip = I_GetFromClipboard ();
-			if (clip != NULL)
+			if (ev->data1 == '\r')
 			{
-				char *clip_p = clip;
-				strtok (clip, "\n\r\b");
-				while (*clip_p)
+				ShoveChatStr ((char *)ChatQueue, chatmodeon - 1);
+				CT_Stop ();
+				return true;
+			}
+			else if (ev->data1 == GK_ESCAPE)
+			{
+				CT_Stop ();
+				return true;
+			}
+			else if (ev->data1 == '\b')
+			{
+				CT_BackSpace ();
+				return true;
+			}
+			else if (ev->data1 == 'C' && (ev->data3 & GKM_CTRL))
+			{
+				I_PutInClipboard ((char *)ChatQueue);
+				return true;
+			}
+			else if (ev->data1 == 'V' && (ev->data3 & GKM_CTRL))
+			{
+				char *clip = I_GetFromClipboard ();
+				if (clip != NULL)
 				{
-					CT_AddChar (*clip_p++);
+					char *clip_p = clip;
+					strtok (clip, "\n\r\b");
+					while (*clip_p)
+					{
+						CT_AddChar (*clip_p++);
+					}
+					delete[] clip;
 				}
-				delete[] clip;
 			}
 		}
-		else
+		else if (ev->subtype == EV_GUI_Char)
 		{
-			CT_AddChar (ev->data2);
+			// send a macro
+			if (ev->data2 && (ev->data1 >= '0' && ev->data1 <= '9'))
+			{
+				ShoveChatStr (*chat_macros[ev->data1 - '0'], chatmodeon - 1);
+				CT_Stop ();
+			}
+			else
+			{
+				CT_AddChar (ev->data1);
+			}
 			return true;
 		}
 	}
@@ -181,7 +186,7 @@ void CT_Drawer (void)
 		static const char *prompt = "Say: ";
 		int i, x, scalex, y, promptwidth;
 
-		if (*con_scaletext)
+		if (con_scaletext)
 		{
 			scalex = CleanXfac;
 			y = (!viewactive ? -30 : -10) * CleanYfac;
@@ -216,7 +221,7 @@ void CT_Drawer (void)
 		// draw the prompt, text, and cursor
 		ChatQueue[len] = gameinfo.gametype == GAME_Doom ? '_' : '[';
 		ChatQueue[len+1] = '\0';
-		if (*con_scaletext)
+		if (con_scaletext)
 		{
 			screen->DrawTextClean (CR_GREEN, 0, y, prompt);
 			screen->DrawTextClean (CR_GREY, promptwidth, y, ChatQueue + i);
@@ -231,8 +236,8 @@ void CT_Drawer (void)
 		BorderTopRefresh = screen->GetPageCount ();
 	}
 
-	if (*deathmatch &&
-		((Actions[ACTION_SHOWSCORES]) ||
+	if (deathmatch &&
+		(Button_ShowScores.bDown ||
 		 players[consoleplayer].camera->health <= 0))
 	{
 		HU_DrawScores (&players[consoleplayer]);
@@ -301,12 +306,7 @@ CCMD (messagemode)
 
 CCMD (say)
 {
-	if (argc > 1)
-	{
-		char *chat = BuildString (argc - 1, argv + 1);
-		ShoveChatStr (chat, 0);
-		delete[] chat;
-	}
+	ShoveChatStr (argv.AllButFirstArg(), 0);
 }
 
 CCMD (messagemode2)
@@ -321,12 +321,7 @@ CCMD (messagemode2)
 
 CCMD (say_team)
 {
-	if (argc > 1)
-	{
-		char *chat = BuildString (argc - 1, argv + 1);
-		ShoveChatStr (chat, 1);
-		delete[] chat;
-	}
+	ShoveChatStr (argv.AllButFirstArg(), 1);
 }
 
 static int STACK_ARGS compare (const void *arg1, const void *arg2)
@@ -361,7 +356,7 @@ void HU_DrawScores (player_t *player)
 		if (playeringame[i])
 		{
 			int width = screen->StringWidth (players[i].userinfo.netname);
-			if (*teamplay)
+			if (teamplay)
 				width += screen->StringWidth (
 					players[i].userinfo.team == TEAM_None ? "None"
 					: TeamNames[players[i].userinfo.team]) + 24;
@@ -376,9 +371,9 @@ void HU_DrawScores (player_t *player)
 	y = (ST_Y >> 1) - (MAXPLAYERS * 6);
 	if (y < 48) y = 48;
 
-	if (*deathmatch && *timelimit && gamestate == GS_LEVEL)
+	if (deathmatch && timelimit && gamestate == GS_LEVEL)
 	{
-		int timeleft = (int)(*timelimit * TICRATE * 60) - level.time;
+		int timeleft = (int)(timelimit * TICRATE * 60) - level.time;
 		int hours, minutes, seconds;
 
 		if (timeleft < 0)
@@ -414,7 +409,7 @@ void HU_DrawScores (player_t *player)
 			screen->DrawTextClean (sortedplayers[i] == player ? CR_GREEN : CR_BRICK,
 							 margin, y, str);
 
-			if (*teamplay && sortedplayers[i]->userinfo.team != TEAM_None)
+			if (teamplay && sortedplayers[i]->userinfo.team != TEAM_None)
 				sprintf (str, "%s (%s)", sortedplayers[i]->userinfo.netname,
 						 TeamNames[sortedplayers[i]->userinfo.team]);
 			else
