@@ -825,8 +825,8 @@ void DrawHUD()
 		{
 			if (CPlayer->LogText && *CPlayer->LogText)
 			{
-				int linelen = hudwidth<640? hudwidth-20 : 560;
-				brokenlines_t *lines = V_BreakLines (560, CPlayer->LogText);
+				int linelen = hudwidth<640? Scale(hudwidth,9,10)-40 : 560;
+				brokenlines_t *lines = V_BreakLines (linelen, CPlayer->LogText);
 				int height = 20;
 
 				screen->SetFont(SmallFont);
@@ -838,7 +838,7 @@ void DrawHUD()
 				{
 					x=hudwidth/20;
 					y=hudheight/8;
-					w=hudwidth;
+					w=hudwidth-2*x;
 				}
 				else
 				{
@@ -1016,7 +1016,5 @@ AT_GAME_SET(Hud)
 	}
 
 	SetIcon("ArmorBonus", "BON2A0");	// Just a personal preference. ;)
-	SetIcon("Fist", "PUNGC0");			// PUNGA0 is not the best sprite for this
-	SetIcon("Pistol", "I_PISTOL");		// There is nothing inside Doom.wad that looks good.
 }
 

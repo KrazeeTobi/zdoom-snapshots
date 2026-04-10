@@ -294,12 +294,12 @@ void GLSprite::SetThingColor(PalEntry pe)
 	{
 		if (Colormap.LightColor.a==CM_INVERT || Colormap.LightColor.a==CM_LITE)
 		{
-			gray=255-((red*77 + green*143 + blue*37)>>8);
+			gray=255-((red*77 + green*143 + blue*36)>>8);
 			red=green=blue=clamp<int>(gray,0,255);
 		}
 		else if (Colormap.LightColor.a==CM_GOLDMAP)
 		{
-			gray=(red*77 + green*143 + blue*37)>>8;
+			gray=(red*77 + green*143 + blue*36)>>8;
 			red=clamp<int>(gray+(gray>>1),0,255);
 			green=clamp<int>(gray,0,255);
 			blue=0;
@@ -307,10 +307,10 @@ void GLSprite::SetThingColor(PalEntry pe)
 		else if (Colormap.LightColor.a>=CM_DESAT1 && Colormap.LightColor.a<=CM_DESAT31)
 		{
 			fac=Colormap.LightColor.a-CM_DESAT0;
-			gray=(red*77 + green*143 + blue*37)>>8;
-			red  = (red  *(32-fac)+ gray*fac)/32;
-			green= (green*(32-fac)+ gray*fac)/32;
-			blue = (blue *(32-fac)+ gray*fac)/32;
+			gray=(red*77 + green*143 + blue*36)>>8;
+			red  = (red  *(31-fac)+ gray*fac)/31;
+			green= (green*(31-fac)+ gray*fac)/31;
+			blue = (blue *(31-fac)+ gray*fac)/31;
 		}
 	}
 

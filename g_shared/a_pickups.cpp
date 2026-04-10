@@ -363,7 +363,7 @@ void A_RestoreSpecialPosition (AActor *self)
 		self->z = (self->SpawnPoint[2] << FRACBITS) + self->floorz;
 		if (self->flags2 & MF2_FLOATBOB)
 		{
-			self->z += FloatBobOffsets[(self->FloatBobPhase + level.time) & 63];
+			self->z += FloatBobOffsets[(self->FloatBobPhase + level.thisleveltime) & 63];
 		}
 	}
 }
@@ -498,7 +498,7 @@ void AInventory::Serialize (FArchive &arc)
 
 bool AInventory::SpecialDropAction (AActor *dropper)
 {
-	return CallStateChain (dropper, DropState);
+	return false;
 }
 
 //===========================================================================
@@ -787,19 +787,6 @@ bool AInventory::Use (bool pickup)
 
 //===========================================================================
 //
-// AInventory :: DoUse
-//
-//===========================================================================
-
-bool AInventory::DoUse (bool pickup)
-{
-	bool useresult = CallStateChain (Owner, UseState);
-	useresult |= Use(pickup);
-	return useresult;
-}
-
-//===========================================================================
-//
 // AInventory :: Hide
 //
 // Hides this actor until it's time to respawn again. 
@@ -843,7 +830,7 @@ void AInventory::Touch (AActor *toucher)
 		toucher = toucher->player->mo;
 	}
 
-	if (!DoTryPickup (toucher))
+	if (!TryPickup (toucher))
 		return;
 
 	if (!(ItemFlags & IF_QUIET))
@@ -1108,7 +1095,7 @@ bool AInventory::TryPickup (AActor *toucher)
 		}
 		// The item is placed in the inventory just long enough to be used.
 		toucher->AddInventory (this);
-		bool usegood = DoUse (true);
+		bool usegood = Use (true);
 		toucher->RemoveInventory (this);
 
 		if (usegood || (ItemFlags & IF_ALWAYSPICKUP))
@@ -1132,7 +1119,7 @@ bool AInventory::TryPickup (AActor *toucher)
 		copy->AttachToOwner (toucher);
 		if (ItemFlags & IF_AUTOACTIVATE)
 		{
-			if (copy->DoUse (true))
+			if (copy->Use (true))
 			{
 				if (--copy->Amount <= 0)
 				{
@@ -1144,20 +1131,6 @@ bool AInventory::TryPickup (AActor *toucher)
 	}
 	return true;
 }
-
-//===========================================================================
-//
-// AInventory :: DoUse
-//
-//===========================================================================
-
-bool AInventory::DoTryPickup (AActor *toucher)
-{
-	bool useresult = CallStateChain (toucher, PickupState);
-	useresult |= TryPickup(toucher);
-	return useresult;
-}
-
 
 //===========================================================================
 //
@@ -2001,4 +1974,31 @@ END_DEFAULTS
 const char *ACommunicator::PickupMessage ()
 {
 	return "You picked up the Communicator";
+}
+
+
+//===========================================================================
+//
+// ACustomInventory
+// 
+// An item that supports the pickup, use and drop states
+//
+//===========================================================================
+IMPLEMENT_ABSTRACT_ACTOR(ACustomInventory);
+
+bool ACustomInventory::TryPickup (AActor *toucher)
+{
+	bool useresult = CallStateChain (toucher, PickupState);
+	useresult |= Super::TryPickup(toucher);
+	return useresult;
+}
+
+bool ACustomInventory::Use (bool pickup)
+{
+	return CallStateChain (Owner, UseState);
+}
+
+bool ACustomInventory::SpecialDropAction (AActor *dropper)
+{
+	return CallStateChain (dropper, DropState);
 }

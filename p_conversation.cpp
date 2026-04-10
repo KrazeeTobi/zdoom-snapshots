@@ -959,7 +959,7 @@ static void PickConversationReply ()
 			item->flags &= ~MF_COUNTITEM;
 		}
 		item->flags |= MF_DROPPED;
-		if (!item->DoTryPickup (players[consoleplayer].mo))
+		if (!item->TryPickup (players[consoleplayer].mo))
 		{
 			item->Destroy ();
 			takestuff = false;

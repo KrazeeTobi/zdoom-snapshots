@@ -5619,6 +5619,12 @@
 				RelativePath=".\gl\gl_models.cpp">
 			</File>
 			<File
+				RelativePath=".\gl\gl_models_md2.cpp">
+			</File>
+			<File
+				RelativePath=".\gl\gl_models_md3.cpp">
+			</File>
+			<File
 				RelativePath=".\gl\gl_nodes.cpp">
 			</File>
 			<File

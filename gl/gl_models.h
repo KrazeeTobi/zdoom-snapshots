@@ -5,28 +5,16 @@
 
 #define MAX_LODS			4
 
+enum { VX, VY, VZ };
 
-struct FTriangle
-{
-	short           vertexIndices[3];
-	short           textureIndices[3];
-};
+static const float rModelAspectMod = 1 / 1.2f;	//.833334f;
 
-struct FModelVertex
-{
-	float           xyz[3];
-};
+#define MD2_MAGIC			0x32504449
+#define DMD_MAGIC			0x4D444D44
+#define MD3_MAGIC			0x33504449
+#define NUMVERTEXNORMALS	162
 
-struct FTexCoord
-{
-	short           s, t;
-};
-
-struct FGLCommandVertex
-{
-	float           s, t;
-	int             index;
-};
+FTexture * LoadSkin(const char * path, const char * fn);
 
 
 class FModel
@@ -45,11 +33,35 @@ public:
 class FDMDModel : public FModel
 {
 protected:
+
+	struct FTriangle
+	{
+		short           vertexIndices[3];
+		short           textureIndices[3];
+	};
+
+
 	struct DMDHeader
 	{
 		int             magic;
 		int             version;
 		int             flags;
+	};
+
+	struct FModelVertex
+	{
+		float           xyz[3];
+	};
+
+	struct FTexCoord
+	{
+		short           s, t;
+	};
+
+	struct FGLCommandVertex
+	{
+		float           s, t;
+		int             index;
 	};
 
 	struct DMDInfo
@@ -68,26 +80,6 @@ protected:
 		int             offsetLODs;
 		int             offsetEnd;
 	};
-
-	struct DMDSkin
-	{
-		char            * name;
-		FTexture		* texture;
-		int             id;
-
-		DMDSkin()
-		{
-			name = NULL;
-			texture = NULL;
-			id = 0;
-		}
-
-		~DMDSkin()
-		{
-			if (name) delete [] name;
-			if (texture) delete [] texture;
-		}
-	} ;
 
 	struct ModelFrame
 	{
@@ -125,7 +117,7 @@ protected:
 	bool			loaded;
 	DMDHeader	    header;
 	DMDInfo			info;
-	DMDSkin *		skins;
+	FTexture **		skins;
 	FTexCoord *		texCoords;
 	
 	ModelFrame  *	frames;
@@ -133,6 +125,8 @@ protected:
 	DMDLoD			lods[MAX_LODS];
 	char           *vertexUsage;   // Bitfield for each vertex.
 	bool			allowTexComp;  // Allow texture compression with this.
+
+	static void RenderGLCommands(void *glCommands, unsigned int numVertices,FModelVertex * vertices);
 
 public:
 	FDMDModel() { loaded = false; }
@@ -154,6 +148,85 @@ public:
 	virtual bool Load(const char * fn, const char * buffer, int length);
 
 };
+
+
+class FMD3Model : public FModel
+{
+	struct MD3Tag
+	{
+		// Currently I have no use for this
+	};
+
+	struct MD3TexCoord
+	{
+		float s,t;
+	};
+
+	struct MD3Vertex
+	{
+		float x,y,z;
+		float nx,ny,nz;
+	};
+
+	struct MD3Triangle
+	{
+		int VertIndex[3];
+	};
+
+	struct MD3Surface
+	{
+		int numVertices;
+		int numTriangles;
+		int numSkins;
+
+		FTexture ** skins;
+		MD3Triangle * tris;
+		MD3TexCoord * texcoords;
+		MD3Vertex * vertices;
+
+		MD3Surface()
+		{
+			tris=NULL;
+			vertices=NULL;
+			texcoords=NULL;
+		}
+
+		~MD3Surface()
+		{
+			if (tris) delete [] tris;
+			if (vertices) delete [] vertices;
+			if (texcoords) delete [] texcoords;
+			for (int i=0;i<numSkins;i++) delete skins[i];
+			if (skins) delete [] skins;
+		}
+	};
+
+	struct MD3Frame
+	{
+		// The bounding box information is of no use in the Doom engine
+		// That will still be done with the actor's size information.
+		char Name[16];
+		float origin[3];
+	};
+
+	int numFrames;
+	int numTags;
+	int numSurfaces;
+
+	MD3Frame * frames;
+	MD3Surface * surfaces;
+
+	void RenderTriangles(MD3Surface * surf, MD3Vertex * vert);
+
+public:
+	FMD3Model() { }
+	virtual ~FMD3Model() { }
+
+	virtual bool Load(const char * fn, const char * buffer, int length);
+	virtual int FindFrame(const char * name);
+	virtual void RenderFrame(FTexture * skin, int frame, int cm);
+};
+
 
 
 #define MAX_MODELS_PER_FRAME 4

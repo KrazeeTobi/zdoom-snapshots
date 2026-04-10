@@ -244,7 +244,7 @@ void SC_SetCMode (bool cmode)
 //
 //==========================================================================
 
-BOOL SC_GetString (void)
+BOOL SC_GetString (bool noescape)
 {
 	char *text;
 	BOOL foundToken;
@@ -324,7 +324,8 @@ BOOL SC_GetString (void)
 		ScriptPtr++;
 		while (*ScriptPtr != ASCII_QUOTE)
 		{
-			if (*ScriptPtr=='\\' && ScriptPtr[1]=='"')
+			// Hack alert: Do not allow escaped quotation marks when parsing DECORATE!
+			if (*ScriptPtr=='\\' && ScriptPtr[1]=='"' && !noescape)
 			{
 				*text++ = '"';
 				ScriptPtr+=2;

@@ -952,7 +952,7 @@ void A_GiveInventory(AActor * self)
 			item->flags&=~MF_COUNTITEM;
 			level.total_items--;
 		}
-		if (!item->DoTryPickup (self))
+		if (!item->TryPickup (self))
 		{
 			item->Destroy ();
 			StateCall.Result = false;

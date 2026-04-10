@@ -299,7 +299,7 @@ void ClientObituary (AActor *self, AActor *inflictor, AActor *attacker)
 					message = inflictor->GetObituary ();
 				}
 			}
-			if (message == NULL)
+			if (message == NULL && attacker->player->ReadyWeapon!=NULL)
 			{
 				message = attacker->player->ReadyWeapon->GetClass()->Meta.GetMetaString (AMETA_Obituary);
 				if (message == NULL)

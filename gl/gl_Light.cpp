@@ -119,7 +119,7 @@ void gl_SetFogParams(int _fogdensity, PalEntry _outsidefogcolor, int _outsidefog
 {
 	fogdensity=_fogdensity;
 	outsidefogcolor=_outsidefogcolor;
-	outsidefogdensity=_outsidefogdensity? _outsidefogdensity : _fogdensity;
+	outsidefogdensity=_outsidefogdensity? _outsidefogdensity : _fogdensity? _fogdensity:70;
 	skyfog=_skyfog;
 
 	outsidefogdensity>>=1;
@@ -460,9 +460,9 @@ void gl_SetSpriteLight(fixed_t x, fixed_t y, fixed_t z, subsector_t * subsec, in
 	{
 		float gray=(tr*77 + tg*143 + tb*37)/257;
 
-		tr= (tr*(32-desaturation)+ gray*desaturation)/32;
-		tg= (tg*(32-desaturation)+ gray*desaturation)/32;
-		tb= (tb*(32-desaturation)+ gray*desaturation)/32;
+		tr= (tr*(31-desaturation)+ gray*desaturation)/31;
+		tg= (tg*(31-desaturation)+ gray*desaturation)/31;
+		tb= (tb*(31-desaturation)+ gray*desaturation)/31;
 	}
 
 	gl_GetLightColor(lightlevel,red,green,blue,&r,&g,&b, full);
@@ -477,7 +477,7 @@ void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int 
 { 
 	subsector_t * subsec = R_PointInSubsector2(thing->x, thing->y);
 
-	gl_SetSpriteLight(thing->x, thing->y, (thing->z+thing->height)>>1, subsec, lightlevel, red, green, blue, desaturation, alpha, ThingColor, full);
+	gl_SetSpriteLight(thing->x, thing->y, thing->z+(thing->height>>1), subsec, lightlevel, red, green, blue, desaturation, alpha, ThingColor, full);
 }
 
 void gl_SetSpriteLight( particle_t * thing, int lightlevel, int red, int green, int blue, int desaturation, float alpha, PalEntry ThingColor)

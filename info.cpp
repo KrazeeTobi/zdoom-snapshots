@@ -42,6 +42,7 @@
 #include "m_fixed.h"
 #include "c_dispatch.h"
 #include "autosegs.h"
+#include "a_sharedglobal.h"
 
 #include "gi.h"
 
@@ -242,6 +243,29 @@ void FActorInfo::StaticSetActorNums ()
 	{
 		TypeInfo::m_RuntimeActors[i]->ActorInfo->RegisterIDs ();
 	}
+
+	// MF_NOSECTOR is only causing problems so remap
+	// it to RF_INVISIBLE which in most cases is what
+	// this is used for anyway.
+	for (int i = 0; i < TypeInfo::m_NumTypes; i++)
+	{
+		TypeInfo * ti = TypeInfo::m_Types[i];
+
+		if (ti->ActorInfo!=NULL && !ti->IsDescendantOf(RUNTIME_CLASS(ADecal)))
+		{
+			AActor * def = GetDefaultByType(ti);
+
+			if (def->flags&MF_NOSECTOR)
+			{
+				def->flags&=~MF_NOSECTOR;
+				def->renderflags|=RF_INVISIBLE;
+			}
+		}
+	}
+	// I don't see any benefit in removing MF_NOSECTOR from the
+	// map spot because it really can inflate the sector lists in some maps.
+	AActor * def = GetDefaultByType(RUNTIME_CLASS(AMapSpot));
+	if (def) def->flags|=MF_NOSECTOR;
 }
 
 void FActorInfo::RegisterIDs ()

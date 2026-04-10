@@ -929,18 +929,19 @@ void gl_RenderPlayerView (player_t* player)
 	gl_fixedcolormap=CM_DEFAULT;
 
 	// check for special colormaps
-	if (player->camera->player) 
+	player_t * cplayer = player->camera->player;
+	if (cplayer) 
 	{
-		gl_fixedcolormap=player->camera->player->fixedcolormap;
+		gl_fixedcolormap=cplayer->fixedcolormap;
 
-		if (player->camera->player->extralight<0)
+		if (cplayer->extralight<0)
 		{
 			gl_fixedcolormap=CM_INVERT;
 			extralight=0;
 		}
 		else
 		{
-			for(AInventory * in = player->mo->Inventory; in; in = in->Inventory)
+			for(AInventory * in = cplayer->mo->Inventory; in; in = in->Inventory)
 			{
 				PalEntry color = in->GetBlend ();
 
@@ -955,12 +956,12 @@ void gl_RenderPlayerView (player_t* player)
 					gl_fixedcolormap=CM_GOLDMAP;
 					break;
 				}
-				else if (player->camera->player->fixedcolormap!=0 && player->camera->player->fixedcolormap<=NUMCOLORMAPS) 
+				else if (cplayer->fixedcolormap!=0 && cplayer->fixedcolormap<=NUMCOLORMAPS) 
 				{
 					// Need special handling for light amplifiers and invulnerability
 					if (in->IsA(RUNTIME_CLASS(APowerTorch)))
 					{
-						gl_fixedcolormap = player->camera->player->fixedcolormap + CM_TORCH;
+						gl_fixedcolormap = cplayer->fixedcolormap + CM_TORCH;
 					}
 					else if (in->IsA(RUNTIME_CLASS(APowerLightAmp)))
 					{

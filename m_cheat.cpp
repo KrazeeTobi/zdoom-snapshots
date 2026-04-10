@@ -391,7 +391,7 @@ void GiveSpawner (player_t *player, const TypeInfo *type, int amount)
 				item->Amount = MIN (amount, item->MaxAmount);
 			}
 		}
-		if (!item->DoTryPickup (player->mo))
+		if (!item->TryPickup (player->mo))
 		{
 			item->Destroy ();
 		}
@@ -508,7 +508,7 @@ void cht_Give (player_t *player, char *name, int amount)
 				if (key->KeyNumber != 0)
 				{
 					key = static_cast<AKey *>(Spawn (TypeInfo::m_Types[i], 0,0,0));
-					if (!key->DoTryPickup (player->mo))
+					if (!key->TryPickup (player->mo))
 					{
 						key->Destroy ();
 					}

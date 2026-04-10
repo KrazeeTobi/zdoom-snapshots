@@ -345,7 +345,7 @@ void ADynamicLight::Serialize(FArchive &arc)
 		{
 			float pulseTime = ANGLE_TO_FLOAT(this->angle) / TICRATE;
 			m_cycler.SetParams(args[LIGHT_SECONDARY_INTENSITY], args[LIGHT_INTENSITY], pulseTime);
-			m_lastUpdate=level.time;
+			m_lastUpdate=level.thisleveltime;
 			m_cycler.ShouldCycle(true);
 			m_cycler.SetCycleType(CYCLE_Sin);
 			m_currentIntensity = m_cycler.GetVal();
@@ -413,7 +413,7 @@ void ADynamicLight::Activate(AActor *activator)
 	{
 		float pulseTime = ANGLE_TO_FLOAT(this->angle) / TICRATE;
 		
-		m_lastUpdate = level.time;
+		m_lastUpdate = level.thisleveltime;
 		m_cycler.SetParams(args[LIGHT_SECONDARY_INTENSITY], args[LIGHT_INTENSITY], pulseTime);
 		m_cycler.ShouldCycle(true);
 		m_cycler.SetCycleType(CYCLE_Sin);
@@ -460,9 +460,9 @@ void ADynamicLight::Tick()
 	{
 	case PulseLight:
 	{
-		float diff = (level.time - m_lastUpdate) / (float)TICRATE;
+		float diff = (level.thisleveltime - m_lastUpdate) / (float)TICRATE;
 		
-		m_lastUpdate = level.time;
+		m_lastUpdate = level.thisleveltime;
 		m_cycler.Update(diff);
 		m_currentIntensity = m_cycler.GetVal();
 		break;

@@ -1,3 +1,59 @@
+7. Jan 2006
+- Removed the MF_NOSECTOR flag from everything except the decal and the regular
+  map spot. This flag was only causing problems because any check depending on
+  the sector lists were skipped for thse things. Unlike Doom there's much more
+  that uses these lists today.
+- Fixed: The obituary code could crash when a player was killed by another
+  player who happened not to have a ready weapon at the precise moment of death.
+- Added an MD3 renderer.
+
+6. Jan 2006
+- Moved Pickup, Use and Drop states into a CustomInventory subclass to bring
+  the behavior in line with upcoming ZDoom versions.
+- Added an MD3 loader and cleaned up the model code.
+
+5. Jan 2006
+- Added support for true color textures as raw graphics and in the TX_ namespace.
+  These textures will only work in GL mode.
+  
+3. Jan 2006
+- Fixed: Added some NULL pointer checks to the texture code. Several places 
+  where it was possible that no texture was selected checked some texture 
+  properties with this invalid pointer.
+
+30. Dec 2005
+- Moved some previously hard coded icon definitions for the alternative HUD
+  into the ALTHUDCF lump.
+
+27. Dec 2005
+- Added special escape character handling to SC_GetString. Normally it should be
+  on but for sprite frame sequences in DECORATE it must not be used at all because
+  they have to treat the backslash as a regular character.
+  
+25. Dec 2005
+- Fixed: dynamic lights used the hub timer, not the level timer.
+- Fixed: Floatbobbing used the hub timer, not the level timer.
+- Fixed: Gravity calculations for floatbobbing objects had to be reverted
+  to ZDoom's method because it is able to reset the timer if it desyncs.
+
+23. Dec 2005
+- Fixed: The fixed colormap selection code didn't properly check the player's
+  camera.
+- Fixed: The calculations for desaturation never fully desaturated the picture
+  because they treated a value of 32 as fully desaturated, not 31 as was intended.
+  
+21. Dec 2005
+- Added MF2_NOTELEPORT to ABlood.
+
+20. Dec 2005
+- Fixed: Some scaling calculations for the alternative HUD were wrong.
+- Fixed: Handling of the outsidefog MAPINFO option was broken.
+
+16. Dec 2005
+- Fixed: The alternate HUD didn't update the inventory's start item
+- Fixed: The model lookup code didn't use the hash chains properly.
+
+
 14. Dec 2005
 - Fixed: The code that moved objects out of walls contained several
   serious bugs.

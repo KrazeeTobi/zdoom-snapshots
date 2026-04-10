@@ -1458,7 +1458,7 @@ static int ProcessStates(FActorInfo * actor, AActor * defaults, Baggage &bag, in
 
 			memcpy(state.sprite.name, statestring, 4);
 			state.Misc1=state.Misc2=0;
-			SC_MustGetString();
+			SC_GetString(true);
 			strncpy(statestring, sc_String + 1, 255);
 			statestrp = statestring;
 			state.Frame=(*sc_String&223)-'A';

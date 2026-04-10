@@ -1282,7 +1282,7 @@ BOOL P_TestMobjLocation (AActor *mobj)
 		fixed_t z = mobj->z;
 		if (mobj->flags2 & MF2_FLOATBOB)
 		{
-			z -= FloatBobOffsets[(mobj->FloatBobPhase + level.time - 1) & 63];
+			z -= FloatBobOffsets[(mobj->FloatBobPhase + level.thisleveltime - 1) & 63];
 		}
 		if ((z < mobj->floorz) || (z + mobj->height > mobj->ceilingz))
 		{ // Bad Z

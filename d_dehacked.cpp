@@ -2567,7 +2567,7 @@ bool ADehackedPickup::TryPickup (AActor *toucher)
 		{
 			RealPickup->flags &= ~MF_DROPPED;
 		}
-		if (!RealPickup->DoTryPickup (toucher))
+		if (!RealPickup->TryPickup (toucher))
 		{
 			RealPickup->Destroy ();
 			RealPickup = NULL;

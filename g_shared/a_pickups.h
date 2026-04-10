@@ -110,7 +110,6 @@ public:
 	virtual void DoPickupSpecial (AActor *toucher);
 	virtual bool SpecialDropAction (AActor *dropper);
 	virtual bool DrawPowerup (int x, int y);
-	bool DoTryPickup (AActor *toucher);
 
 	virtual const char *PickupMessage ();
 	virtual void PlayPickupSound (AActor *toucher);
@@ -144,7 +143,7 @@ public:
 	virtual void GoAwayAndDie ();
 	virtual bool HandlePickup (AInventory *item);
 
-	bool DoUse (bool pickup);
+	virtual bool Use (bool pickup);
 
 	virtual void AbsorbDamage (int damage, int damageType, int &newdamage);
 	virtual void AlterWeaponSprite (vissprite_t *vis);
@@ -152,7 +151,6 @@ public:
 	virtual PalEntry GetBlend ();
 
 private:
-	virtual bool Use (bool pickup);	// Use DoUse instead to call the use state as well!
 
 	static int StaticLastMessageTic;
 	static const char *StaticLastMessage;
@@ -399,4 +397,13 @@ public:
 	const char *PickupMessage ();
 };
 
+
+class ACustomInventory : public AInventory
+{
+	DECLARE_ACTOR (ACustomInventory, AInventory)
+public:
+	virtual bool TryPickup (AActor *toucher);
+	virtual bool Use (bool pickup);
+	virtual bool SpecialDropAction (AActor *dropper);
+};
 #endif //__A_PICKUPS_H__

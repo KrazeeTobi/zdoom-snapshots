@@ -111,6 +111,47 @@ const BYTE *FHiresTexture::GetPixels ()
 
 //==========================================================================
 //
+// Tries to load a lump with DevIL and creates a texture if successful
+//
+//==========================================================================
+FHiresTexture * FHiresTexture::TryLoad(int lumpnum)
+{
+	unsigned char *buffer = NULL;
+	ILuint imgID;
+	FMemLump memLump;
+	char name[9];
+
+	if (Wads.LumpLength(lumpnum)==0) return NULL;
+
+	memLump = Wads.ReadLump(lumpnum);
+
+	ilGenImages(1, &imgID);
+	ilBindImage(imgID);
+	if (ilLoadL(IL_TYPE_UNKNOWN, memLump.GetMem(), Wads.LumpLength(lumpnum)))
+	{
+		int width = ilGetInteger(IL_IMAGE_WIDTH);
+		int height = ilGetInteger(IL_IMAGE_HEIGHT);
+
+		ilDeleteImages(1, &imgID);
+
+		Wads.GetLumpName(name, lumpnum);
+		FHiresTexture * tex = new FHiresTexture(name, width, height);
+		if (tex)
+		{
+			FGLTexture * gltex = FGLTexture::ValidateTexture(tex);
+			if (gltex)
+			{
+				gltex->HiresLump=lumpnum;
+			}
+		}
+		return tex;
+	}
+	ilDeleteImages(1, &imgID);
+	return NULL;
+}
+
+//==========================================================================
+//
 // Checks for the presence of a hires texture replacement
 //
 //==========================================================================

@@ -9,7 +9,7 @@ void SC_Close (void);
 void SC_SetCMode (bool cmode);
 void SC_SavePos (void);
 void SC_RestorePos (void);
-BOOL SC_GetString (void);
+BOOL SC_GetString (bool noescape=false);
 void SC_MustGetString (void);
 void SC_MustGetStringName (const char *name);
 bool SC_CheckString (const char *name);

@@ -39,6 +39,7 @@
 
 #include "p_local.h"
 #include "p_lnspec.h"
+#include "a_sharedglobal.h"
 #include "gl/gl_struct.h"
 #include "gl/gl_renderstruct.h"
 #include "gl/gl_portal.h"
@@ -705,7 +706,7 @@ void GLWall::PutWall(bool translucent)
 		}
 		else if ( !gl_fixedcolormap && passflag[type]==1)
 		{
-			list = (!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE) ? GLDL_LITFOG : gltexture->tex->bMasked? GLDL_MASKED : GLDL_LIT;
+			list = (!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE) ? GLDL_LITFOG : (gltexture && gltexture->tex->bMasked)? GLDL_MASKED : GLDL_LIT;
 		}
 		else if (type==RENDERWALL_M2S && !gl_fixedcolormap)
 		{
@@ -1832,7 +1833,7 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 #ifdef _DEBUG
 	if (seg->linedef-lines==break_renderlinedef && IsDebuggerPresent())
 		__asm int 3;	
-	if (seg->linedef-lines==1415)
+	if (seg->linedef-lines==104)
 		__asm nop
 #endif
 

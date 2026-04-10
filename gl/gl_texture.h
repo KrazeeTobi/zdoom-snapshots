@@ -203,6 +203,8 @@ public:
 	virtual const BYTE *GetColumn (unsigned int column, const Span **spans_out);
 	virtual const BYTE *GetPixels ();
 	virtual void Unload ();
+
+	static FHiresTexture * TryLoad(int lumpnum);
 };
 
 

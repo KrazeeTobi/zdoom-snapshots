@@ -182,19 +182,19 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 			if (Colormap.LightColor.a>=1 && Colormap.LightColor.a<=CM_DESAT31)
 			{
 				int fac=Colormap.LightColor.a-CM_DESAT0;
-				float gray=(red*77 + green*143 + blue*37)/255.0f;
+				float gray=(red*77 + green*143 + blue*37)/257.0f;
 
-				red =   (red  *(32-fac)+ gray*fac)/32;
-				green = (green*(32-fac)+ gray*fac)/32;
-				blue =  (blue *(32-fac)+ gray*fac)/32;
+				red =   (red  *(31-fac)+ gray*fac)/31;
+				green = (green*(31-fac)+ gray*fac)/31;
+				blue =  (blue *(31-fac)+ gray*fac)/31;
 			}
 			else if (Colormap.LightColor.a==CM_INVERT)
 			{
-				red=green=blue=clamp<float>(255-(red*77 + green*143 + blue*37)/255.0f,0.0f,1.0f);
+				red=green=blue=clamp<float>(255-(red*77 + green*143 + blue*37)/257.0f,0.0f,1.0f);
 			}
 			else if (Colormap.LightColor.a==CM_GOLDMAP)
 			{
-				float gray=(red*77 + green*143 + blue*37)/255.0f;
+				float gray=(red*77 + green*143 + blue*37)/257.0f;
 				red=clamp<float>(gray*1.5f, 0.0f, 1.0f);
 				green=clamp<float>(gray, 0.0f, 1.0f);
 				blue=0;

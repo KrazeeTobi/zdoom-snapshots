@@ -695,7 +695,7 @@ bool AActor::UseInventory (AInventory *item)
 	}
 	// Changed this call to an intermediate function
 	// so use state calls can be done independently of subclass.
-	if (!item->DoUse (false))
+	if (!item->Use (false))
 	{
 		return false;
 	}
@@ -770,7 +770,7 @@ AInventory *AActor::GiveInventoryType (const TypeInfo *type)
 	AInventory *item;
 
 	item = static_cast<AInventory *>(Spawn (type, 0,0,0));
-	if (!item->DoTryPickup (this))
+	if (!item->TryPickup (this))
 	{
 		item->Destroy ();
 		return NULL;
@@ -791,7 +791,7 @@ bool AActor::GiveAmmo (const TypeInfo *type, int amount)
 	AInventory *item = static_cast<AInventory *>(Spawn (type, 0, 0, 0));
 	item->Amount = amount;
 	item->flags |= MF_DROPPED;
-	if (!item->DoTryPickup (this))
+	if (!item->TryPickup (this))
 	{
 		item->Destroy ();
 		return false;
@@ -1658,7 +1658,8 @@ explode:
 		{
 			if (mo->floorz > mo->Sector->floorplane.ZatPoint (mo->x, mo->y))
 			{
-				for(int i=0;i<mo->Sector->e->ffloors.Size();i++)
+				unsigned i;
+				for(i=0;i<mo->Sector->e->ffloors.Size();i++)
 				{
 					// Sliding around on 3D floors looks extremely bad so
 					// if the floor comes from one in the current sector stop sliding the corpse!
@@ -1787,7 +1788,7 @@ void P_ZMovement (AActor *mo)
 		mo->player->deltaviewheight = (mo->player->defaultviewheight/*VIEWHEIGHT*/ - mo->player->viewheight)>>3;
 	}
 
-	mo->z += mo->momz;
+	if (!(mo->flags2&MF2_FLOATBOB)) mo->z += mo->momz;
 
 //
 // apply gravity
@@ -1817,6 +1818,8 @@ void P_ZMovement (AActor *mo)
 			}
 		}
 	}
+
+	if (mo->flags2&MF2_FLOATBOB) mo->z += mo->momz;
 
 //
 // adjust height
@@ -2779,11 +2782,11 @@ void AActor::Tick ()
 
 	if (flags2 & MF2_FLOATBOB)
 	{ // Floating item bobbing motion
-		z += FloatBobDiffs[(FloatBobPhase + level.time) & 63];
+		z += FloatBobDiffs[(FloatBobPhase + level.thisleveltime) & 63];
 	}
 	if (momz || BlockingMobj ||
 		(z != floorz && (!(flags2 & MF2_FLOATBOB) ||
-		(z - FloatBobOffsets[(FloatBobPhase + level.time) & 63] != floorz)
+		(z - FloatBobOffsets[(FloatBobPhase + level.thisleveltime) & 63] != floorz)
 		)))
 	{	// Handle Z momentum and gravity
 		if (((flags2 & MF2_PASSMOBJ) || (flags & MF_SPECIAL)) && !(compatflags & COMPATF_NO_PASSMOBJ))
@@ -3158,7 +3161,7 @@ AActor *AActor::StaticSpawn (const TypeInfo *type, fixed_t ix, fixed_t iy, fixed
 	if (actor->flags2 & MF2_FLOATBOB)
 	{ // Prime the bobber
 		actor->FloatBobPhase = rng();
-		actor->z += FloatBobOffsets[(actor->FloatBobPhase + level.time - 1) & 63];
+		actor->z += FloatBobOffsets[(actor->FloatBobPhase + level.thisleveltime - 1) & 63];
 	}
 	if (actor->flags2 & MF2_FLOORCLIP)
 	{
@@ -3506,7 +3509,7 @@ void P_SpawnPlayer (mapthing2_t *mthing)
 				if (key->KeyNumber != 0)
 				{
 					key = static_cast<AKey *>(Spawn (TypeInfo::m_Types[i], 0,0,0));
-					if (!key->DoTryPickup (p->mo))
+					if (!key->TryPickup (p->mo))
 					{
 						key->Destroy ();
 					}

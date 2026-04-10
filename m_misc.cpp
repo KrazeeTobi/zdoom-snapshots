@@ -342,18 +342,14 @@ string GetUserFile (string file, bool nodir)
 
 void STACK_ARGS M_SaveDefaults ()
 {
-	// Hmm... what if you have to call this prematurely from some debugging code... :?
-	if (GameConfig)
+	GameConfig->ArchiveGlobalData ();
+	if (GameNames[gameinfo.gametype] != NULL)
 	{
-		GameConfig->ArchiveGlobalData ();
-		if (GameNames[gameinfo.gametype] != NULL)
-		{
-			GameConfig->ArchiveGameData (GameNames[gameinfo.gametype]);
-		}
-		GameConfig->WriteConfigFile ();
-		delete GameConfig;
-		GameConfig = NULL;
+		GameConfig->ArchiveGameData (GameNames[gameinfo.gametype]);
 	}
+	GameConfig->WriteConfigFile ();
+	delete GameConfig;
+	GameConfig = NULL;
 }
 
 

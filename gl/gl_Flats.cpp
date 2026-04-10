@@ -357,7 +357,7 @@ inline void GLFlat::PutFlat(bool translucent)
 		{
 			if (!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE)
 				gl_drawlist[GLDL_LITFOG].AddFlat(this);
-			else if (!gltexture->tex->bMasked)
+			else if (!gltexture || !gltexture->tex->bMasked)
 				gl_drawlist[GLDL_LIT].AddFlat(this);
 			else
 				gl_drawlist[GLDL_MASKED].AddFlat(this);

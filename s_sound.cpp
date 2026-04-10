@@ -371,7 +371,7 @@ void S_Start ()
 		if (stricmp(LastLocalSndInfo, LocalSndInfo) || !level.info)
 		{
 			// First delete the old sound list
-			for(int i=1;i<S_sfx.Size();i++) 
+			for(unsigned i=1;i<S_sfx.Size();i++) 
 			{
 				GSnd->UnloadSound(&S_sfx[i]);
 			}
@@ -380,8 +380,8 @@ void S_Start ()
 			S_ParseSndInfo();
 		
 			// Now parse the local SNDINFO
-			i = Wads.CheckNumForName(LocalSndInfo);
-			if (i>=0) S_AddLocalSndInfo(i);
+			int j = Wads.CheckNumForName(LocalSndInfo);
+			if (j>=0) S_AddLocalSndInfo(j);
 		
 			// Also reload the SNDSEQ if the SNDINFO was replaced!
 			S_ParseSndSeq(Wads.CheckNumForName(LocalSndSeq));

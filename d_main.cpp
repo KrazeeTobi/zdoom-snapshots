@@ -2017,8 +2017,8 @@ void D_DoomMain (void)
 	}
 
 	DArgs *files = Args.GatherFiles ("-file", ".wad", true);
-	DArgs *files1 = Args.GatherFiles (NULL, ".zip", true);
-	DArgs *files2 = Args.GatherFiles (NULL, ".pk3", true);
+	DArgs *files1 = Args.GatherFiles (NULL, ".zip", false);
+	DArgs *files2 = Args.GatherFiles (NULL, ".pk3", false);
 	if (files->NumArgs() > 0 || files1->NumArgs() > 0 || files2->NumArgs() > 0)
 	{
 		// Check for -file in shareware

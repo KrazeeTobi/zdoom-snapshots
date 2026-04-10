@@ -216,11 +216,11 @@ void ModifyPalette(PalEntry * pout, PalEntry * pin, int cm, int count, bool bgra
 			fac=cm-CM_DESAT0;
 			for(i=0;i<count;i++)
 			{
-				int gray=(pin[i].r*77 + pin[i].g*143 + pin[i].b*37)>>8;
+				int gray=(pin[i].r*77 + pin[i].g*143 + pin[i].b*36)>>8;
 
-				pout[i].r = (pin[i].r*(32-fac) + gray*fac)/32;
-				pout[i].g = (pin[i].g*(32-fac) + gray*fac)/32;
-				pout[i].b = (pin[i].b*(32-fac) + gray*fac)/32;
+				pout[i].r = (pin[i].r*(31-fac) + gray*fac)/31;
+				pout[i].g = (pin[i].g*(31-fac) + gray*fac)/31;
+				pout[i].b = (pin[i].b*(31-fac) + gray*fac)/31;
 				pout[i].a = pin[i].a;
 			}
 		}
@@ -463,8 +463,6 @@ void FPNGTexture::CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_heig
 		id = MAKE_ID('I','E','N','D');
 		lump >> id;
 	}
-	if (!stricmp(Name,"CLDANG1"))
-		__asm nop
 
 	BYTE * Pixels = new BYTE[Width*Height];
 

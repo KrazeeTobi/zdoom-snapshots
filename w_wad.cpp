@@ -534,7 +534,6 @@ void FWadCollection::AddFile (const char *filename, const char * data, int lengt
 								!strncmp(name, "voices/", 7)		? ns_strifevoices :
 								!strncmp(name, "patches/", 8)		? ns_global :
 								!strncmp(name, "graphics/", 9)		? ns_global :
-								!strncmp(name, "graphic/", 8)		? ns_global :
 								!strncmp(name, "sounds/", 7)		? ns_global :
 								!strncmp(name, "music/", 6)			? ns_global : 
 								!strchr(name, '/')					? ns_global : -1;
