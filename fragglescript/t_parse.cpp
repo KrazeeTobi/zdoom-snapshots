@@ -28,6 +28,17 @@
 //
 //----------------------------------------------------------------------------
 
+/*
+FraggleScript is from SMMU which is under the GPL. Technically, therefore, 
+combining the FraggleScript code with the non-free ZDoom code is a violation of the GPL.
+
+As this may be a problem for you, I hereby grant an exception to my copyright on the 
+SMMU source (including FraggleScript). You may use any code from SMMU in GZDoom, provided that:
+
+    * For any binary release of the port, the source code is also made available.
+    * The copyright notice is kept on any file containing my code.
+*/
+
 /* includes ************************/
 #include <stdarg.h>
 #include "t_script.h"
@@ -764,6 +775,13 @@ fixed_t fixedvalue(const svalue_s & v)
 	return (v.type == svt_fixed ? v.value.f :
 	v.type == svt_string ? (fixed_t)(atof(v.value.s) * FRACUNIT) :
 	v.type == svt_mobj ? -1*FRACUNIT : intvalue(v) * FRACUNIT );
+}
+
+float floatvalue(const svalue_s & v)
+{
+	return (float)( (v.type == svt_string ? atof(v.value.s) :       
+	v.type == svt_fixed ? (int)(v.value.f / (float)FRACUNIT) : 
+	v.type == svt_mobj ? -1 : v.value.i ));
 }
 
 // haleyjd: 8-17

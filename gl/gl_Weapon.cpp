@@ -19,6 +19,10 @@
 **    documentation and/or other materials provided with the distribution.
 ** 3. The name of the author may not be used to endorse or promote products
 **    derived from this software without specific prior written permission.
+** 4. When not used as part of GZDoom or a GZDoom derivative, this code will be
+**    covered by the terms of the GNU Lesser General Public License as published
+**    by the Free Software Foundation; either version 2 of the License, or (at
+**    your option) any later version.
 **
 ** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
 ** IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -186,7 +190,7 @@ void gl_DrawPlayerSprites(sector_t * viewsector)
 		}
 		if (!fullbright)
 		{
-			lightlevel = gl_CalcLightLevel(lightlevel/*+ (extralight << LIGHTSEGSHIFT)*/);
+			lightlevel = gl_CalcLightLevel(lightlevel);
 		}
 		else 
 		{
@@ -218,17 +222,17 @@ void gl_DrawPlayerSprites(sector_t * viewsector)
 	case STYLE_Translucent:
 		if (vis.RenderStyle == STYLE_Add) gl.BlendFunc(GL_SRC_ALPHA,GL_ONE);
 		gl.AlphaFunc(GL_GEQUAL,(0.5f/65536.0f)*abs(playermo->alpha));
-		gl_SetColor(lightlevel,cm.LightColor,playermo->alpha/65536.0f);
+		gl_SetColor(lightlevel,cm.LightColor,playermo->alpha/65536.0f, (PalEntry)0xffffff, true);
 		break;
 	case STYLE_Normal:
 
 		if (gl_light_sprites && !fullbright)
 		{
-			gl_SetSpriteLight(playermo, lightlevel, cm.LightColor, 1.0, 0xffffff);
+			gl_SetSpriteLight(playermo, lightlevel, cm.LightColor, 1.0, (PalEntry)0xffffff, true);
 		}
 		else
 		{
-			gl_SetColor(lightlevel,cm.LightColor,1.0f);
+			gl_SetColor(lightlevel,cm.LightColor,1.0f, (PalEntry)0xffffff, true);
 		}
 		break;
 

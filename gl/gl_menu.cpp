@@ -12,6 +12,7 @@ void StartGLLightMenu (void);
 
 EXTERN_CVAR (Bool, vid_vsync)
 EXTERN_CVAR(Int, gl_spriteclip)
+EXTERN_CVAR(Int, gl_lightmode)
 EXTERN_CVAR(Bool, gl_blendcolormaps)
 EXTERN_CVAR(Bool, gl_texture_usehires)
 EXTERN_CVAR(Bool, gl_precache)
@@ -55,13 +56,21 @@ static value_t Colormaps[] =
 	{ 1.0, "Blend" },
 };
 
+static value_t LightingModes[] =
+{
+	{ 0.0, "Standard" },
+	{ 1.0, "Bright" },
+	{ 3.0, "Doom" },
+};
+
 
 menuitem_t OpenGLItems[] = {
-	{ more,     "Light Options", {NULL}, {0.0}, {0.0},	{0.0}, {(value_t *)StartGLLightMenu} },
+	{ more,     "Dynamic Light Options", {NULL}, {0.0}, {0.0},	{0.0}, {(value_t *)StartGLLightMenu} },
 	{ redtext,	" ",						{NULL},							{0.0}, {0.0}, {0.0}, {NULL} },
 	{ discrete, "Vertical Sync",			{&vid_vsync},					{2.0}, {0.0}, {0.0}, {OnOff} },
 	{ discrete, "Environment map on mirrors",{&gl_mirror_envmap},			{2.0}, {0.0}, {0.0}, {OnOff} },
 	{ discrete, "Enhanced night vision mode",{&gl_enhanced_lightamp},		{2.0}, {0.0}, {0.0}, {OnOff} },
+	{ discrete, "Sector light mode",		{&gl_lightmode},				{3.0}, {0.0}, {0.0}, {LightingModes} },
 	{ discrete, "Adjust sprite clipping",	{&gl_spriteclip},				{3.0}, {0.0}, {0.0}, {SpriteclipModes} },
 	{ discrete, "Depth Fog",				{&gl_depthfog},					{2.0}, {0.0}, {0.0}, {OnOff} },
 	{ discrete, "Boom colormap handling",	{&gl_blendcolormaps},			{2.0}, {0.0}, {0.0}, {Colormaps} },

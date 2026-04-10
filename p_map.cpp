@@ -1397,6 +1397,8 @@ BOOL P_CheckPosition (AActor *thing, fixed_t x, fixed_t y)
 	{ // [RH] Fake taller height to catch stepping up into things.
 		thing->height = realheight + gameinfo.StepHeight;
 	}
+
+	stepthing = NULL;
 	for (bx = xl; bx <= xh; bx++)
 	{
 		for (by = yl; by <= yh; by++)
@@ -1404,7 +1406,6 @@ BOOL P_CheckPosition (AActor *thing, fixed_t x, fixed_t y)
 			AActor *robin = NULL;
 			do
 			{
-				stepthing = NULL;
 				if (!P_BlockThingsIterator (bx, by, PIT_CheckThing, checkpbt, robin))
 				{	// [RH] If a thing can be stepped up on, we need to continue checking
 					// other things in the blocks and see if we hit something that is
@@ -1472,8 +1473,11 @@ BOOL P_CheckPosition (AActor *thing, fixed_t x, fixed_t y)
 	thing->height = realheight;
 	if (tmflags & MF_NOCLIP)
 		return (BlockingMobj = thingblocker) == NULL;
-	if (tmceilingz - tmfloorz < thing->height)
-		return false;
+
+	bool blocked = (tmceilingz - tmfloorz < thing->height);
+
+	//if (tmceilingz - tmfloorz < thing->height)
+		//return false;
 
 	xl = (tmbbox[BOXLEFT] - bmaporgx)>>MAPBLOCKSHIFT;
 	xh = (tmbbox[BOXRIGHT] - bmaporgx)>>MAPBLOCKSHIFT;
@@ -1488,6 +1492,8 @@ BOOL P_CheckPosition (AActor *thing, fixed_t x, fixed_t y)
 		for (by=yl ; by<=yh ; by++)
 			if (!P_BlockLinesIterator (bx,by,PIT_CheckLine))
 				return false;
+
+	if (blocked) return false;
 
 	if (stepthing != NULL)
 	{

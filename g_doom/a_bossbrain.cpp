@@ -93,11 +93,11 @@ public:
 FState ABossEye::States[] =
 {
 #define S_BRAINEYE 0
-	S_NORMAL (SSWV, 'A',   10, A_Look						, &States[S_BRAINEYE]),
+	S_NORMAL (TNT1, 'A',   10, A_Look						, &States[S_BRAINEYE]),
 
 #define S_BRAINEYESEE (S_BRAINEYE+1)
-	S_NORMAL (SSWV, 'A',  181, A_BrainAwake 				, &States[S_BRAINEYESEE+1]),
-	S_NORMAL (SSWV, 'A',  150, A_BrainSpit					, &States[S_BRAINEYESEE+1])
+	S_NORMAL (TNT1, 'A',  181, A_BrainAwake 				, &States[S_BRAINEYESEE+1]),
+	S_NORMAL (TNT1, 'A',  150, A_BrainSpit					, &States[S_BRAINEYESEE+1])
 };
 
 IMPLEMENT_ACTOR (ABossEye, Doom, 89, 0)
@@ -106,7 +106,6 @@ IMPLEMENT_ACTOR (ABossEye, Doom, 89, 0)
 
 	PROP_SpawnState (S_BRAINEYE)
 	PROP_SeeState (S_BRAINEYESEE)
-	PROP_RenderStyle(STYLE_None)
 END_DEFAULTS
 
 void ABossEye::Serialize (FArchive &arc)

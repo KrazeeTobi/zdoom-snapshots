@@ -54,22 +54,22 @@ inline bool gl_isWhite(PalEntry color)
 	return color.r + color.g + color.b == 3*0xff;
 }
 
-void gl_GetLightColor(int light, int red, int green, int blue, float * pred, float * pgreen, float * pblue);
-inline void gl_GetLightColor(int light, PalEntry pe, float * pred, float * pgreen, float * pblue)
+void gl_GetLightColor(int light, int red, int green, int blue, float * pred, float * pgreen, float * pblue, bool full=false);
+inline void gl_GetLightColor(int light, PalEntry pe, float * pred, float * pgreen, float * pblue, bool full=false)
 {
-	gl_GetLightColor(light,pe.r,pe.g,pe.b,pred,pgreen,pblue);
+	gl_GetLightColor(light,pe.r,pe.g,pe.b,pred,pgreen,pblue, full);
 }
 
-void gl_SetColor(int light, int red, int green, int blue, float alpha, PalEntry ThingColor = 0xffffff);
-inline void gl_SetColor(int light, PalEntry pe, float alpha, PalEntry ThingColor = 0xffffff)
+void gl_SetColor(int light, int red, int green, int blue, float alpha, PalEntry ThingColor = 0xffffff, bool full=false);
+inline void gl_SetColor(int light, PalEntry pe, float alpha, PalEntry ThingColor = 0xffffff, bool full=false)
 {
-	gl_SetColor(light,pe.r,pe.g,pe.b,alpha, ThingColor);
+	gl_SetColor(light,pe.r,pe.g,pe.b,alpha, ThingColor, full);
 }
 
-void gl_SetSpriteLight( AActor * thing, int light, int red, int green, int blue, int desat, float alpha, PalEntry ThingColor = 0xffffff);
-inline void gl_SetSpriteLight(AActor * thing, int light, PalEntry pe, float alpha, PalEntry ThingColor = 0xffffff)
+void gl_SetSpriteLight( AActor * thing, int light, int red, int green, int blue, int desat, float alpha, PalEntry ThingColor = 0xffffff, bool full=false);
+inline void gl_SetSpriteLight(AActor * thing, int light, PalEntry pe, float alpha, PalEntry ThingColor = 0xffffff, bool full=false)
 {
-	gl_SetSpriteLight(thing, light,pe.r,pe.g,pe.b,pe.a,alpha, ThingColor);
+	gl_SetSpriteLight(thing, light,pe.r,pe.g,pe.b,pe.a,alpha, ThingColor, full);
 }
 
 struct particle_t;
@@ -81,7 +81,7 @@ inline void gl_SetSpriteLight(particle_t * thing, int light, PalEntry pe, float 
 
 void gl_InitFog();
 void gl_SetFogParams(int _fogdensity, PalEntry _outsidefogcolor, int _outsidefogdensity, int _skyfog);
-int gl_GetFogDensity(int lightlevel, PalEntry fogcolor);
+float gl_GetFogDensity(int lightlevel, PalEntry fogcolor);
 void gl_SetFog(int lightlevel, PalEntry pe, int renderstyle);
 
 // textures + sprites

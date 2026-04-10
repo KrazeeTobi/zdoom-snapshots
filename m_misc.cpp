@@ -577,6 +577,7 @@ void M_ScreenShot (char *filename)
 		}
 		filename = autoname;
 	}
+	CreatePath(screenshot_dir);
 
 	// save the screenshot
 	if (currentrenderer == 1)

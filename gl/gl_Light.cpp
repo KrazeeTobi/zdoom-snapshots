@@ -18,6 +18,10 @@
 **    documentation and/or other materials provided with the distribution.
 ** 3. The name of the author may not be used to endorse or promote products
 **    derived from this software without specific prior written permission.
+** 4. When not used as part of GZDoom or a GZDoom derivative, this code will be
+**    covered by the terms of the GNU Lesser General Public License as published
+**    by the Free Software Foundation; either version 2 of the License, or (at
+**    your option) any later version.
 **
 ** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
 ** IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -62,8 +66,13 @@ CVAR (Bool, gl_light_particles, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 CVAR(Bool,gl_enhanced_lightamp,true,CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR(Bool,gl_depthfog,true,CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 
+CUSTOM_CVAR(Int, gl_lightmode, 3 ,CVAR_ARCHIVE)
+{
+	if (self>3) self=3;
+	if (self<0) self=0;
+}
 
-static byte distfogtable[256];	// light to fog conversion table for black fog
+static float distfogtable[2][256];	// light to fog conversion table for black fog
 
 static int fogdensity;
 static PalEntry outsidefogcolor;
@@ -87,13 +96,23 @@ void gl_SetFogParams(int _fogdensity, PalEntry _outsidefogcolor, int _outsidefog
 	{
 		if (i<164)
 		{
-			distfogtable[i]= (_fogdensity>>1) + (_fogdensity)*(164-i)/164;
+			distfogtable[0][i]= (_fogdensity>>1) + (_fogdensity)*(164-i)/164;
 		}
 		else if (i<230)
 		{											    
-			distfogtable[i]= (_fogdensity>>1) - (_fogdensity>>1)*(i-164)/(230-164);
+			distfogtable[0][i]= (_fogdensity>>1) - (_fogdensity>>1)*(i-164)/(230-164);
 		}
-		else distfogtable[i]=0;
+		else distfogtable[0][i]=0;
+
+		if (i<128)
+		{
+			distfogtable[1][i]= 6.f + (_fogdensity>>1) + (_fogdensity)*(128-i)/128;
+		}
+		else if (i<216)
+		{											    
+			distfogtable[1][i]= (216.f-i) / ((216.f-128.f)) * 6.f;
+		}
+		else distfogtable[1][i]=0;
 	}
 	outsidefogdensity>>=1;
 	fogdensity>>=1;
@@ -104,7 +123,7 @@ void gl_SetFogParams(int _fogdensity, PalEntry _outsidefogcolor, int _outsidefog
 // Get current light color
 //
 //==========================================================================
-void gl_GetLightColor(int lightlevel, int red, int green, int blue, float * pred, float * pgreen, float * pblue)
+void gl_GetLightColor(int lightlevel, int red, int green, int blue, float * pred, float * pgreen, float * pblue, bool full)
 {
 	float & r=*pred,& g=*pgreen,& b=*pblue;
 	int torch=0;
@@ -132,6 +151,8 @@ void gl_GetLightColor(int lightlevel, int red, int green, int blue, float * pred
 		return;
 	}
 
+	if (gl_lightmode&2 && lightlevel<192 && !full) lightlevel -= (192-lightlevel);
+
 	//float light=lighttable[clamp<int>(lightlevel,30,255)];
 	float light=clamp<int>(lightlevel,30,255)/255.0f;
 	r=red*light/255.0f;
@@ -144,10 +165,10 @@ void gl_GetLightColor(int lightlevel, int red, int green, int blue, float * pred
 // set current light color
 //
 //==========================================================================
-void gl_SetColor(int light, int red, int green, int blue, float alpha, PalEntry ThingColor)
+void gl_SetColor(int light, int red, int green, int blue, float alpha, PalEntry ThingColor, bool full)
 { 
 	float r,g,b;
-	gl_GetLightColor(light,red,green,blue,&r,&g,&b);
+	gl_GetLightColor(light,red,green,blue,&r,&g,&b, full);
 	gl.Color4f(r * ThingColor.r/255.0f, g * ThingColor.g/255.0f, b * ThingColor.b/255.0f, alpha);
 }
 
@@ -166,9 +187,10 @@ void gl_SetColor(int light, int red, int green, int blue, float alpha, PalEntry 
 //	4. If none of the above apply fog density is based on the light level as for the software renderer.
 //
 //==========================================================================
-int gl_GetFogDensity(int lightlevel, PalEntry fogcolor)
+
+float gl_GetFogDensity(int lightlevel, PalEntry fogcolor)
 {
-	int density;
+	float density;
 
 	if (gl_fixedcolormap) 
 	{
@@ -177,7 +199,7 @@ int gl_GetFogDensity(int lightlevel, PalEntry fogcolor)
 	if (gl_isBlack(fogcolor))
 	{
 		// case 1
-		density=distfogtable[lightlevel];
+		density=distfogtable[gl_lightmode&1][lightlevel];
 	}
 	else if (outsidefogcolor.a!=0xff && 
 			fogcolor.r==outsidefogcolor.r && 
@@ -202,7 +224,7 @@ int gl_GetFogDensity(int lightlevel, PalEntry fogcolor)
 
 
 static PalEntry cfogcolor=-1;
-static int cfogdensity=-1;
+static float cfogdensity=-1;
 
 void gl_InitFog()
 {
@@ -211,6 +233,8 @@ void gl_InitFog()
 	gl_EnableFog(false);
 	gl.Hint(GL_FOG_HINT, GL_FASTEST);
 	gl.Fogi(GL_FOG_MODE, GL_EXP);
+
+	//gl_FogDensity(fog_density/500.0f * FOG_COEFF);
 }
 //==========================================================================
 //
@@ -221,7 +245,7 @@ void gl_InitFog()
 void gl_SetFog(int lightlevel, PalEntry fogcolor, int blendmode)
 {
 
-	int fogdensity;
+	float fogdensity;
 
 	if (level.flags&LEVEL_HASFADETABLE)
 	{
@@ -243,7 +267,8 @@ void gl_SetFog(int lightlevel, PalEntry fogcolor, int blendmode)
 	// no fog in enhanced vision modes!
 	if (fogdensity==0 || !gl_depthfog)
 	{
-		cfogcolor=cfogdensity=-1;
+		cfogcolor=-1;
+		cfogdensity=-1;
 		gl_EnableFog(false);
 	}
 	else
@@ -367,7 +392,7 @@ inline fixed_t P_AproxDistance3(fixed_t dx, fixed_t dy, fixed_t dz)
 // Sets the light for a sprite - takes dynamic lights into account
 //
 //==========================================================================
-void gl_SetSpriteLight(fixed_t x, fixed_t y, fixed_t z, subsector_t * subsec, int lightlevel, int red, int green, int blue, int desaturation, float alpha, PalEntry ThingColor)
+void gl_SetSpriteLight(fixed_t x, fixed_t y, fixed_t z, subsector_t * subsec, int lightlevel, int red, int green, int blue, int desaturation, float alpha, PalEntry ThingColor, bool full)
 {
 	FLightNode * node = gl_subsectors[subsec-subsectors].lighthead;
 	float r,g,b;
@@ -424,7 +449,7 @@ void gl_SetSpriteLight(fixed_t x, fixed_t y, fixed_t z, subsector_t * subsec, in
 		tb= (tb*(32-desaturation)+ gray*desaturation)/32;
 	}
 
-	gl_GetLightColor(lightlevel,red,green,blue,&r,&g,&b);
+	gl_GetLightColor(lightlevel,red,green,blue,&r,&g,&b, full);
 	r = clamp<float>(r+tr, 0, 1.0f);
 	g = clamp<float>(g+tg, 0, 1.0f);
 	b = clamp<float>(b+tb, 0, 1.0f);
@@ -432,16 +457,16 @@ void gl_SetSpriteLight(fixed_t x, fixed_t y, fixed_t z, subsector_t * subsec, in
 	gl.Color4f(r * ThingColor.r/255.0f, g * ThingColor.g/255.0f, b * ThingColor.b/255.0f, alpha);
 }
 
-void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int blue, int desaturation, float alpha, PalEntry ThingColor)
+void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int blue, int desaturation, float alpha, PalEntry ThingColor, bool full)
 { 
 	subsector_t * subsec = R_PointInSubsector2(thing->x, thing->y);
 
-	gl_SetSpriteLight(thing->x, thing->y, (thing->z+thing->height)>>1, subsec, lightlevel, red, green, blue, desaturation, alpha, ThingColor);
+	gl_SetSpriteLight(thing->x, thing->y, (thing->z+thing->height)>>1, subsec, lightlevel, red, green, blue, desaturation, alpha, ThingColor, full);
 }
 
 void gl_SetSpriteLight( particle_t * thing, int lightlevel, int red, int green, int blue, int desaturation, float alpha, PalEntry ThingColor)
 { 
-	gl_SetSpriteLight(thing->x, thing->y, thing->z, thing->subsector, lightlevel, red, green, blue, desaturation, alpha, ThingColor);
+	gl_SetSpriteLight(thing->x, thing->y, thing->z, thing->subsector, lightlevel, red, green, blue, desaturation, alpha, ThingColor, false);
 }
 
 

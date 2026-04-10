@@ -18,6 +18,10 @@
 **    documentation and/or other materials provided with the distribution.
 ** 3. The name of the author may not be used to endorse or promote products
 **    derived from this software without specific prior written permission.
+** 4. When not used as part of GZDoom or a GZDoom derivative, this code will be
+**    covered by the terms of the GNU Lesser General Public License as published
+**    by the Free Software Foundation; either version 2 of the License, or (at
+**    your option) any later version.
 **
 ** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
 ** IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -293,7 +297,7 @@ void GLWall::RenderFogSheet()
 {
 	if (gl_depthfog)
 	{
-		int fogdensity=gl_GetFogDensity(lightlevel, Colormap.FadeColor);
+		float fogdensity=gl_GetFogDensity(lightlevel, Colormap.FadeColor);
 
 	#if 0
 		// It works but the banding effects it creates are rather distracting on Geforce cards

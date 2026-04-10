@@ -2,6 +2,7 @@
 //---------------------------------------------------------------------------
 //
 // Copyright(C) 2000 Simon Howard
+// Copyright(C) 2005 Christoph Oelckers
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -31,6 +32,17 @@
 // By Simon Howard
 //
 //---------------------------------------------------------------------------
+
+/*
+FraggleScript is from SMMU which is under the GPL. Technically, therefore, 
+combining the FraggleScript code with the non-free ZDoom code is a violation of the GPL.
+
+As this may be a problem for you, I hereby grant an exception to my copyright on the 
+SMMU source (including FraggleScript). You may use any code from SMMU in GZDoom, provided that:
+
+    * For any binary release of the port, the source code is also made available.
+    * The copyright notice is kept on any file containing my code.
+*/
 
 #include "templates.h"
 #include "p_local.h"
@@ -3546,19 +3558,10 @@ void SF_TestLocation()
 {
     AActor *mo = t_argc ? MobjForSvalue(t_argv[0]) : current_script->trigger;
 
-    if (!mo)
-        return;
-
-    if (P_TestMobjLocation(mo))
-    {
-        t_return.type = svt_int;
-        t_return.value.f = 1;
-    }
-
-    else
-    {
-        t_return.type = svt_int;
-        t_return.value.f = 0;
+    if (mo)
+	{
+       t_return.type = svt_int;
+       t_return.value.f = !!P_TestMobjLocation(mo);
     }
 }
 
@@ -3931,11 +3934,11 @@ void SF_ObjType()
 
 //==========================================================================
 //
-//Hurdler: some new math functions
+// some new math functions
 //
 //==========================================================================
 
-fixed_t double2fixed(double t)
+inline fixed_t double2fixed(double t)
 {
 	return (fixed_t)(t*65536.0);
 }
@@ -3950,9 +3953,8 @@ void SF_Sin()
 	}
 	else
 	{
-		fixed_t n1 = fixedvalue(t_argv[0]);
 		t_return.type = svt_fixed;
-		t_return.value.f = double2fixed(sin(FIXED_TO_FLOAT(n1)));
+		t_return.value.f = double2fixed(sin(floatvalue(t_argv[0])));
 	}
 }
 
@@ -3965,9 +3967,8 @@ void SF_ASin()
 	}
 	else
 	{
-		fixed_t n1 = fixedvalue(t_argv[0]);
 		t_return.type = svt_fixed;
-		t_return.value.f = double2fixed(asin(FIXED_TO_FLOAT(n1)));
+		t_return.value.f = double2fixed(asin(floatvalue(t_argv[0])));
 	}
 }
 
@@ -3980,9 +3981,8 @@ void SF_Cos()
 	}
 	else
 	{
-		fixed_t n1 = fixedvalue(t_argv[0]);
 		t_return.type = svt_fixed;
-		t_return.value.f = double2fixed(cos(FIXED_TO_FLOAT(n1)));
+		t_return.value.f = double2fixed(cos(floatvalue(t_argv[0])));
 	}
 }
 
@@ -3995,9 +3995,8 @@ void SF_ACos()
 	}
 	else
 	{
-		fixed_t n1 = fixedvalue(t_argv[0]);
 		t_return.type = svt_fixed;
-		t_return.value.f = double2fixed(acos(FIXED_TO_FLOAT(n1)));
+		t_return.value.f = double2fixed(acos(floatvalue(t_argv[0])));
 	}
 }
 
@@ -4010,9 +4009,8 @@ void SF_Tan()
 	}
 	else
 	{
-		fixed_t n1 = fixedvalue(t_argv[0]);
 		t_return.type = svt_fixed;
-		t_return.value.f = double2fixed(tan(FIXED_TO_FLOAT(n1)));
+		t_return.value.f = double2fixed(tan(floatvalue(t_argv[0])));
 	}
 }
 
@@ -4025,9 +4023,8 @@ void SF_ATan()
 	}
 	else
 	{
-		fixed_t n1 = fixedvalue(t_argv[0]);
 		t_return.type = svt_fixed;
-		t_return.value.f = double2fixed(atan(FIXED_TO_FLOAT(n1)));
+		t_return.value.f = double2fixed(atan(floatvalue(t_argv[0])));
 	}
 }
 
@@ -4040,9 +4037,8 @@ void SF_Exp()
 	}
 	else
 	{
-		fixed_t n1 = fixedvalue(t_argv[0]);
 		t_return.type = svt_fixed;
-		t_return.value.f = double2fixed(exp(FIXED_TO_FLOAT(n1)));
+		t_return.value.f = double2fixed(exp(floatvalue(t_argv[0])));
 	}
 }
 
@@ -4054,9 +4050,8 @@ void SF_Log()
 	}
 	else
 	{
-		fixed_t n1 = fixedvalue(t_argv[0]);
 		t_return.type = svt_fixed;
-		t_return.value.f = double2fixed(log(FIXED_TO_FLOAT(n1)));
+		t_return.value.f = double2fixed(log(floatvalue(t_argv[0])));
 	}
 }
 
@@ -4069,9 +4064,8 @@ void SF_Sqrt()
 	}
 	else
 	{
-		fixed_t n1 = fixedvalue(t_argv[0]);
 		t_return.type = svt_fixed;
-		t_return.value.f = double2fixed(sqrt(FIXED_TO_FLOAT(n1)));
+		t_return.value.f = double2fixed(sqrt(floatvalue(t_argv[0])));
 	}
 }
 
@@ -4084,28 +4078,22 @@ void SF_Floor()
 	}
 	else
 	{
-		fixed_t n1 = fixedvalue(t_argv[0]);
 		t_return.type = svt_fixed;
-		t_return.value.f = n1 & 0xffFF0000;
+		t_return.value.f = fixedvalue(t_argv[0]) & 0xffFF0000;
 	}
 }
 
 
 void SF_Pow()
 {
-	fixed_t   n1, n2;
-	
 	if(t_argc != 2)
 	{
 		script_error("invalid number of arguments\n");
 		return;
 	}
 	
-	n1 = fixedvalue(t_argv[0]);
-	n2 = fixedvalue(t_argv[1]);
-	
 	t_return.type = svt_fixed;
-	t_return.value.f = double2fixed(pow(FIXED_TO_FLOAT(n1), FIXED_TO_FLOAT(n2)));
+	t_return.value.f = double2fixed(pow(floatvalue(t_argv[0]), floatvalue(t_argv[1])));
 }
 
 //==========================================================================

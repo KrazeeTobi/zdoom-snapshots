@@ -20,6 +20,10 @@
 **    documentation and/or other materials provided with the distribution.
 ** 3. The name of the author may not be used to endorse or promote products
 **    derived from this software without specific prior written permission.
+** 4. When not used as part of GZDoom or a GZDoom derivative, this code will be
+**    covered by the terms of the GNU Lesser General Public License as published
+**    by the Free Software Foundation; either version 2 of the License, or (at
+**    your option) any later version.
 **
 ** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
 ** IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -383,13 +387,14 @@ static void CopyPixelData(BYTE * buffer, int texwidth, int texheight, int origin
 void FTexture::CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_height, int x, int y, 
 									 int cm, int translation)
 {
-	GPalette.BaseColors[0].a=255;
+	PalEntry * palette = screen->GetPalette();
+	palette[0].a=255;
 	CopyPixelData(buffer, buf_width, buf_height, x, y,
 				  GetPixels(), Width, Height, Height, 1, 
-				  cm, translation, GPalette.BaseColors);
+				  cm, translation, palette);
 
 	Unload();
-	GPalette.BaseColors[0].a=0;
+	palette[0].a=0;
 }
 
 //===========================================================================

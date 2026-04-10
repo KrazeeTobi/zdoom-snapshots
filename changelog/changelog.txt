@@ -1,3 +1,28 @@
+19. Oct 2005
+- Changed the sector lighting to be closer to the way Doom is doing it.
+  I kept the old method as an option though.
+
+
+18. Oct 2005
+- Fixed: Making a screenshot crashed when screenshot_dir didn't exist.
+
+
+17. Oct 2005
+- Fixed: Movement collision checks failed when inside a sector with lower
+  height than the actor being tested.
+- Fixed: Loading GL nodes from a WAD failed.
+  
+
+16. Oct 2005
+- Fixed Doom2's boss shooter so that it works with Dehacked again.
+- Fixed: ACS_Suspend crashed when no scripts had been started.
+
+
+15. Oct 2005
+- Fixed: Drawing a skybox interfered with flooding texture gaps.
+- Fixed: Negative frags were displayed without sign.
+
+
 13. Oct 2005
 - Fixed: Sprite sorting was broken when multiple translucent 3D-floors were involved
 - Fixed: The fixes for missing textures done yesterday introduced some unwanted side effects.

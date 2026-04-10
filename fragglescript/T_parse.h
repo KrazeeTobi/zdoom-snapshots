@@ -63,6 +63,7 @@ struct sfarray_s
 // un-inline these two functions to save some memory
 int intvalue(const svalue_s & v);
 fixed_t fixedvalue(const svalue_s & v);
+float floatvalue(const svalue_s & v);
 char *stringvalue(const svalue_t & v);
 
 #include "t_vari.h"

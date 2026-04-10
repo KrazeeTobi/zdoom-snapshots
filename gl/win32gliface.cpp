@@ -256,6 +256,7 @@ Win32GLFrameBuffer::Win32GLFrameBuffer(int width, int height, int bits, int refr
 	m_Fullscreen = fullscreen;
 
 	memcpy (SourcePalette, GPalette.BaseColors, sizeof(PalEntry)*256);
+	UpdatePalette ();
 
 	RECT r;
 	LONG style, exStyle;
@@ -293,6 +294,8 @@ Win32GLFrameBuffer::Win32GLFrameBuffer(int width, int height, int bits, int refr
 	CalcGamma(Gamma, m_gammaTable);
 
 	InitializeState();
+
+
 }
 
 Win32GLFrameBuffer::~Win32GLFrameBuffer()

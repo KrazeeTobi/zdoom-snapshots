@@ -18,6 +18,10 @@
 **    documentation and/or other materials provided with the distribution.
 ** 3. The name of the author may not be used to endorse or promote products
 **    derived from this software without specific prior written permission.
+** 4. When not used as part of GZDoom or a GZDoom derivative, this code will be
+**    covered by the terms of the GNU Lesser General Public License as published
+**    by the Free Software Foundation; either version 2 of the License, or (at
+**    your option) any later version.
 **
 ** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
 ** IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -629,6 +633,8 @@ static void SetupFloodStencil(wallseg * ws)
 
 	gl.ColorMask(1,1,1,1);						// don't write to the graphics buffer
 	gl.Enable(GL_TEXTURE_2D);
+	gl.Disable(GL_DEPTH_TEST);
+	gl.DepthMask(false);
 }
 
 static void ClearFloodStencil(wallseg * ws)
@@ -649,9 +655,11 @@ static void ClearFloodStencil(wallseg * ws)
 
 	// restore old stencil op.
 	gl.StencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
-	gl.StencilFunc(GL_EQUAL,recursion,~0);		// draw sky into stencil
+	gl.StencilFunc(GL_EQUAL,recursion,~0);
 	gl.Enable(GL_TEXTURE_2D);
 	gl.ColorMask(1,1,1,1);
+	gl.Enable(GL_DEPTH_TEST);
+	gl.DepthMask(true);
 }
 
 //==========================================================================
@@ -698,8 +706,6 @@ static void DrawFloodedPlane(wallseg * ws, float planez, sector_t * sec, bool ce
 	float fviewy = TO_MAP(viewy);
 	float fviewz = TO_MAP(viewz);
 
-	gl.Disable(GL_DEPTH_TEST);
-	gl.DepthMask(false);
 	gl.Begin(GL_TRIANGLE_FAN);
 	float prj_fac1 = (planez-fviewz)/(ws->z1-fviewz);
 	float prj_fac2 = (planez-fviewz)/(ws->z2-fviewz);
@@ -729,8 +735,6 @@ static void DrawFloodedPlane(wallseg * ws, float planez, sector_t * sec, bool ce
 	gl.Vertex3f(px4, planez, py4);
 
 	gl.End();
-	gl.Enable(GL_DEPTH_TEST);
-	gl.DepthMask(true);
 
 	gl.MatrixMode(GL_TEXTURE);
 	gl.PopMatrix();
@@ -747,8 +751,8 @@ static void FloodUpperGap(seg_t * seg)
 {
 	wallseg ws;
 	sector_t ffake, bfake;
-	sector_t * fakefsector = gl_FakeFlat(seg->frontsector, &ffake, false);
-	sector_t * fakebsector = gl_FakeFlat(seg->backsector, &bfake, true);
+	sector_t * fakefsector = gl_FakeFlat(seg->frontsector, &ffake, true);
+	sector_t * fakebsector = gl_FakeFlat(seg->backsector, &bfake, false);
 
 	vertex_t * v1, * v2;
 	if (seg->sidedef == &sides[seg->linedef->sidenum[0]])
@@ -790,8 +794,8 @@ static void FloodLowerGap(seg_t * seg)
 {
 	wallseg ws;
 	sector_t ffake, bfake;
-	sector_t * fakefsector = gl_FakeFlat(seg->frontsector, &ffake, false);
-	sector_t * fakebsector = gl_FakeFlat(seg->backsector, &bfake, true);
+	sector_t * fakefsector = gl_FakeFlat(seg->frontsector, &ffake, true);
+	sector_t * fakebsector = gl_FakeFlat(seg->backsector, &bfake, false);
 
 	vertex_t * v1, * v2;
 	if (seg->sidedef == &sides[seg->linedef->sidenum[0]])
