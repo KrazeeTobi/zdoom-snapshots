@@ -298,6 +298,7 @@ enum
 #define MOD_DISINTEGRATE	25
 #define MOD_POISON			26
 #define MOD_ELECTRIC		27
+#define MOD_MASSACRE		1000		// Damaged by the massacre cheat
 #define MOD_FRIENDLY_FIRE	0x80000000
 
 #define BLINKTHRESHOLD (4*32)

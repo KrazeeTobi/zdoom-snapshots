@@ -3,7 +3,7 @@
 ** Loads custom actors out of DECORATE lumps.
 **
 **---------------------------------------------------------------------------
-** Copyright 2002 Randy Heit
+** Copyright 2002-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -66,10 +66,10 @@ enum EDefinitionType
 struct FExtraInfo
 {
 	char DeathSprite[5];
-	size_t SpawnStart, SpawnEnd;
-	size_t DeathStart, DeathEnd;
-	size_t IceDeathStart, IceDeathEnd;
-	size_t FireDeathStart, FireDeathEnd;
+	unsigned int SpawnStart, SpawnEnd;
+	unsigned int DeathStart, DeathEnd;
+	unsigned int IceDeathStart, IceDeathEnd;
+	unsigned int FireDeathStart, FireDeathEnd;
 	bool bSolidOnDeath, bSolidOnBurn;
 	bool bBurnAway, bDiesAway, bGenericIceDeath;
 	fixed_t DeathHeight, BurnHeight;
@@ -400,7 +400,6 @@ static void ParseDecorate (void (*process)(FState *, int))
 			def = DEF_Decoration;
 		}
 
-		type = new TypeInfo;
 		typeName = new char[strlen(sc_String)+2];
 		typeName[0] = 'A';
 		strcpy (&typeName[1], sc_String);
@@ -930,7 +929,7 @@ static void ParseInsideDecoration (FActorInfo *info, AActor *defaults,
 		SC_MustGetString ();
 	}
 
-	size_t i;
+	unsigned int i;
 
 	for (i = 0; i < states.Size(); ++i)
 	{

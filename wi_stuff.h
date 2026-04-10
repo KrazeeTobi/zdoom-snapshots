@@ -63,6 +63,8 @@ typedef struct wbstartstruct_s
 
 	// total time for the entire current game
 	int			totaltime;
+
+	int			sucktime;
 	
 	// index of this player in game
 	int			pnum;	

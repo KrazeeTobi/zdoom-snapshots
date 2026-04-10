@@ -84,6 +84,7 @@
 #include "gameconfigfile.h"
 #include "sbar.h"
 #include "decallib.h"
+#include "r_polymost.h"
 
 #include "v_text.h"
 
@@ -175,7 +176,7 @@ BOOL singletics = false;	// debug flag to cancel adaptiveness
 char startmap[8];
 BOOL autostart;
 BOOL advancedemo;
-FILE    *debugfile;
+FILE *debugfile;
 event_t events[MAXEVENTS];
 int eventhead;
 int eventtail;
@@ -206,7 +207,7 @@ const char *IWADTypeNames[NUM_IWAD_TYPES] =
 
 // PRIVATE DATA DEFINITIONS ------------------------------------------------
 
-wadlist_t **wadtail = &wadfiles;
+static wadlist_t **wadtail = &wadfiles;
 static int demosequence;
 static int pagetic;
 static const char *IWADNames[] =
@@ -266,6 +267,8 @@ void D_ProcessEvents (void)
 			continue;				// console ate the event
 		if (M_Responder (ev))
 			continue;				// menu ate the event
+		if (testpolymost)
+			Polymost_Responder (ev);
 		G_Responder (ev);
 	}
 }
@@ -281,12 +284,12 @@ void D_ProcessEvents (void)
 void D_PostEvent (const event_t *ev)
 {
 	events[eventhead] = *ev;
-	if (ev->type == EV_Mouse && !paused && menuactive == MENU_Off &&
+	if (ev->type == EV_Mouse && !testpolymost && !paused && menuactive == MENU_Off &&
 		ConsoleState != c_down && ConsoleState != c_falling)
 	{
 		if (Button_Mlook.bDown || freelook)
 		{
-			int look = int(ev->y * m_pitch * mouse_sensitivity * 16.0);	
+			int look = int(ev->y * m_pitch * mouse_sensitivity * 16.0);
 			if (invertmouse)
 				look = -look;
 			G_AddViewPitch (look);
@@ -508,80 +511,89 @@ void D_Display (bool screenshot)
 		wipe = false;
 	}
 
-		switch (gamestate)
+	if (testpolymost)
 	{
-	case GS_FULLCONSOLE:
-		C_DrawConsole ();
-		M_Drawer ();
-		if (!screenshot)
-			screen->Update ();
-		return;
+		drawpolymosttest();
+		C_DrawConsole();
+		M_Drawer();
+	}
+	else
+	{
+		switch (gamestate)
+		{
+		case GS_FULLCONSOLE:
+			C_DrawConsole ();
+			M_Drawer ();
+			if (!screenshot)
+				screen->Update ();
+			return;
 
-	case GS_LEVEL:
-	case GS_TITLELEVEL:
-		if (!gametic)
+		case GS_LEVEL:
+		case GS_TITLELEVEL:
+			if (!gametic)
+				break;
+
+			R_RefreshViewBorder ();
+			if (currentrenderer==0)
+			{
+				R_RenderActorView (players[consoleplayer].mo);
+				R_DetailDouble ();		// [RH] Apply detail mode expansion
+				// [RH] Let cameras draw onto textures that were visible this frame.
+				FCanvasTextureInfo::UpdateAll ();
+			}
+			else
+			{
+				gl_RenderPlayerView (&players[consoleplayer]);
+			}
+
+			if (automapactive)
+			{
+				int saved_ST_Y=ST_Y;
+				if (hud_althud && realviewheight == SCREENHEIGHT) ST_Y=realviewheight;
+				AM_Drawer ();
+				ST_Y = saved_ST_Y;
+			}
+
+	#ifdef ALTERNATIVE_HUD
+
+			if (hud_althud && realviewheight == SCREENHEIGHT)
+			{
+				if (DrawFSHUD || automapactive) DrawHUD();
+				StatusBar->DrawTopStuff (DrawFSHUD ? HUD_Fullscreen : HUD_None);
+			}
+			else 
+	#endif
+			if (realviewheight == SCREENHEIGHT && viewactive)
+			{
+				StatusBar->Draw (DrawFSHUD ? HUD_Fullscreen : HUD_None);
+				StatusBar->DrawTopStuff (DrawFSHUD ? HUD_Fullscreen : HUD_None);
+			}
+			else
+			{
+				StatusBar->Draw (HUD_StatusBar);
+				StatusBar->DrawTopStuff (HUD_StatusBar);
+			}
+			CT_Drawer ();
 			break;
 
-		R_RefreshViewBorder ();
-		if (currentrenderer==0)
-		{
-			R_RenderActorView (players[consoleplayer].mo);
-			R_DetailDouble ();		// [RH] Apply detail mode expansion
-			// [RH] Let cameras draw onto textures that were visible this frame.
-			FCanvasTextureInfo::UpdateAll ();
+		case GS_INTERMISSION:
+			WI_Drawer ();
+			CT_Drawer ();
+			break;
+
+		case GS_FINALE:
+			F_Drawer ();
+			CT_Drawer ();
+			break;
+
+		case GS_DEMOSCREEN:
+			D_PageDrawer ();
+			CT_Drawer ();
+			break;
+
+		default:
+		    break;
 		}
-		else
-		{
-			gl_RenderPlayerView (&players[consoleplayer]);
-		}
-
-		if (automapactive)
-		{
-			int saved_ST_Y=ST_Y;
-			if (hud_althud && realviewheight == SCREENHEIGHT) ST_Y=realviewheight;
-			AM_Drawer ();
-			ST_Y = saved_ST_Y;
-		}
-
-#ifdef ALTERNATIVE_HUD
-
-		if (hud_althud && realviewheight == SCREENHEIGHT)
-		{
-			if (DrawFSHUD || automapactive) DrawHUD();
-			StatusBar->DrawTopStuff (DrawFSHUD ? HUD_Fullscreen : HUD_None);
-		}
-		else 
-#endif
-		if (realviewheight == SCREENHEIGHT && viewactive)
-		{
-			StatusBar->Draw (DrawFSHUD ? HUD_Fullscreen : HUD_None);
-			StatusBar->DrawTopStuff (DrawFSHUD ? HUD_Fullscreen : HUD_None);
-		}
-		else
-		{
-			StatusBar->Draw (HUD_StatusBar);
-			StatusBar->DrawTopStuff (HUD_StatusBar);
-		}
-		CT_Drawer ();
-		break;
-
-	case GS_INTERMISSION:
-		WI_Drawer ();
-		CT_Drawer ();
-		break;
-
-	case GS_FINALE:
-		F_Drawer ();
-		CT_Drawer ();
-		break;
-
-	case GS_DEMOSCREEN:
-		D_PageDrawer ();
-		CT_Drawer ();
-		break;
-
-	default:
-	    break;
 	}
 
 	// draw pause pic
@@ -738,7 +750,7 @@ void D_ErrorCleanup ()
 void D_DoomLoop ()
 {
 	int lasttic = 0;
-	
+
 	for (;;)
 	{
 		try
@@ -800,7 +812,7 @@ void D_DoomLoop ()
 		{
 			if (error.GetMessage ())
 			{
-					Printf (PRINT_BOLD, "\n%s\n", error.GetMessage());
+				Printf (PRINT_BOLD, "\n%s\n", error.GetMessage());
 			}
 			D_ErrorCleanup ();
 		}
@@ -1417,8 +1429,7 @@ static EIWADType ScanIWAD (const char *iwad)
 			return IWAD_StrifeTeaser;
 		}
 	}
-	else if (
-		lumpsfound[Check_map01])
+	else if (lumpsfound[Check_map01])
 	{
 		if (lumpsfound[Check_redtnt2])
 		{
@@ -1579,7 +1590,6 @@ static EIWADType IdentifyVersion (void)
 	WadStuff wads[sizeof(IWADNames)/sizeof(char *)];
 	size_t foundwads[NUM_IWAD_TYPES] = { 0 };
 	const char *iwadparm = Args.CheckValue ("-iwad");
-	char *homepath = NULL;
 	size_t numwads;
 	int pickwad;
 	size_t i;
@@ -1631,10 +1641,8 @@ static EIWADType IdentifyVersion (void)
 #ifdef unix
 					else if (*value == '~' && (*(value + 1) == 0 || *(value + 1) == '/'))
 					{
-						homepath = GetUserFile (*(value + 1) ? value + 2 : value + 1);
-						CheckIWAD (homepath, wads);
-						delete[] homepath;
-						homepath = NULL;
+						string homepath = GetUserFile (*(value + 1) ? value + 2 : value + 1);
+						CheckIWAD (homepath.GetChars(), wads);
 					}
 #endif
 					else
@@ -1721,9 +1729,6 @@ static EIWADType IdentifyVersion (void)
 		delete[] wads[i].Path;
 	}
 
-	if (homepath)
-		delete[] homepath;
-
 	return wads[pickwad].Type;
 }
 
@@ -1756,7 +1761,7 @@ static const char *BaseFileSearch (const char *file, const char *ext)
 			if (stricmp (key, "Path") == 0)
 			{
 				const char *dir;
-				char *homepath = NULL;
+				string homepath;
 
 				if (*value == '$')
 				{
@@ -1773,7 +1778,7 @@ static const char *BaseFileSearch (const char *file, const char *ext)
 				else if (*value == '~' && (*(value + 1) == 0 || *(value + 1) == '/'))
 				{
 					homepath = GetUserFile (*(value + 1) ? value + 2 : value + 1);
-					dir = homepath;
+					dir = homepath.GetChars();
 				}
 #endif
 				else
@@ -1783,11 +1788,6 @@ static const char *BaseFileSearch (const char *file, const char *ext)
 				if (dir != NULL)
 				{
 					sprintf (wad, "%s%s%s", dir, dir[strlen (dir) - 1] != '/' ? "/" : "", file);
-					if (homepath != NULL)
-					{
-						delete[] homepath;
-						homepath = NULL;
-					}
 					if (FileExists (wad))
 					{
 						return wad;
@@ -1800,10 +1800,9 @@ static const char *BaseFileSearch (const char *file, const char *ext)
 	// Retry, this time with a default extension
 	if (ext != NULL)
 	{
-		static char tmp[PATH_MAX];
-		strcpy (tmp, file);
+		string tmp = file;
 		DefaultExtension (tmp, ext);
-		return BaseFileSearch (tmp, NULL);
+		return BaseFileSearch (tmp.GetChars(), NULL);
 	}
 	return NULL;
 }
@@ -2036,8 +2035,7 @@ void D_DoomMain (void)
 	Wads.InitMultipleFiles (&wadfiles);
 
 	// [RH] Initialize localizable strings.
-	GStrings.LoadStrings (Wads.GetNumForName ("LANGUAGE"), STRING_TABLE_SIZE, false);
-	GStrings.Compact ();
+	GStrings.LoadStrings (false);
 
 	//P_InitXlat ();
 
@@ -2055,7 +2053,7 @@ void D_DoomMain (void)
 	// [RH] Now that all text strings are set up,
 	// insert them into the level and cluster data.
 	G_MakeEpisodes ();
-
+	
 	// [RH] Parse through all loaded mapinfo lumps
 	G_ParseMapInfo ();
 
@@ -2105,11 +2103,11 @@ void D_DoomMain (void)
 	FActorInfo::StaticSetActorNums ();
 
 	// [RH] User-configurable startup strings. Because BOOM does.
-	if (GStrings(STARTUP1)[0])	Printf ("%s\n", GStrings(STARTUP1));
-	if (GStrings(STARTUP2)[0])	Printf ("%s\n", GStrings(STARTUP2));
-	if (GStrings(STARTUP3)[0])	Printf ("%s\n", GStrings(STARTUP3));
-	if (GStrings(STARTUP4)[0])	Printf ("%s\n", GStrings(STARTUP4));
-	if (GStrings(STARTUP5)[0])	Printf ("%s\n", GStrings(STARTUP5));
+	if (GStrings["STARTUP1"])	Printf ("%s\n", GStrings("STARTUP1"));
+	if (GStrings["STARTUP2"])	Printf ("%s\n", GStrings("STARTUP2"));
+	if (GStrings["STARTUP3"])	Printf ("%s\n", GStrings("STARTUP3"));
+	if (GStrings["STARTUP4"])	Printf ("%s\n", GStrings("STARTUP4"));
+	if (GStrings["STARTUP5"])	Printf ("%s\n", GStrings("STARTUP5"));
 
 	//Added by MC:
 	bglobal.getspawned = Args.GatherFiles ("-bots", "", false);
@@ -2125,7 +2123,7 @@ void D_DoomMain (void)
 	}
 
 	flags = dmflags;
-
+		
 	if (Args.CheckParm ("-nomonsters"))		flags |= DF_NO_MONSTERS;
 	if (Args.CheckParm ("-respawn"))		flags |= DF_MONSTERS_RESPAWN;
 	if (Args.CheckParm ("-fast"))			flags |= DF_FAST_MONSTERS;
@@ -2206,7 +2204,7 @@ void D_DoomMain (void)
 	}
 	if (devparm)
 	{
-		Printf (GStrings(D_DEVSTR));
+		Printf (GStrings("D_DEVSTR"));
 	}
 
 #ifndef unix
@@ -2215,7 +2213,7 @@ void D_DoomMain (void)
 	// the user's home directory.
 	if (Args.CheckParm("-cdrom"))
 	{
-		Printf (GStrings(D_CDROM));
+		Printf (GStrings("D_CDROM"));
 		mkdir ("c:\\zdoomdat", 0);
 	}
 #endif
@@ -2304,7 +2302,7 @@ void D_DoomMain (void)
 		G_TimeDemo (v);
 		D_DoomLoop ();	// never returns
 	}
-
+		
 	v = Args.CheckValue ("-loadgame");
 	if (v)
 	{

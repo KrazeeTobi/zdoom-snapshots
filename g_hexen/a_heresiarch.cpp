@@ -671,6 +671,7 @@ void A_SorcSpinBalls(AActor *actor)
 	AActor *mo;
 	fixed_t z;
 
+	actor->SpawnState += 2;		// [RH] Don't spawn balls again
 	A_SlowBalls(actor);
 	actor->args[0] = 0;								// Currently no defense
 	actor->args[3] = SORC_NORMAL;
@@ -1290,20 +1291,12 @@ void A_SpawnBishop(AActor *actor)
 	{
 		if (!P_TestMobjLocation(mo))
 		{
-			if (mo->flags&MF_COUNTKILL) level.total_monsters--;
 			mo->Destroy ();
+			level.total_monsters--;
 		}
 		else if (actor->target != NULL)
 		{ // [RH] Make the new bishops inherit the Heriarch's target
-			AActor *master = actor->target;
-
-			mo->target = master->target;
-			mo->TIDtoHate = master->TIDtoHate;
-			mo->LastLook = master->LastLook;
-			mo->flags3 |= master->flags3 & (MF3_NOSIGHTCHECK | MF3_HUNTPLAYERS);
-			mo->flags4 |= master->flags4 & MF4_NOHATEPLAYERS;
-			mo->flags = (mo->flags & ~MF_FRIENDLY) | (actor->flags & MF_FRIENDLY);
-			mo->master = master;
+			mo->CopyFriendliness (actor->target, true);
 		}
 	}
 	actor->Destroy ();

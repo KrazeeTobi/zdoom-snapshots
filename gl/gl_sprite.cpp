@@ -354,7 +354,7 @@ void GLSprite::Process(AActor* thing,sector_t * sector)
 	}
 
 
-	player_t *player=&players[displayplayer];
+	player_t *player=&players[consoleplayer];
 	GL_RECT r;
 	bool enhancedvision=false;
 	bool fullbright=!!(thing->renderflags & RF_FULLBRIGHT);
@@ -583,7 +583,7 @@ void GLSprite::ProcessParticle (particle_t *particle, sector_t *sector)//, int s
 		if (P_PointOnLineSide(particle->x, particle->y, GLPortal::mirrorline)) return;
 	}
 
-	player_t *player=&players[displayplayer];
+	player_t *player=&players[consoleplayer];
 	
 	if (particle->trans==0) return;
 	lightlevel = sector->lightlevel;

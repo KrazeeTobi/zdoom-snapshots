@@ -205,7 +205,7 @@ void DDoor::Tick ()
 // [RH] DoorSound: Plays door sound depending on direction and speed
 void DDoor::DoorSound (bool raise) const
 {
-	const char *snd="";
+	const char *snd;
 
 	if (m_Sector->seqType >= 0)
 	{
@@ -216,8 +216,9 @@ void DDoor::DoorSound (bool raise) const
 		switch (gameinfo.gametype)
 		{
 		default:
+			snd = NULL;
 			break;
-			
+
 		case GAME_Heretic:
 			snd = raise ? "HereticDoorOpen" : "HereticDoorClose";
 			break;
@@ -284,7 +285,10 @@ void DDoor::DoorSound (bool raise) const
 			}
 			break;
 		}
-		SN_StartSequence (m_Sector, snd);
+		if (snd != NULL)
+		{
+			SN_StartSequence (m_Sector, snd);
+		}
 	}
 }
 
@@ -491,7 +495,7 @@ TArray<FDoorAnimation> DoorAnimations;
 //
 static int P_FindSlidingDoorType (int picnum)
 {
-	size_t i;
+	unsigned int i;
 
 	for (i = 0; i < DoorAnimations.Size(); ++i)
 	{
@@ -558,7 +562,6 @@ void DAnimatedDoor::Tick ()
 			}
 
 			fixed_t topdist = m_Sector->ceilingplane.d;
-
 			if (MoveCeiling (2048*FRACUNIT, m_BotDist, 0, -1) == crushed)
 			{
 				m_Timer = m_Delay;
@@ -569,7 +572,6 @@ void DAnimatedDoor::Tick ()
 
 			m_Line1->flags |= ML_BLOCKING;
 			m_Line2->flags |= ML_BLOCKING;
-
 			if (ani.CloseSound != NULL)
 			{
 				SN_StartSequence (m_Sector, ani.CloseSound);

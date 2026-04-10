@@ -23,8 +23,6 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "doomtype.h"
-#include "version.h"
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -32,6 +30,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <malloc.h>
+
+#include "doomtype.h"
+#include "version.h"
 
 #if defined(_WIN32)
 #include <io.h>
@@ -106,7 +107,7 @@ BOOL M_WriteFile (char const *name, void *source, int length)
 
 	if (count < length)
 		return false;
-    
+
 	return true;
 }
 
@@ -114,9 +115,7 @@ BOOL M_WriteFile (char const *name, void *source, int length)
 //
 // M_ReadFile
 //
-
 int M_ReadFile (char const *name, byte **buffer)
-
 {
 	int handle, count, length;
 	struct stat fileinfo;
@@ -299,7 +298,7 @@ static long ParseCommandLine (const char *args, int *argc, char **argv)
 
 
 #ifdef unix
-char *GetUserFile (const char *file, bool nodir)
+string GetUserFile (string file, bool nodir)
 {
 	char *home = getenv ("HOME");
 	if (home == NULL || *home == '\0')
@@ -625,14 +624,3 @@ CCMD (screenshot)
 	else
 		G_ScreenShot (argv[1]);
 }
-
-
-
-
-
-
-
-
-
-
-

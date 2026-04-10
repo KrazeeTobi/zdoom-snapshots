@@ -3,7 +3,7 @@
 ** Handles line specials
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2004 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -792,43 +792,37 @@ FUNC(LS_Teleport_Line)
 	return EV_SilentLineTeleport (ln, backSide, it, arg1, arg2);
 }
 
+static void ThrustThingHelper (AActor *it, angle_t angle, int force, BOOL nolimit);
 FUNC(LS_ThrustThing)
 // ThrustThing (angle, force, nolimit, tid)
 {
-	if (arg3!=0)
+	if (arg3 != 0)
 	{
-		AActor * victim;
-
-		angle_t angle = BYTEANGLE(arg0) >> ANGLETOFINESHIFT;
-
 		FActorIterator iterator (arg3);
-
-		while ( (victim = iterator.Next ()) )
+		while ((it = iterator.Next()) != NULL)
 		{
-			victim->momx += arg1 * finecosine[angle];
-			victim->momy += arg1 * finesine[angle];
-			if (!arg2)
-			{
-				victim->momx = clamp<fixed_t> (victim->momx, -MAXMOVE, MAXMOVE);
-				victim->momy = clamp<fixed_t> (victim->momy, -MAXMOVE, MAXMOVE);
-			}
+			ThrustThingHelper (it, BYTEANGLE(arg0), arg1, arg2);
 		}
 		return true;
 	}
 	else if (it)
 	{
-		angle_t angle = BYTEANGLE(arg0) >> ANGLETOFINESHIFT;
-
-		it->momx += arg1 * finecosine[angle];
-		it->momy += arg1 * finesine[angle];
-		if (!arg2)
-		{
-			it->momx = clamp<fixed_t> (it->momx, -MAXMOVE, MAXMOVE);
-			it->momy = clamp<fixed_t> (it->momy, -MAXMOVE, MAXMOVE);
-		}
+		ThrustThingHelper (it, BYTEANGLE(arg0), arg1, arg2);
 		return true;
 	}
 	return false;
+}
+
+static void ThrustThingHelper (AActor *it, angle_t angle, int force, BOOL nolimit)
+{
+	angle >>= ANGLETOFINESHIFT;
+	it->momx += force * finecosine[angle];
+	it->momy += force * finesine[angle];
+	if (!nolimit)
+	{
+		it->momx = clamp<fixed_t> (it->momx, -MAXMOVE, MAXMOVE);
+		it->momy = clamp<fixed_t> (it->momy, -MAXMOVE, MAXMOVE);
+	}
 }
 
 FUNC(LS_ThrustThingZ)	// [BC]
@@ -926,7 +920,7 @@ FUNC(LS_DamageThing)
 		{ // Negative damages mean healing
 			if (it->player)
 			{
-				P_GiveBody (it->player, -arg0);
+				P_GiveBody (it, -arg0);
 			}
 			else
 			{
@@ -947,8 +941,6 @@ FUNC(LS_DamageThing)
 
 	return it ? true : false;
 }
-
-bool P_GiveBody (player_t *, int);
 
 FUNC(LS_HealThing)
 // HealThing (amount, max)
@@ -1332,9 +1324,9 @@ FUNC(LS_Thing_SetGoal)
 }
 
 FUNC(LS_Thing_Move)		// [BC]
-// Thing_Move (tid, mapspot)
+// Thing_Move (tid, mapspot, nofog)
 {
-	return P_Thing_Move (arg0, arg1);
+	return P_Thing_Move (arg0, arg1, arg2 ? false : true);
 }
 
 FUNC(LS_Thing_SetTranslation)
@@ -1448,9 +1440,8 @@ FUNC(LS_FloorAndCeiling_RaiseByValue)
 FUNC(LS_FloorAndCeiling_LowerRaise)
 // FloorAndCeiling_LowerRaise (tag, fspeed, cspeed)
 {
-	bool res = EV_DoCeiling (DCeiling::ceilRaiseToHighest, ln, arg0, SPEED(arg2), 0, 0, 0, 0, 0);
-	res |= EV_DoFloor (DFloor::floorLowerToLowest, ln, arg0, SPEED(arg1), 0, 0, 0);
-	return res;
+	return EV_DoCeiling (DCeiling::ceilRaiseToHighest, ln, arg0, SPEED(arg2), 0, 0, 0, 0, 0) |
+		   EV_DoFloor     (DFloor::floorLowerToLowest, ln, arg0, SPEED(arg1), 0, 0, 0);
 }
 
 FUNC(LS_Elevator_MoveToFloor)
@@ -1639,7 +1630,7 @@ void AdjustPusher (int tag, int magnitude, int angle, DPusher::EPusher type)
 	// Now create pushers for any sectors that don't already have them.
 	while ((secnum = P_FindSectorFromTag (tag, secnum)) >= 0)
 	{
-		size_t i;
+		unsigned int i;
 		for (i = 0; i < numcollected; i++)
 		{
 			if (Collection[i].RefNum == sectors[secnum].tag)
@@ -1725,7 +1716,7 @@ static void SetWallScroller (int id, int sidechoice, fixed_t dx, fixed_t dy)
 		// Now create scrollers for any walls that don't already have them.
 		while ((linenum = P_FindLineFromID (id, linenum)) >= 0)
 		{
-			size_t i;
+			unsigned int i;
 			for (i = 0; i < numcollected; i++)
 			{
 				if (Collection[i].RefNum == lines[linenum].sidenum[sidechoice])
@@ -1824,8 +1815,6 @@ FUNC(LS_Scroll_Floor)
 	}
 	if (arg3 > 0)
 	{
-		dx = FixedMul (dx, CARRYFACTOR);
-		dy = FixedMul (dy, CARRYFACTOR);
 		SetScroller (arg0, DScroller::sc_carry, dx, dy);
 	}
 	else

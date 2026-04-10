@@ -54,7 +54,7 @@ typedef enum
 	SS_STRING_DOOR,
 	SS_STRING_PLATFORM,
 	SS_STRING_ENVIRONMENT,
-	SS_STRING_NOSTOPCUTOFF,
+	SS_STRING_NOSTOPCUTOFF
 } ssstrings_t;
 
 typedef enum
@@ -70,7 +70,7 @@ typedef enum
 	SS_CMD_VOLUME,
 	SS_CMD_STOPSOUND,
 	SS_CMD_ATTENUATION,
-	SS_CMD_END,
+	SS_CMD_END
 } sscmds_t;
 
 typedef struct {

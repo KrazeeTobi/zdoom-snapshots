@@ -72,7 +72,7 @@ bool AAmmo::TryPickup (AActor *toucher)
 {
 	int count = Amount;
 
-	if (gameskill == sk_baby || gameskill == sk_nightmare)
+	if (gameskill == sk_baby || (gameskill == sk_nightmare && gameinfo.gametype != GAME_Strife))
 	{ // extra ammo in baby mode and nightmare mode
 		if (gameinfo.gametype & (GAME_Doom|GAME_Strife))
 			Amount <<= 1;
@@ -157,9 +157,16 @@ AInventory *AAmmo::CreateCopy (AActor *other)
 		copy = static_cast<AInventory *>(Spawn (type, 0, 0, 0));
 		copy->Amount = Amount;
 		copy->BecomeItem ();
-		return copy;
 	}
-	return Super::CreateCopy (other);
+	else
+	{
+		copy = Super::CreateCopy (other);
+	}
+	if (copy->Amount > copy->MaxAmount)
+	{ // Don't pick up more ammo than you're supposed to be able to carry.
+		copy->Amount = copy->MaxAmount;
+	}
+	return copy;
 }
 
 /* Keys *******************************************************************/
@@ -172,41 +179,67 @@ AInventory *AAmmo::CreateCopy (AActor *other)
 //
 //---------------------------------------------------------------------------
 
-bool P_GiveBody (player_t *player, int num)
+bool P_GiveBody (AActor *actor, int num)
 {
 	int max;
+	player_t *player = actor->player;
 
-	max = MAXHEALTH + player->stamina;
-	if (player->morphTics)
+	if (player != NULL)
 	{
-		max = MAXMORPHHEALTH;
-	}
-	// [RH] For Strife: A negative body sets you up with a percentage
-	// of your full health.
-	if (num < 0)
-	{
-		num = max * -num / 100;
-		if (player->health >= num)
+		max = MAXHEALTH + player->stamina;
+		if (player->morphTics)
 		{
-			return false;
+			max = MAXMORPHHEALTH;
 		}
-		player->health = num;
-		player->mo->health = num;
+		// [RH] For Strife: A negative body sets you up with a percentage
+		// of your full health.
+		if (num < 0)
+		{
+			num = max * -num / 100;
+			if (player->health < num)
+			{
+				player->health = num;
+				actor->health = num;
+				return true;
+			}
+		}
+		else
+		{
+			if (player->health < max)
+			{
+				player->health += num;
+				if (player->health > max)
+				{
+					player->health = max;
+				}
+				actor->health = player->health;
+				return true;
+			}
+		}
 	}
 	else
 	{
-		if (player->health >= max)
+		max = actor->GetDefault()->health;
+		if (num < 0)
 		{
-			return false;
+			num = max * -num / 100;
+			if (actor->health < num)
+			{
+				actor->health = num;
+				return true;
+			}
 		}
-		player->health += num;
-		if (player->health > max)
+		else if (actor->health < max)
 		{
-			player->health = max;
+			actor->health += num;
+			if (actor->health > max)
+			{
+				actor->health = max;
+			}
+			return true;
 		}
-		player->mo->health = player->health;
 	}
-	return true;
+	return false;
 }
 
 //---------------------------------------------------------------------------
@@ -479,8 +512,7 @@ bool AInventory::SpecialDropAction (AActor *dropper)
 
 bool AInventory::ShouldRespawn ()
 {
-	return (multiplayer || alwaysapplydmflags) && 
-		   (dmflags & DF_ITEMS_RESPAWN);
+	return !!(dmflags & DF_ITEMS_RESPAWN);
 }
 
 //===========================================================================
@@ -703,7 +735,7 @@ void AInventory::BecomePickup ()
 	}
 	flags = GetDefault()->flags | MF_DROPPED;
 	renderflags &= ~RF_INVISIBLE;
-	SetStateNF (SpawnState);
+	SetState (SpawnState);
 }
 
 //===========================================================================
@@ -1085,7 +1117,6 @@ bool AInventory::TryPickup (AActor *toucher)
 		}
 		else
 		{
-			//BecomePickup ();
 			return false;
 		}
 	}
@@ -1243,10 +1274,11 @@ bool ABasicArmorPickup::Use (bool pickup)
 	if (armor == NULL)
 	{
 		armor = Spawn<ABasicArmor> (0,0,0);
+		armor->BecomeItem ();
 		armor->SavePercent = SavePercent;
 		armor->Amount = armor->MaxAmount = SaveAmount;
 		armor->Icon = Icon;
-		armor->AttachToOwner(Owner);
+		Owner->AddInventory (armor);
 		return true;
 	}
 	// If you already have more armor than this item gives you, you can't
@@ -1313,11 +1345,12 @@ bool ABasicArmorBonus::Use (bool pickup)
 	if (armor == NULL)
 	{
 		armor = Spawn<ABasicArmor> (0,0,0);
+		armor->BecomeItem ();
 		armor->SavePercent = SavePercent;
 		armor->Amount = saveAmount;
 		armor->MaxAmount = MaxSaveAmount;
 		armor->Icon = Icon;
-		armor->AttachToOwner(Owner);
+		Owner->AddInventory (armor);
 		return true;
 	}
 	// If you already have more armor than this item can give you, you can't
@@ -1444,24 +1477,24 @@ void ABasicArmor::AbsorbDamage (int damage, int damageType, int &newdamage)
 			// The armor has become useless
 			SavePercent = 0;
 			// Now see if the player has some more armor in their inventory
-			// and use it if so. As in Strife, the worst armor is used up first.
-			ABasicArmorPickup *worst = NULL;
+			// and use it if so. As in Strife, the best armor is used up first.
+			ABasicArmorPickup *best = NULL;
 			AInventory *probe = Owner->Inventory;
 			while (probe != NULL)
 			{
 				if (probe->IsKindOf (RUNTIME_CLASS(ABasicArmorPickup)))
 				{
 					ABasicArmorPickup *inInv = static_cast<ABasicArmorPickup*>(probe);
-					if (worst == NULL || worst->SavePercent > inInv->SavePercent)
+					if (best == NULL || best->SavePercent < inInv->SavePercent)
 					{
-						worst = inInv;
+						best = inInv;
 					}
 				}
 				probe = probe->Inventory;
 			}
-			if (worst != NULL)
+			if (best != NULL)
 			{
-				Owner->UseInventory (worst);
+				Owner->UseInventory (best);
 			}
 		}
 	}
@@ -1750,7 +1783,7 @@ bool AHealthPickup::HandlePickup (AInventory *item)
 
 bool AHealthPickup::Use (bool pickup)
 {
-	return P_GiveBody (Owner->player, health);
+	return P_GiveBody (Owner, health);
 }
 
 // Backpack -----------------------------------------------------------------
@@ -1911,7 +1944,7 @@ void ABackpack::DetachFromOwner ()
 
 const char *ABackpack::PickupMessage ()
 {
-	return GStrings(GOTBACKPACK);
+	return GStrings("GOTBACKPACK");
 }
 
 FState ABackpack::States[] =

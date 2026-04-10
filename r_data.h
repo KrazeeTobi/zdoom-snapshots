@@ -354,4 +354,3 @@ extern size_t numfakecmaps;
 int R_FindSkin (const char *name);	// [RH] Find a skin
 
 #endif
-

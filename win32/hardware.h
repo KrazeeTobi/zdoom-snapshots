@@ -2,7 +2,7 @@
 ** hardware.h
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2001 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -47,7 +47,6 @@ class IVideo
 
 	virtual DFrameBuffer *CreateFrameBuffer (int width, int height, bool fs, DFrameBuffer *old) = 0;
 
-	virtual bool GoFullscreen (bool yes) = 0;
 	virtual bool FullscreenChanged (bool fs) = 0;
 	virtual void StartModeIterator (int bits) = 0;
 	virtual bool NextMode (int *width, int *height, bool *letterbox) = 0;

@@ -115,22 +115,22 @@ CVAR (Bool, addrocketexplosion, false, CVAR_ARCHIVE)
 
 fixed_t FloatBobOffsets[64] =
 {
-       0, 51389, 102283, 152192,
-       200636, 247147, 291278, 332604,
-       370727, 405280, 435929, 462380,
-       484378, 501712, 514213, 521763,
-       524287, 521763, 514213, 501712,
-       484378, 462380, 435929, 405280,
-       370727, 332604, 291278, 247147,
-       200636, 152192, 102283, 51389,
-       -1, -51390, -102284, -152193,
-       -200637, -247148, -291279, -332605,
-       -370728, -405281, -435930, -462381,
-       -484380, -501713, -514215, -521764,
-       -524288, -521764, -514214, -501713,
-       -484379, -462381, -435930, -405280,
-       -370728, -332605, -291279, -247148,
-       -200637, -152193, -102284, -51389
+	0, 51389, 102283, 152192,
+	200636, 247147, 291278, 332604,
+	370727, 405280, 435929, 462380,
+	484378, 501712, 514213, 521763,
+	524287, 521763, 514213, 501712,
+	484378, 462380, 435929, 405280,
+	370727, 332604, 291278, 247147,
+	200636, 152192, 102283, 51389,
+	-1, -51390, -102284, -152193,
+	-200637, -247148, -291279, -332605,
+	-370728, -405281, -435930, -462381,
+	-484380, -501713, -514215, -521764,
+	-524288, -521764, -514214, -501713,
+	-484379, -462381, -435930, -405280,
+	-370728, -332605, -291279, -247148,
+	-200637, -152193, -102284, -51389
 };
 
 fixed_t FloatBobDiffs[64] =
@@ -171,6 +171,23 @@ IMPLEMENT_POINTY_CLASS (AActor)
  DECLARE_POINTER (LastHeard)
  DECLARE_POINTER (master)
 END_POINTERS
+ACTOR_STATE_NAMES(AActor) =
+{
+	{ &AActor::SpawnState,		"Spawn" },
+	{ &AActor::SeeState,		"See" },
+	{ &AActor::PainState,		"Pain" },
+	{ &AActor::MeleeState,		"Melee" },
+	{ &AActor::MissileState,	"Missile" },
+	{ &AActor::CrashState,		"Crash" },
+	{ &AActor::DeathState,		"Death" },
+	{ &AActor::XDeathState,		"XDeath" },
+	{ &AActor::BDeathState,		"Burn" },
+	{ &AActor::IDeathState,		"Ice" },
+	{ &AActor::EDeathState,		"Disintegrate" },
+	{ &AActor::RaiseState,		"Raise" },
+	{ &AActor::WoundState,		"Wound" },
+	{ 0, NAME_None }
+};
 
 AActor::~AActor ()
 {
@@ -337,7 +354,7 @@ void AActor::Serialize (FArchive &arc)
 	if (arc.IsStoring ())
 	{
 		int convnum = 0;
-		size_t i;
+		unsigned int i;
 
 		if (Conversation != NULL)
 		{
@@ -369,7 +386,7 @@ void AActor::Serialize (FArchive &arc)
 	else
 	{
 		int convnum;
-		size_t i;
+		unsigned int i;
 
 		convnum = arc.ReadCount();
 		if (convnum == 0 || GetDefault()->Conversation == NULL)
@@ -592,14 +609,6 @@ bool AActor::SetStateNF (FState *newstate)
 
 void AActor::AddInventory (AInventory *item)
 {
-	// If it's still linked into the world, unlink it
-	/* doesn't work!
-	if (!(item->flags & MF_NOSECTOR))
-	{
-		item->BecomeItem ();
-	}
-	*/
-
 	// Check if it's already attached to an actor
 	if (item->Owner != NULL)
 	{
@@ -792,6 +801,52 @@ bool AActor::GiveAmmo (const TypeInfo *type, int amount)
 
 //============================================================================
 //
+// AActor :: CopyFriendliness
+//
+// Makes this actor hate (or like) the same things another actor does.
+//
+//============================================================================
+
+void AActor::CopyFriendliness (const AActor *other, bool changeTarget)
+{
+	TIDtoHate = other->TIDtoHate;
+	LastLook = other->LastLook;
+	flags  = (flags & ~MF_FRIENDLY) | (other->flags & MF_FRIENDLY);
+	flags3 = (flags3 & ~(MF3_NOSIGHTCHECK | MF3_HUNTPLAYERS)) | (other->flags3 & (MF3_NOSIGHTCHECK | MF3_HUNTPLAYERS));
+	flags4 = (flags4 & ~MF4_NOHATEPLAYERS) | (other->flags4 & MF4_NOHATEPLAYERS);
+	FriendPlayer = other->FriendPlayer;
+	if (changeTarget)
+	{
+		target = other->target;
+	}
+}
+
+//============================================================================
+//
+// AActor :: ObtainInventory
+//
+// Removes the items from the other actor and puts them in this actor's
+// inventory. The actor receiving the inventory must not have any items.
+//
+//============================================================================
+
+void AActor::ObtainInventory (AActor *other)
+{
+	Inventory = other->Inventory;
+	InventoryID = other->InventoryID;
+	other->Inventory = NULL;
+	other->InventoryID = 0;
+
+	AInventory *item = Inventory;
+	while (item != NULL)
+	{
+		item->Owner = this;
+		item = item->Inventory;
+	}
+}
+
+//============================================================================
+//
 // AActor :: CheckLocalView
 //
 // Returns true if this actor is local for the player. Here, local means the
@@ -875,7 +930,7 @@ void P_ExplodeMissile (AActor *mo, line_t *line)
 	}
 
 	mo->momx = mo->momy = mo->momz = 0;
-
+	mo->effects = 0;		// [RH]
 	mo->SetState (mo->DeathState);
 	if (mo->ObjectFlags & OF_MassDestruction)
 	{
@@ -1139,7 +1194,7 @@ bool P_SeekerMissile (AActor *actor, angle_t thresh, angle_t turnMax)
 	AActor *target;
 
 	target = actor->tracer;
-	if (target == NULL)
+	if (target == NULL || actor->Speed == 0)
 	{
 		return false;
 	}
@@ -1187,14 +1242,16 @@ bool P_SeekerMissile (AActor *actor, angle_t thresh, angle_t turnMax)
 //
 #define STOPSPEED			0x1000
 #define FRICTION			0xe800
+#define CARRYSTOPSPEED		(STOPSPEED*32/3)
 
-void P_XYMovement (AActor *mo, bool bForceSlide) 
+void P_XYMovement (AActor *mo, fixed_t scrollx, fixed_t scrolly) 
 {
+	bool bForceSlide = scrollx || scrolly;
 	angle_t angle;
 	fixed_t ptryx, ptryy;
 	player_t *player;
 	fixed_t xmove, ymove;
-	bool walkplane;
+	const secplane_t * walkplane;
 	static const int windTab[3] = {2048*5, 2048*10, 2048*25};
 	int steps, step, totalsteps;
 	fixed_t startx, starty;
@@ -1246,6 +1303,22 @@ void P_XYMovement (AActor *mo, bool bForceSlide)
 		xmove = mo->momx;
 		ymove = mo->momy;
 	}
+	// [RH] Carrying sectors didn't work with low speeds in BOOM. This is
+	// because BOOM relied on the speed being fast enough to accumulate
+	// despite friction. If the speed is too low, then its movement will get
+	// cancelled, and it won't accumulate to the desired speed.
+	if (scrollx > CARRYSTOPSPEED)
+	{
+		scrollx = FixedMul (scrollx, CARRYFACTOR);
+		mo->momx += scrollx;
+	}
+	if (scrolly > CARRYSTOPSPEED)
+	{
+		scrolly = FixedMul (scrolly, CARRYFACTOR);
+		mo->momy += scrolly;
+	}
+	xmove += scrollx;
+	ymove += scrolly;
 
 	if ((xmove | ymove) == 0)
 	{
@@ -1275,7 +1348,7 @@ void P_XYMovement (AActor *mo, bool bForceSlide)
 
 	{
 		maxmove = mo->radius - FRACUNIT;
-		
+
 		if (maxmove <= 0)
 		{ // gibs can have radius 0, so don't divide by zero below!
 			maxmove = MAXMOVE;
@@ -1560,7 +1633,7 @@ explode:
 	{ // no friction for missiles
 		return;
 	}
-	
+
 	if (mo->z > mo->floorz && !(mo->flags2 & MF2_ONMOBJ) &&
 		(!(mo->flags2 & MF2_FLY) || !(mo->flags & MF_NOGRAVITY)) && !mo->waterlevel)
 	{ // [RH] Friction when falling is available for larger aircontrols
@@ -2082,13 +2155,8 @@ void P_NightmareRespawn (AActor *mobj)
 
 	mo->HandleSpawnFlags ();
 	mo->reactiontime = 18;
-	mo->TIDtoHate = mobj->TIDtoHate;
-	mo->LastLook = mobj->LastLook;
-	mo->flags3 |= mobj->flags3 & MF3_HUNTPLAYERS;
-	mo->flags4 |= mobj->flags4 & MF4_NOHATEPLAYERS;
-	// Friendliness information must also be transferred
-	mo->flags = (mo->flags&~MF_FRIENDLY) | (mobj->flags&MF_FRIENDLY);
-	mo->FriendPlayer = mobj->FriendPlayer;
+	mo->CopyFriendliness (mobj, false);
+	mo->Translation = mobj->Translation;
 
 	// spawn a teleport fog at old spot because of removal of the body?
 	mo = Spawn ("TeleportFog", mobj->x, mobj->y, mobj->z);
@@ -2183,11 +2251,6 @@ angle_t AActor::AngleIncrements ()
 	return ANGLE_45;
 }
 
-int AActor::GetMOD ()
-{
-	return MOD_UNKNOWN;
-}
-
 const char *AActor::GetObituary ()
 {
 	return NULL;
@@ -2207,7 +2270,7 @@ void AActor::GetExplodeParms (int &damage, int &dist, bool &hurtSource)
 }
 
 void AActor::Howl ()
-{ 
+{
 }
 
 void AActor::NoBlockingSet ()
@@ -2280,7 +2343,6 @@ bool AActor::AdjustReflectionAngle (AActor *thing, angle_t &angle)
 
 	return false;
 }
-
 
 void AActor::PlayActiveSound ()
 {
@@ -2387,7 +2449,6 @@ void AActor::Tick ()
 	static const byte HereticScrollDirs[4] = { 6, 9, 1, 4 };
 	static const char HereticSpeedMuls[5] = { 5, 10, 25, 30, 35 };
 
-	bool bForceSlide;
 	AActor *onmo;
 	int i;
 
@@ -2516,12 +2577,11 @@ void AActor::Tick ()
 	//End of MC
 
 	// [RH] Consider carrying sectors here
-	bForceSlide = false;
-	if ((level.Scrolls != NULL || player != NULL) && !(flags & MF_NOCLIP))
+	fixed_t cummx = 0, cummy = 0;
+	if ((level.Scrolls != NULL || player != NULL) && !(flags & MF_NOCLIP) && !(flags & MF_NOSECTOR))
 	{
 		fixed_t height, waterheight;	// killough 4/4/98: add waterheight
 		const msecnode_t *node;
-		fixed_t cummx, cummy;
 		int countx, county;
 
 		// killough 3/7/98: Carry things on floor
@@ -2532,7 +2592,6 @@ void AActor::Tick ()
 		// Move objects only if on floor or underwater,
 		// non-floating, and clipped.
 
-		cummx = cummy = 0;
 		countx = county = 0;
 
 		for (node = touching_sectorlist; node; node = node->m_tnext)
@@ -2562,15 +2621,15 @@ void AActor::Tick ()
 					if (compatflags&COMPATF_RAVENSCROLL)
 					{
 						angle_t fineangle = HexenScrollDirs[scrolltype / 3] * 32;
-						fixed_t carryspeed = HexenSpeedMuls[scrolltype % 3] * 2048;
+						fixed_t carryspeed = FixedDiv(HexenSpeedMuls[scrolltype % 3] * 2048, CARRYFACTOR);
 						scrollx += FixedMul (carryspeed, finecosine[fineangle]);
 						scrolly += FixedMul (carryspeed, finesine[fineangle]);
 					}
 					else
 					{
 						// Use speeds that actually match the scrolling textures!
-						scrollx =-3*1024*hexenScrollies[scrolltype][0];
-						scrolly = 3*1024*hexenScrollies[scrolltype][1];
+						scrollx +=FixedDiv(-3*1024*hexenScrollies[scrolltype][0], CARRYFACTOR);
+						scrolly +=FixedDiv( 3*1024*hexenScrollies[scrolltype][1], CARRYFACTOR);
 					}
 				}
 				else if (scrolltype >= Carry_East5 &&
@@ -2584,6 +2643,7 @@ void AActor::Tick ()
 						// Use speeds that actually match the scrolling textures!
 						carryspeed = 3072 * (1<<(scrolltype%5));
 					}
+					carryspeed = FixedDiv(carryspeed, CARRYFACTOR);
 					scrollx += carryspeed * ((dir & 3) - 1);
 					scrolly += carryspeed * (((dir & 12) >> 2) - 1);
 				}
@@ -2602,7 +2662,7 @@ void AActor::Tick ()
 				else if (scrolltype == Scroll_StrifeCurrent)
 				{ // Strife scroll special
 					int anglespeed = sec->tag - 100;
-					fixed_t carryspeed = (anglespeed % 10) << (FRACBITS - 4);
+					fixed_t carryspeed = FixedDiv((anglespeed % 10) << (FRACBITS - 4), CARRYFACTOR);
 					angle_t fineangle = (anglespeed / 10) << (32-3);
 					fineangle >>= ANGLETOFINESHIFT;
 					scrollx += FixedMul (carryspeed, finecosine[fineangle]);
@@ -2640,9 +2700,10 @@ void AActor::Tick ()
 			if (scrolly) county++;
 		}
 
-		// Some Boom compatible levels don't like this
-		// But it is only important for non-player objects.
-		if (!(level.flags&LEVEL_ADDITIVE_SCROLLERS) || player)
+		// Some levels designed with Boom in mind actually want things to accelerate
+		// at neighboring scrolling sector boundaries. But it is only important for
+		// non-player objects.
+		if (player != NULL || !(level.flags & LEVEL_ADDITIVE_SCROLLERS))
 		{
 			if (countx > 1)
 			{
@@ -2653,9 +2714,6 @@ void AActor::Tick ()
 				cummy /= county;
 			}
 		}
-		momx += cummx;
-		momy += cummy;
-		bForceSlide = (cummx || cummy);
 	}
 
 	// [RH] If standing on a steep slope, fall down it
@@ -2692,15 +2750,17 @@ void AActor::Tick ()
 	}
 
 	// [RH] Missiles moving perfectly vertical need some X/Y movement, or they
-	// won't hurt anything.
-	if ((flags & MF_MISSILE) && (momx|momy) == 0)
+	// won't hurt anything. Don't do this if damage is 0! That way, you can
+	// still have missiles that go straight up and down through actors without
+	// damaging anything.
+	if ((flags & MF_MISSILE) && (momx|momy) == 0 && damage == 0)
 	{
 		momx = 1;
 	}
 
 	// Handle X and Y momemtums
 	BlockingMobj = NULL;
-	P_XYMovement (this, bForceSlide);
+	P_XYMovement (this, cummx, cummy);
 	if (ObjectFlags & OF_MassDestruction)
 	{ // actor was destroyed
 		return;
@@ -2789,7 +2849,7 @@ void AActor::Tick ()
 	{
 		P_HitWater (this, Sector);
 	}
-	
+
 	// [RH] Don't advance if predicting a player
 	if (player && (player->cheats & CF_PREDICTING))
 	{
@@ -2844,9 +2904,9 @@ bool AActor::UpdateWaterLevel (fixed_t oldz, bool dosplash)
 	byte lastwaterlevel = waterlevel;
 	fixed_t fh=FIXED_MIN;
 	bool reset=false;
-	
+
 	waterlevel = 0;
-	
+
 	if (Sector == NULL)
 	{
 		return false;
@@ -2856,7 +2916,7 @@ bool AActor::UpdateWaterLevel (fixed_t oldz, bool dosplash)
 	{
 		waterlevel = 3;
 	}
-	else 
+	else
 	{
 		const sector_t *hsec = Sector->heightsec;
 		if (hsec != NULL && !(hsec->MoreFlags & SECF_IGNOREHEIGHTSEC))
@@ -3376,17 +3436,7 @@ void P_SpawnPlayer (mapthing2_t *mthing)
 	else if (oldactor != NULL && oldactor->player == p)
 	{
 		// Move the voodoo doll's inventory to the new player.
-		mobj->Inventory = oldactor->Inventory;
-		mobj->InventoryID = oldactor->InventoryID;
-		oldactor->Inventory = NULL;
-		oldactor->InventoryID = 0;
-
-		AInventory *item = mobj->Inventory;
-		while (item != NULL)
-		{
-			item->Owner = mobj;
-			item = item->Inventory;
-		}
+		mobj->ObtainInventory (oldactor);
 	}
 
 	// [RH] Be sure the player has the right translation
@@ -3430,13 +3480,9 @@ void P_SpawnPlayer (mapthing2_t *mthing)
 
 	p->momx = p->momy = 0;		// killough 10/98: initialize bobbing to 0.
 
-	if (players[consoleplayer].camera == players[consoleplayer].mo || players[consoleplayer].camera == oldactor)
+	if (players[consoleplayer].camera == oldactor)
 	{
-		if (NULL == (players[consoleplayer].camera = players[displayplayer].mo))
-		{
-			players[consoleplayer].camera = players[consoleplayer].mo;
-			displayplayer = consoleplayer;
-		}
+		players[consoleplayer].camera = mobj;
 	}
 
 	// [RH] Allow chasecam for demo watching
@@ -3466,7 +3512,7 @@ void P_SpawnPlayer (mapthing2_t *mthing)
 		}
 	}
 
-	if (displayplayer == playernum)
+	if (StatusBar != NULL && StatusBar->GetPlayer() == playernum)
 	{
 		StatusBar->AttachToPlayer (p);
 	}
@@ -3501,6 +3547,7 @@ void P_SpawnPlayer (mapthing2_t *mthing)
 	}
 	mobj->FriendPlayer=playernum+1;
 }
+
 
 //
 // P_SpawnMapThing
@@ -3762,8 +3809,7 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 	}
 
 	// don't spawn any monsters if -nomonsters
-	if (dmflags & DF_NO_MONSTERS
-		&& ((info->flags3 & MF3_ISMONSTER)) )
+	if (dmflags & DF_NO_MONSTERS && info->flags3 & MF3_ISMONSTER )
 	{
 		return;
 	}
@@ -4586,9 +4632,46 @@ int AActor::DoSpecialDamage (AActor *target, int damage)
 	}
 }
 
-int AActor::TakeSpecialDamage (AActor *inflictor, AActor *source, int damage)
+int AActor::TakeSpecialDamage (AActor *inflictor, AActor *source, int damage, int damagetype)
 {
-	return damage;
+	// If the actor does not have a corresponding death state, then it does not take damage.
+	// Note that DeathState matches every kind of damagetype, so an actor has that, it can
+	// be hurt with any type of damage. Exception: Massacre damage always succeeds, because
+	// it needs to work.
+	FState *death;
+
+	if (DeathState != NULL)
+	{
+		return damage;
+	}
+
+	switch (damagetype)
+	{
+	case MOD_MASSACRE:
+		return damage;
+
+	case MOD_DISINTEGRATE:
+		death = EDeathState;
+		break;
+
+	case MOD_FIRE:
+		death = BDeathState;
+		break;
+
+	case MOD_ICE:
+		death = IDeathState;
+		if (death == NULL && !deh.NoAutofreeze && !(flags4 & MF4_NOICEDEATH) &&
+			(player || (flags3 & MF3_ISMONSTER)))
+		{
+			death = &AActor::States[S_GENERICFREEZEDEATH];
+		}
+		break;
+
+	default:
+		death = NULL;
+		break;
+	}
+	return (death == NULL) ? -1 : damage;
 }
 
 FArchive &operator<< (FArchive &arc, FSoundIndex &snd)

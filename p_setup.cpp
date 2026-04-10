@@ -68,7 +68,7 @@ extern void P_TranslateTeleportThings (void);
 extern int	P_TranslateSectorSpecial (int);
 
 extern int numinterpolations;
-//extern unsigned int R_OldBlend;
+extern unsigned int R_OldBlend;
 
 CVAR (Bool, genblockmap, false, CVAR_SERVERINFO|CVAR_GLOBALCONFIG);
 CVAR (Bool, gennodes, false, CVAR_SERVERINFO|CVAR_GLOBALCONFIG);
@@ -153,8 +153,8 @@ int				*blockmaplump;	// offsets in blockmap are from here
 fixed_t 		bmaporgx;		// origin of block map
 fixed_t 		bmaporgy;
 
-FBlockNode**		blocklinks; 	// for thing chains
-
+FBlockNode**	blocklinks;		// for thing chains
+			
 
 
 // REJECT
@@ -176,7 +176,6 @@ static void P_AllocateSideDefs (int count);
 static void P_SetSideNum (WORD *sidenum_p, WORD sidenum);
 
 // [RH] Figure out blends for deep water sectors
-
 static void SetTexture (short *texture, DWORD *blend, char *name8)
 {
 	char name[9];
@@ -206,7 +205,7 @@ static void SetTexture (short *texture, DWORD *blend, char *name8)
 	}
 }
 
-static bool SetTextureNoErr (short *texture, DWORD *color, char *name8)
+static void SetTextureNoErr (short *texture, DWORD *color, char *name8, bool *validcolor)
 {
 	char name[9];
 	strncpy (name, name8, 8);
@@ -223,11 +222,12 @@ static bool SetTextureNoErr (short *texture, DWORD *color, char *name8)
 		{
 			*color = strtoul (name, &stop, 16);
 			*texture = 0;
-			return true;
+			*validcolor = (*stop == 0) && (stop == name2 + 6);
 		}
 		else	// Support for Legacy's color format!
 		{
 			int l=strlen(name);
+			*validcolor = false;
 			if (l>=7) 
 			{
 				for(stop=name2;stop<name2+6;stop++) if (!isxdigit(*stop)) *stop='0';
@@ -244,14 +244,12 @@ static bool SetTextureNoErr (short *texture, DWORD *color, char *name8)
 
 				*color=MAKERGB(red, green, blue);
 				*texture = 0;
-				return true;
+				*validcolor = true;
 			}
 		}
 		*texture = 0;
 	}
-	return false;
 }
-
 
 void P_FloodZone (sector_t *sec, int zonenum)
 {
@@ -869,7 +867,7 @@ void P_LoadSectors (int lump)
 
 		ss->gravity = 1.f;	// [RH] Default sector gravity of 1.0
 		ss->ZoneNumber = 0xFFFF;
-	
+
 		// [RH] Sectors default to white light with the default fade.
 		//		If they are outside (have a sky ceiling), they use the outside fog.
 		if (level.outsidefog != 0xff000000 && ss->ceilingpic == skyflatnum)
@@ -998,11 +996,9 @@ void P_LoadThings (int lump, int position)
 		//		everything and let it decide what to do with them.
 
 		// [RH] Need to translate the spawn flags to Hexen format.
-
 		short flags = SHORT(mt->options);
 
 		memset (&mt2, 0, sizeof(mt2));
-
 		mt2.flags = (short)((flags & 0xf) | 0x7e0);
 		if (gameinfo.gametype == GAME_Strife)
 		{
@@ -1030,6 +1026,7 @@ void P_LoadThings (int lump, int position)
 		mt2.y = SHORT(mt->y);
 		mt2.angle = SHORT(mt->angle);
 		mt2.type = SHORT(mt->type);
+
 		P_SpawnMapThing (&mt2, position);
 	}
 }
@@ -1870,28 +1867,31 @@ void P_LoadSideDefs2 (int lump)
 			// upper "texture" is light color
 			// lower "texture" is fog color
 			{
-				DWORD color = 0xffffff, fog = 0x000000;
+				DWORD color, fog;
+				bool colorgood, foggood;
 
-				bool validfog = SetTextureNoErr (&sd->bottomtexture, &fog, msd->bottomtexture);
-				bool validcolor = SetTextureNoErr (&sd->toptexture, &color, msd->toptexture);
+				SetTextureNoErr (&sd->bottomtexture, &fog, msd->bottomtexture, &foggood);
+				SetTextureNoErr (&sd->toptexture, &color, msd->toptexture, &colorgood);
 				strncpy (name, msd->midtexture, 8);
 				sd->midtexture = TexMan.GetTexture (name, FTexture::TEX_Wall, FTextureManager::TEXMAN_Overridable);
 
-				if (validfog || validcolor)
+				if (colorgood | foggood)
 				{
 					int s;
+					FDynamicColormap *colormap = NULL;
 
 					for (s = 0; s < numsectors; s++)
 					{
-						int s_color=color;
-						int s_fog=fog;
-
-						if (!validcolor) s_color = sectors[s].ColorMap->Color;
-						if (!validfog) s_fog = sectors[s].ColorMap->Fade;
-						FDynamicColormap *colormap = GetSpecialLights (s_color, s_fog, 0);
-
 						if (sectors[s].tag == sidetemp[i].a.tag)
 						{
+							if (!colorgood) color = sectors[s].ColorMap->Color;
+							if (!foggood) fog = sectors[s].ColorMap->Fade;
+							if (colormap == NULL ||
+								colormap->Color != color ||
+								colormap->Fade != fog)
+							{
+								colormap = GetSpecialLights (color, fog, 0);
+							}
 							sectors[s].ColorMap = colormap;
 						}
 					}
@@ -2321,7 +2321,7 @@ static void P_CreateBlockMap ()
 	delete[] BlockLists;
 
 	blockmaplump = new int[BlockMap.Size()];
-	for (size_t ii = 0; ii < BlockMap.Size(); ++ii)
+	for (unsigned int ii = 0; ii < BlockMap.Size(); ++ii)
 	{
 		blockmaplump[ii] = BlockMap[ii];
 	}
@@ -2408,8 +2408,8 @@ static void P_GroupLines (bool buildmap)
 	sector_t*			sector;
 	DBoundingBox		bbox;
 	bool				flaggedNoFronts = false;
-	size_t				ii, jj;
-	
+	unsigned int		ii, jj;
+		
 	// look up sector number for each subsector
 	clock (times[0]);
 	for (i = 0; i < numsubsectors; i++)
@@ -2501,7 +2501,7 @@ static void P_GroupLines (bool buildmap)
 		jj += ExtraLights[ii].NumLights;
 	}
 	unclock (times[2]);
-	
+
 	// build line tables for each sector
 	clock (times[3]);
 	linebuffer = new line_t *[total];
@@ -3441,4 +3441,3 @@ CCMD (lineloc)
 		lines[linenum].v2->y >> FRACBITS);
 }
 #endif
-

@@ -3,7 +3,7 @@
 ** Routines for managing SNDINFO lumps and ambient sounds
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2004 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@
 // HEADER FILES ------------------------------------------------------------
 
 #include "templates.h"
-//#include "actor.h"
+#include "actor.h"
 #include "a_sharedglobal.h"
 #include "s_sound.h"
 #include "c_dispatch.h"
@@ -1108,7 +1108,7 @@ static int S_FindPlayerClass (const char *name)
 {
 	if (!PlayerClassesIsSorted)
 	{
-		size_t i;
+		unsigned int i;
 
 		for (i = 0; i < PlayerClasses.Size(); ++i)
 		{
@@ -1438,7 +1438,7 @@ CCMD (soundlinks)
 CCMD (playersounds)
 {
 	const char *reserveNames[256];
-	size_t i;
+	unsigned int i;
 	int j, k, l;
 
 	// Find names for the player sounds

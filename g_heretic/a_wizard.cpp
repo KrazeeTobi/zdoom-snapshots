@@ -91,12 +91,12 @@ void AWizard::NoBlockingSet ()
 
 const char *AWizard::GetObituary ()
 {
-	return GStrings (OB_WIZARD);
+	return GStrings("OB_WIZARD");
 }
 
 const char *AWizard::GetHitObituary ()
 {
-	return GStrings (OB_WIZARDHIT);
+	return GStrings("OB_WIZARDHIT");
 }
 
 class AWizardFX1 : public AActor

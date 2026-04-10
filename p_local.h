@@ -132,7 +132,7 @@ bool	P_Thing_Spawn (int tid, int type, angle_t angle, bool fog, int newtid);
 bool	P_Thing_Projectile (int tid, int type, angle_t angle,
 			fixed_t speed, fixed_t vspeed, int dest, AActor *forcedest, int gravity, int newtid,
 			bool leadTarget);
-bool	P_Thing_Move (int tid, int mapspot);
+bool	P_Thing_Move (int tid, int mapspot, bool fog);
 
 //
 // P_ENEMY
@@ -213,10 +213,10 @@ inline void P_MakeDivline (const line_t *li, divline_t *dl)
 fixed_t P_InterceptVector (const divline_t *v2, const divline_t *v1);
 int 	P_BoxOnLineSide (const fixed_t *tmbox, const line_t *ld);
 
-extern fixed_t opentop;
-extern fixed_t openbottom;
-extern fixed_t openrange;
-extern fixed_t lowfloor;
+extern fixed_t			opentop;
+extern fixed_t			openbottom;
+extern fixed_t			openrange;
+extern fixed_t			lowfloor;
 
 void	P_LineOpening (const line_t *linedef, fixed_t x, fixed_t y, fixed_t refx=FIXED_MIN, fixed_t refy=0);
 
@@ -284,7 +284,7 @@ bool	P_TestMobjZ (AActor *mobj);
 BOOL	P_CheckPosition (AActor *thing, fixed_t x, fixed_t y);
 AActor	*P_CheckOnmobj (AActor *thing);
 void	P_FakeZMovement (AActor *mo);
-BOOL	P_TryMove (AActor* thing, fixed_t x, fixed_t y, BOOL dropoff, bool onfloor = false);
+BOOL	P_TryMove (AActor* thing, fixed_t x, fixed_t y, BOOL dropoff, const secplane_t * onfloor = NULL);
 BOOL	P_TeleportMove (AActor* thing, fixed_t x, fixed_t y, fixed_t z, BOOL telefrag);	// [RH] Added z and telefrag parameters
 void	P_PlayerStartStomp (AActor *actor);		// [RH] Stomp on things for a newly spawned player
 void	P_SlideMove (AActor* mo, fixed_t tryx, fixed_t tryy, int numsteps);
@@ -318,7 +318,7 @@ extern	fixed_t CameraX, CameraY, CameraZ;
 extern	sector_t *CameraSector;
 
 // [RH] Means of death
-void	P_RadiusAttack (AActor *spot, AActor *source, int damage, int distance, int damageType, bool hurtSelf);
+void	P_RadiusAttack (AActor *spot, AActor *source, int damage, int distance, int damageType, bool hurtSelf, bool thrustless=false);
 
 void	P_DelSeclist(msecnode_t *);							// phares 3/16/98
 void	P_CreateSecNodeList(AActor*,fixed_t,fixed_t);		// phares 3/14/98
@@ -327,7 +327,7 @@ int		P_GetFriction(const AActor *mo, int *frictionfactor);
 BOOL	Check_Sides(AActor *, int, int);					// phares
 
 // [RH] 
-bool	P_CheckSlopeWalk (AActor *actor, fixed_t &xmove, fixed_t &ymove);
+const secplane_t * P_CheckSlopeWalk (AActor *actor, fixed_t &xmove, fixed_t &ymove);
 
 //
 // P_SETUP
@@ -350,7 +350,7 @@ void P_TouchSpecialThing (AActor *special, AActor *toucher);
 
 void P_DamageMobj (AActor *target, AActor *inflictor, AActor *source, int damage, int mod, int flags=0);
 
-bool P_GiveBody (player_t *player, int num);
+bool P_GiveBody (AActor *actor, int num);
 bool P_MorphPlayer (player_t *player, const TypeInfo *morphClass);
 void P_PoisonPlayer (player_t *player, AActor *poisoner, AActor *source, int poison);
 void P_PoisonDamage (player_t *player, AActor *source, int damage, bool playPainSound);

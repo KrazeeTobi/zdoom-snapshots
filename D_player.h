@@ -87,7 +87,7 @@ public:
 	fixed_t		JumpZ;					// [GRB] Variable JumpZ
 };
 
-class APlayerChunk : APlayerPawn
+class APlayerChunk : public APlayerPawn
 {
 	DECLARE_STATELESS_ACTOR (APlayerChunk, APlayerPawn)
 };
@@ -182,6 +182,7 @@ public:
 	bool		centering;
 	byte		turnticks;
 	short		oldbuttons;
+	bool		attackdown;
 	int			health;					// only used between levels, mo->health
 										// is used during levels
 
@@ -290,5 +291,10 @@ inline FArchive &operator<< (FArchive &arc, player_s *&p)
 {
 	return arc.SerializePointer (players, (BYTE **)&p, sizeof(*players));
 }
+
+EXTERN_CVAR(Float, maxviewpitch)
+
+#define MAX_DN_ANGLE	((int)(currentrenderer==0? 56 : maxviewpitch))		// Max looking down angle
+#define MAX_UP_ANGLE	((int)(currentrenderer==0? 32 : maxviewpitch))		// Max looking up angle
 
 #endif // __D_PLAYER_H__

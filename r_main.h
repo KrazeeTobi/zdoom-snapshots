@@ -164,7 +164,6 @@ inline int R_PointOnSide (fixed_t x, fixed_t y, const node_t *node)
 
 extern fixed_t			viewx;
 extern fixed_t			viewy;
-extern fixed_t			viewz;
 
 angle_t R_PointToAngle2 (fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2);
 inline angle_t R_PointToAngle (fixed_t x, fixed_t y) { return R_PointToAngle2 (viewx, viewy, x, y); }

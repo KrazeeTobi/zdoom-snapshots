@@ -80,7 +80,7 @@ typedef struct
 	unsigned short	v2;		 // end vertex			(16 bit)
 	unsigned short	linedef; // linedef, or -1 for minisegs
 	short			side;	 // side on linedef: 0 for right, 1 for left
-	short			partner; // corresponding partner seg, or -1 on one-sided walls
+	unsigned short	partner; // corresponding partner seg, or -1 on one-sided walls
 } glseg_t;
 
 typedef struct

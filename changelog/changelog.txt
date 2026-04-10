@@ -1,3 +1,21 @@
+4. Nov. 2005
+- Fixed some bugs introduced by ZDoom 2.0.98.
+- Fixed: The sloped 3D-light code coulds cause an infinite recursion.
+
+
+3. Nov 2005
+- Upgraded to ZDoom 2.0.98
+
+
+2. Nov 2005 
+- Implemented a Strife log viewer for the alternate HUD.
+- Added sloped 3D lighting support
+
+
+1. Nov 2005
+- Fixed a sector assignment problem in the GL nodes loader.
+
+
 31. Oct 2005
 - Allowed GLDEFS as a generic name for DOOMDEFS/HTICDEFS etc.
 - Added support for Quake2/Unreal style skyboxes

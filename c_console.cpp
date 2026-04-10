@@ -3,7 +3,7 @@
 ** Implements the console itself
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2004 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
 **---------------------------------------------------------------------------
 **
 */
+
 #include "m_alloc.h"
 #include "templates.h"
 #include <stdarg.h>
@@ -1814,7 +1815,8 @@ static void C_TabComplete (bool goForward)
 
 static bool C_TabCompleteList ()
 {
-	int nummatches, maxwidth, i;
+	int nummatches, i;
+	size_t maxwidth;
 	int commonsize = INT_MAX;
 
 	nummatches = 0;
@@ -1840,17 +1842,17 @@ static bool C_TabCompleteList ()
 				}
 			}
 			nummatches++;
-			maxwidth = MAX<int> (maxwidth, strlen (TabCommands[i].Name));
+			maxwidth = MAX (maxwidth, strlen (TabCommands[i].Name));
 		}
 	}
 	if (nummatches > 1)
 	{
-		int x = 0;
+		size_t x = 0;
 		maxwidth += 3;
 		Printf (TEXTCOLOR_BLUE "Completions for %s:\n", CmdLine+2);
 		for (i = TabPos; nummatches > 0; ++i, --nummatches)
 		{
-			Printf ("%*s", -maxwidth, TabCommands[i].Name);
+			Printf ("%-*s", int(maxwidth), TabCommands[i].Name);
 			x += maxwidth;
 			if (x > ConCols - maxwidth)
 			{

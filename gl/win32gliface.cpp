@@ -17,8 +17,6 @@ CUSTOM_CVAR(Int, gl_vid_multisample, 0, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 	//Printf("ZGL: This won't take effect until ZDoomGL is restarted.\n");
 }
 
-CVAR(Bool, gl_atifog, false, 0)
-
 RenderContext gl;
 
 
@@ -326,10 +324,6 @@ void Win32GLFrameBuffer::InitializeState()
 			Printf("Support for non power 2 textures enabled.\n");
 		}
 	}
-
-	if (!strncmp(gl.vendorstring, "ATI ", 4)) gl_atifog=true;
-
-
 	gl.ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	gl.ClearDepth(1.0f);
 	gl.DepthFunc(GL_LESS);

@@ -291,7 +291,7 @@ class AGoldWandAmmo : public AAmmo
 public:
 	virtual const char *PickupMessage ()
 	{
-		return GStrings(TXT_AMMOGOLDWAND1);
+		return GStrings("TXT_AMMOGOLDWAND1");
 	}
 };
 
@@ -318,7 +318,7 @@ class AGoldWandHefty : public AGoldWandAmmo
 public:
 	virtual const char *PickupMessage ()
 	{
-		return GStrings(TXT_AMMOGOLDWAND2);
+		return GStrings("TXT_AMMOGOLDWAND2");
 	}
 };
 
@@ -579,7 +579,7 @@ class ACrossbowAmmo : public AAmmo
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_AMMOCROSSBOW1);
+		return GStrings("TXT_AMMOCROSSBOW1");
 	}
 };
 
@@ -606,7 +606,7 @@ class ACrossbowHefty : public ACrossbowAmmo
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_AMMOCROSSBOW2);
+		return GStrings("TXT_AMMOCROSSBOW2");
 	}
 };
 
@@ -631,7 +631,7 @@ class ACrossbow : public AHereticWeapon
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_WPNCROSSBOW);
+		return GStrings("TXT_WPNCROSSBOW");
 	}
 };
 
@@ -923,7 +923,7 @@ class AMaceAmmo : public AAmmo
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_AMMOMACE1);
+		return GStrings("TXT_AMMOMACE1");
 	}
 };
 
@@ -950,7 +950,7 @@ class AMaceHefty : public AMaceAmmo
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_AMMOMACE1);
+		return GStrings("TXT_AMMOMACE1");
 	}
 };
 
@@ -976,7 +976,7 @@ public:
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_WPNMACE);
+		return GStrings("TXT_WPNMACE");
 	}
 protected:
 	bool DoRespawn ();
@@ -1640,7 +1640,7 @@ class AGauntlets : public AHereticWeapon
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_WPNGAUNTLETS);
+		return GStrings("TXT_WPNGAUNTLETS");
 	}
 };
 
@@ -1851,7 +1851,7 @@ void A_GauntletAttack (AActor *actor)
 	}
 	if (power)
 	{
-		P_GiveBody (player, damage>>1);
+		P_GiveBody (player->mo, damage>>1);
 		S_Sound (player->mo, CHAN_AUTO, "weapons/gauntletspowhit", 1, ATTN_NORM);
 	}
 	else
@@ -1892,7 +1892,7 @@ class ABlasterAmmo : public AAmmo
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_AMMOBLASTER1);
+		return GStrings("TXT_AMMOBLASTER1");
 	}
 };
 
@@ -1921,7 +1921,7 @@ class ABlasterHefty : public ABlasterAmmo
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_AMMOBLASTER2);
+		return GStrings("TXT_AMMOBLASTER2");
 	}
 };
 
@@ -1946,7 +1946,7 @@ class ABlaster : public AHereticWeapon
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_WPNBLASTER);
+		return GStrings("TXT_WPNBLASTER");
 	}
 };
 
@@ -2352,7 +2352,7 @@ class ASkullRodAmmo : public AAmmo
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_AMMOSKULLROD1);
+		return GStrings("TXT_AMMOSKULLROD1");
 	}
 };
 
@@ -2380,7 +2380,7 @@ class ASkullRodHefty : public ASkullRodAmmo
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_AMMOSKULLROD2);
+		return GStrings("TXT_AMMOSKULLROD2");
 	}
 };
 
@@ -2404,7 +2404,7 @@ class ASkullRod : public AHereticWeapon
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_WPNSKULLROD);
+		return GStrings("TXT_WPNSKULLROD");
 	}
 };
 
@@ -2875,7 +2875,7 @@ class APhoenixRodAmmo : public AAmmo
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_AMMOPHOENIXROD1);
+		return GStrings("TXT_AMMOPHOENIXROD1");
 	}
 };
 
@@ -2904,7 +2904,7 @@ class APhoenixRodHefty : public APhoenixRodAmmo
 public:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_AMMOPHOENIXROD2);
+		return GStrings("TXT_AMMOPHOENIXROD2");
 	}
 };
 
@@ -2934,7 +2934,7 @@ public:
 	}
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_WPNPHOENIXROD);
+		return GStrings("TXT_WPNPHOENIXROD");
 	}
 	int FlameCount;		// for flamethrower duration
 };
@@ -3314,7 +3314,7 @@ class ABagOfHolding : public ABackpack
 protected:
 	const char *PickupMessage ()
 	{
-		return GStrings(TXT_ITEMBAGOFHOLDING);
+		return GStrings("TXT_ITEMBAGOFHOLDING");
 	}
 };
 

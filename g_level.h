@@ -2,7 +2,7 @@
 ** g_level.h
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2001 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -122,6 +122,7 @@ struct level_info_s
 	char		skypic1[9];
 	int			cluster;
 	int			partime;
+	int			sucktime;
 	QWORD		flags;
 	char		*music;
 	char		*level_name;
@@ -179,6 +180,7 @@ struct level_locals_s
 	int			starttime;
 	int			partime;
 	int			thisleveltime;
+	int			sucktime;
 
 	level_info_t *info;
 	int			cluster;

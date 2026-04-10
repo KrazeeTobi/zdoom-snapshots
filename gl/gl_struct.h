@@ -93,7 +93,6 @@ typedef struct
 {
 	float x1,x2;
 	float z1,z2;
-	bool noorigverts;
 } GLSeg;
 
 

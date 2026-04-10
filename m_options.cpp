@@ -3,7 +3,7 @@
 ** New options menu code
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2004 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -403,7 +403,7 @@ menuitem_t ControlsItems[] =
 	{ control,	"Weapons/ammo/stats",	{NULL}, {0.0}, {0.0}, {0.0}, {(value_t *)"showpop 3"} },
 };
 
-TArray<menuitem_t> CustomControlsItems (0);
+static TArray<menuitem_t> CustomControlsItems (0);
 
 menu_t ControlsMenu =
 {
@@ -421,9 +421,11 @@ menu_t ControlsMenu =
  *
  *=======================================*/
 static void StartMessagesMenu (void);
+static void StartMapColorsMenu (void);
 
 EXTERN_CVAR (Bool, am_rotate)
 EXTERN_CVAR (Bool, am_overlay)
+EXTERN_CVAR (Bool, am_drawmapback)
 EXTERN_CVAR (Bool, st_scale)
 EXTERN_CVAR (Bool, am_usecustomcolors)
 EXTERN_CVAR (Int,  r_detail)
@@ -506,7 +508,9 @@ static menuitem_t VideoItems[] = {
 	{ redtext,	" ",					{NULL},					{0.0}, {0.0},	{0.0}, {NULL} },
 	{ discrete, "Rotate automap",		{&am_rotate},		   	{2.0}, {0.0},	{0.0}, {OnOff} },
 	{ discrete, "Overlay automap",		{&am_overlay},			{2.0}, {0.0},	{0.0}, {OnOff} },
-	{ discrete, "Standard map colors",	{&am_usecustomcolors},	{2.0}, {0.0},	{0.0}, {NoYes} },
+	{ discrete, "Draw automap background",	{&am_drawmapback},	{2.0}, {0.0},	{0.0}, {OnOff} },
+	{ discrete, "Use Doom map colors",	{&am_usecustomcolors},	{2.0}, {0.0},	{0.0}, {NoYes} },
+	{ more,		"Customize map colors",	{NULL},					{0.0}, {0.0},	{0.0}, {(value_t*)StartMapColorsMenu} },
 };
 
 menu_t VideoMenu =
@@ -516,6 +520,131 @@ menu_t VideoMenu =
 	sizeof(VideoItems)/sizeof(VideoItems[0]), // [ZDoomGL]
 	0,
 	VideoItems,
+};
+
+/*=======================================
+ *
+ * Map Colors Menu
+ *
+ *=======================================*/
+
+EXTERN_CVAR (Color, am_backcolor)
+EXTERN_CVAR (Color, am_yourcolor)
+EXTERN_CVAR (Color, am_wallcolor)
+EXTERN_CVAR (Color, am_secretwallcolor)
+EXTERN_CVAR (Color, am_tswallcolor)
+EXTERN_CVAR (Color, am_fdwallcolor)
+EXTERN_CVAR (Color, am_cdwallcolor)
+EXTERN_CVAR (Color, am_thingcolor)
+EXTERN_CVAR (Color, am_gridcolor)
+EXTERN_CVAR (Color, am_xhaircolor)
+EXTERN_CVAR (Color, am_notseencolor)
+EXTERN_CVAR (Color, am_lockedcolor)
+EXTERN_CVAR (Color, am_ovyourcolor)
+EXTERN_CVAR (Color, am_ovwallcolor)
+EXTERN_CVAR (Color, am_ovthingcolor)
+EXTERN_CVAR (Color, am_ovotherwallscolor)
+EXTERN_CVAR (Color, am_ovunseencolor)
+EXTERN_CVAR (Color, am_ovtelecolor)
+EXTERN_CVAR (Color, am_intralevelcolor)
+EXTERN_CVAR (Color, am_interlevelcolor)
+EXTERN_CVAR (Color, am_secretsectorcolor)
+EXTERN_CVAR (Color, am_thingcolor_friend)
+EXTERN_CVAR (Color, am_thingcolor_monster)
+EXTERN_CVAR (Color, am_thingcolor_item)
+EXTERN_CVAR (Color, am_ovthingcolor_friend)
+EXTERN_CVAR (Color, am_ovthingcolor_monster)
+EXTERN_CVAR (Color, am_ovthingcolor_item)
+
+static menuitem_t MapColorsItems[] = {
+	{ colorpicker, "Background",								{&am_backcolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "You",										{&am_yourcolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "One-sided walls",							{&am_wallcolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Two-sided walls with different floors",		{&am_fdwallcolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Two-sided walls with different ceilings",	{&am_cdwallcolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Map grid",									{&am_gridcolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Center point",								{&am_xhaircolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Not-yet-seen walls",						{&am_notseencolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Locked doors",								{&am_lockedcolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Teleporter to the same map",				{&am_intralevelcolor},	{0}, {0}, {0}, {0} },
+	{ colorpicker, "Teleporter to a different map",				{&am_interlevelcolor},	{0}, {0}, {0}, {0} },
+	{ colorpicker, "Secret sector",								{&am_secretsectorcolor},	{0}, {0}, {0}, {0} },
+	{ redtext,		" ",										{NULL},					{0}, {0}, {0}, {0} },
+	{ colorpicker, "Invisible two-sided walls (for cheat)",		{&am_tswallcolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Secret walls (for cheat)",					{&am_secretwallcolor},	{0}, {0}, {0}, {0} },
+	{ colorpicker, "Actors (for cheat)",						{&am_thingcolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Monsters (for cheat)",						{&am_thingcolor_monster},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Friends (for cheat)",						{&am_thingcolor_friend},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Items (for cheat)",							{&am_thingcolor_item},			{0}, {0}, {0}, {0} },
+	{ redtext,		" ",										{NULL},					{0}, {0}, {0}, {0} },
+	{ colorpicker, "You (overlay)",								{&am_ovyourcolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "One-sided walls (overlay)",					{&am_ovwallcolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Two-sided walls (overlay)",					{&am_ovotherwallscolor},{0}, {0}, {0}, {0} },
+	{ colorpicker, "Not-yet-seen walls (overlay)",				{&am_ovunseencolor},	{0}, {0}, {0}, {0} },
+	{ colorpicker, "Teleporter (overlay)",						{&am_ovtelecolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Actors (overlay) (for cheat)",				{&am_ovthingcolor},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Monsters (overlay) (for cheat)",			{&am_ovthingcolor_monster},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Friends (overlay) (for cheat)",				{&am_ovthingcolor_friend},		{0}, {0}, {0}, {0} },
+	{ colorpicker, "Items (overlay) (for cheat)",				{&am_ovthingcolor_item},		{0}, {0}, {0}, {0} },
+};
+
+
+
+menu_t MapColorsMenu =
+{
+	"CUSTOMIZE MAP COLORS",
+	0,
+	sizeof(MapColorsItems)/sizeof(MapColorsItems[0]),
+	48,
+	MapColorsItems,
+};
+
+/*=======================================
+ *
+ * Color Picker Sub-menu
+ *
+ *=======================================*/
+static void StartColorPickerMenu (char *colorname, FColorCVar *cvar);
+static void ColorPickerReset ();
+static int CurrColorIndex;
+static int SelColorIndex;
+static void UpdateSelColor (int index);
+
+
+static menuitem_t ColorPickerItems[] = {
+	{ redtext,		NULL,					{NULL},		{0},  {0},   {0},  {0} },
+	{ redtext,		" ",					{NULL},		{0},  {0},   {0},  {0} },
+	{ intslider,	"Red",					{NULL},		{0},  {255}, {15}, {0} },
+	{ intslider,	"Green",				{NULL},		{0},  {255}, {15}, {0} },
+	{ intslider,	"Blue",					{NULL},		{0},  {255}, {15}, {0} },
+	{ redtext,		" ",					{NULL},		{0},  {0},   {0},  {0} },
+	{ more,			"Undo changes",			{NULL},		{0},  {0},   {0},  {(value_t*)ColorPickerReset} },
+	{ redtext,		" ",					{NULL},		{0},  {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{0},  {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{1},  {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{2},  {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{3},  {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{4},  {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{5},  {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{6},  {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{7},  {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{8},  {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{9},  {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{10}, {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{11}, {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{12}, {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{13}, {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{14}, {0},   {0},  {0} },
+	{ palettegrid,	" ",					{NULL},		{15}, {0},   {0},  {0} },
+};
+
+menu_t ColorPickerMenu =
+{
+	"SELECT COLOR",
+	2,
+	sizeof(ColorPickerItems)/sizeof(ColorPickerItems[0]),
+	0,
+	ColorPickerItems,
 };
 
 /*=======================================
@@ -697,9 +826,9 @@ CUSTOM_CVAR (Bool, vid_tft, false, CVAR_ARCHIVE)
 	{
 		ModesItems[VM_ASPECTITEM].b.numvalues = 4.f;
 		ModesItems[VM_ASPECTITEM].e.values = Ratios;
-		if (menu_screenratios == 4.f)
+		if (menu_screenratios == 4)
 		{
-			menu_screenratios = 0.f;
+			menu_screenratios = 0;
 		}
 	}
 	BuildModesList (SCREENWIDTH, SCREENHEIGHT, DisplayBits);
@@ -761,7 +890,7 @@ static menuitem_t CompatibilityItems[] = {
 	{ bitflag,	"Limit Pain Elementals to 20 Lost Souls",	{&compatflags}, {0}, {0}, {0}, {(value_t *)COMPATF_LIMITPAIN} },
 	{ bitflag,	"Don't let others hear your pickups",		{&compatflags}, {0}, {0}, {0}, {(value_t *)COMPATF_SILENTPICKUP} },
 	{ bitflag,	"Actors are infinitely tall",				{&compatflags}, {0}, {0}, {0}, {(value_t *)COMPATF_NO_PASSMOBJ} },
-	{ bitflag,	"Allow silent BFG trick",					{&compatflags}, {0}, {0}, {0}, {(value_t *)COMPATF_MAGICSILENCE} },
+	{ bitflag,	"Cripple sound for silent BFG trick",		{&compatflags}, {0}, {0}, {0}, {(value_t *)COMPATF_MAGICSILENCE} },
 	{ bitflag,	"Enable wall running",						{&compatflags}, {0}, {0}, {0}, {(value_t *)COMPATF_WALLRUN} },
 	{ bitflag,	"Spawn item drops on the floor",			{&compatflags}, {0}, {0}, {0}, {(value_t *)COMPATF_NOTOSSDROPS} },
 	{ bitflag,  "All special lines can block use lines",	{&compatflags}, {0}, {0}, {0}, {(value_t *)COMPATF_USEBLOCKING} },
@@ -1005,12 +1134,12 @@ void M_ChangeMessages ()
 {
 	if (show_messages)
 	{
-		Printf (128, "%s\n", GStrings(MSGOFF));
+		Printf (128, "%s\n", GStrings("MSGOFF"));
 		show_messages = false;
 	}
 	else
 	{
-		Printf (128, "%s\n", GStrings(MSGON));
+		Printf (128, "%s\n", GStrings("MSGON"));
 		show_messages = true;
 	}
 }
@@ -1224,6 +1353,11 @@ void M_OptDrawer ()
 				color = LabelColor;
 				break;
 
+			case colorpicker:
+				x = CurrentMenu->indent + 14;
+				color = MoreColor;
+				break;
+
 			default:
 				x = CurrentMenu->indent - width;
 				color = (item->type == control && menuactive == MENU_WaitKey && i == CurrentItem)
@@ -1314,6 +1448,10 @@ void M_OptDrawer ()
 				M_DrawSlider (CurrentMenu->indent + 14, y + labelofs, item->b.min, item->c.max, fabs(value.Float));
 				break;
 
+			case intslider:
+				M_DrawSlider (CurrentMenu->indent + 14, y + labelofs, item->b.min, item->c.max, item->a.fval);
+				break;
+
 			case control:
 			{
 				char description[64];
@@ -1323,6 +1461,56 @@ void M_OptDrawer ()
 				screen->DrawText (CR_WHITE,
 					CurrentMenu->indent + 14, y-1+labelofs, description, DTA_Clean, true, TAG_DONE);
 				screen->SetFont (SmallFont);
+			}
+			break;
+
+			case colorpicker:
+			{
+				int box_x, box_y;
+				box_x = (CurrentMenu->indent - 35 - 160) * CleanXfac + screen->GetWidth()/2;
+				box_y = (y - 98) * CleanYfac + screen->GetHeight()/2;
+				screen->Clear (box_x, box_y, box_x + 32*CleanXfac, box_y + (fontheight-1)*CleanYfac,
+					item->a.colorcvar->GetIndex());
+			}
+			break;
+
+			case palettegrid:
+			{
+				int box_x, box_y;
+				int x1, p;
+				const int w = fontheight*CleanXfac;
+				const int h = fontheight*CleanYfac;
+
+				box_y = (y - 98) * CleanYfac + screen->GetHeight()/2;
+				p = 0;
+				box_x = (CurrentMenu->indent - 32 - 160) * CleanXfac + screen->GetWidth()/2;
+				for (x1 = 0, p = int(item->b.min * 16); x1 < 16; ++p, ++x1)
+				{
+					screen->Clear (box_x, box_y, box_x + w, box_y + h, p);
+					if (p == CurrColorIndex || (i == CurrentItem && x1 == SelColorIndex))
+					{
+						int r, g, b, col;
+						double blinky;
+						if (i == CurrentItem && x1 == SelColorIndex)
+						{
+							r = 255, g = 128, b = 0;
+						}
+						else
+						{
+							r = 200, g = 200, b = 255;
+						}
+						// Make sure the cursors stand out against similar colors
+						// by pulsing them.
+						blinky = fabs(sin(I_MSTime()/1000.0)) * 0.5 + 0.5;
+						col = ColorMatcher.Pick (int(r*blinky), int(g*blinky), int(b*blinky));
+
+						screen->Clear (box_x, box_y, box_x + w, box_y + 1, col);
+						screen->Clear (box_x, box_y + h-1, box_x + w, box_y + h, col);
+						screen->Clear (box_x, box_y, box_x + 1, box_y + h, col);
+						screen->Clear (box_x + w - 1, box_y, box_x + w, box_y + h, col);
+					}
+					box_x += w;
+				}
 			}
 			break;
 
@@ -1357,7 +1545,9 @@ void M_OptDrawer ()
 				break;
 			}
 
-			if (i == CurrentItem && (skullAnimCounter < 6 || menuactive == MENU_WaitKey))
+			if (item->type != palettegrid &&	// Palette grids draw their own cursor
+				i == CurrentItem &&
+				(skullAnimCounter < 6 || menuactive == MENU_WaitKey))
 			{
 				screen->SetFont (ConFont);
 				screen->DrawText (CR_RED, CurrentMenu->indent + 3, y-1+labelofs, "\xd",
@@ -1644,11 +1834,15 @@ void M_OptResponder (event_t *ev)
 		{
 			case slider:
 			case absslider:
+			case intslider:
 				{
 					UCVarValue newval;
 					bool reversed;
 
-					value = item->a.cvar->GetGenericRep (CVAR_Float);
+					if (item->type == intslider)
+						value.Float = item->a.fval;
+					else
+						value = item->a.cvar->GetGenericRep (CVAR_Float);
 					reversed = item->type == absslider && value.Float < 0.f;
 					newval.Float = (reversed ? -value.Float : value.Float) - item->d.step;
 
@@ -1662,12 +1856,19 @@ void M_OptResponder (event_t *ev)
 						newval.Float = -newval.Float;
 					}
 
-					if (item->e.cfunc)
+					if (item->type == intslider)
+						item->a.fval = newval.Float;
+					else if (item->e.cfunc)
 						item->e.cfunc (item->a.cvar, newval.Float);
 					else
 						item->a.cvar->SetGenericRep (newval, CVAR_Float);
 				}
 				S_Sound (CHAN_VOICE, "menu/change", 1, ATTN_NONE);
+				break;
+
+			case palettegrid:
+				SelColorIndex = (SelColorIndex - 1) & 15;
+				S_Sound (CHAN_VOICE, "menu/cursor", 1, ATTN_NONE);
 				break;
 
 			case discrete:
@@ -1953,6 +2154,16 @@ void M_OptResponder (event_t *ev)
 		else if (item->type == screenres)
 		{
 		}
+		else if (item->type == colorpicker)
+		{
+			CurrentMenu->lastOn = CurrentItem;
+			S_Sound (CHAN_VOICE, "menu/choose", 1, ATTN_NONE);
+			StartColorPickerMenu (item->label, item->a.colorcvar);
+		}
+		else if (item->type == palettegrid)
+		{
+			UpdateSelColor (SelColorIndex + int(item->b.min * 16));
+		}
 		break;
 
 	case GK_ESCAPE:
@@ -2018,6 +2229,80 @@ void Reset2Saved (void)
 static void StartMessagesMenu (void)
 {
 	M_SwitchMenu (&MessagesMenu);
+}
+
+static void StartMapColorsMenu (void)
+{
+	M_SwitchMenu (&MapColorsMenu);
+}
+
+CCMD (menu_mapcolors)
+{
+	M_StartControlPanel (true);
+	OptionsActive = true;
+	StartMapColorsMenu ();
+}
+
+static void ColorPickerDrawer ()
+{
+	int newColorIndex = ColorMatcher.Pick (
+		int(ColorPickerItems[2].a.fval),
+		int(ColorPickerItems[3].a.fval),
+		int(ColorPickerItems[4].a.fval));
+	int oldColorIndex = ColorPickerItems[0].a.colorcvar->GetIndex();
+
+	int x = screen->GetWidth()*2/3;
+	int y = (15 + BigFont->GetHeight() + SmallFont->GetHeight()*2 - 102) * CleanYfac + screen->GetHeight()/2;
+
+	screen->Clear (x, y, x + 48*CleanXfac, y + 48*CleanYfac, oldColorIndex);
+	screen->Clear (x + 48*CleanXfac, y, x + 48*2*CleanXfac, y + 48*CleanYfac, newColorIndex);
+
+	y += 49*CleanYfac;
+	screen->DrawText (CR_GRAY, x+(24-SmallFont->StringWidth("Old")/2)*CleanXfac, y,
+		"Old", DTA_CleanNoMove, true, TAG_DONE);
+	screen->DrawText (CR_WHITE, x+(48+24-SmallFont->StringWidth("New")/2)*CleanXfac, y,
+		"New", DTA_CleanNoMove, true, TAG_DONE);
+}
+
+static void SetColorPickerSliders ()
+{
+	FColorCVar *cvar = ColorPickerItems[0].a.colorcvar;
+	ColorPickerItems[2].a.fval = RPART(DWORD(*cvar));
+	ColorPickerItems[3].a.fval = GPART(DWORD(*cvar));
+	ColorPickerItems[4].a.fval = BPART(DWORD(*cvar));
+	CurrColorIndex = cvar->GetIndex();
+}
+
+static void UpdateSelColor (int index)
+{
+	ColorPickerItems[2].a.fval = GPalette.BaseColors[index].r;
+	ColorPickerItems[3].a.fval = GPalette.BaseColors[index].g;
+	ColorPickerItems[4].a.fval = GPalette.BaseColors[index].b;
+}
+
+static void ColorPickerReset ()
+{
+	SetColorPickerSliders ();
+}
+
+static void ActivateColorChoice ()
+{
+	UCVarValue val;
+	val.Int = MAKERGB
+		(int(ColorPickerItems[2].a.fval),
+		 int(ColorPickerItems[3].a.fval),
+		 int(ColorPickerItems[4].a.fval));
+	ColorPickerItems[0].a.colorcvar->SetGenericRep (val, CVAR_Int);
+}
+
+static void StartColorPickerMenu (char *colorname, FColorCVar *cvar)
+{
+	ColorPickerMenu.PreDraw = ColorPickerDrawer;
+	ColorPickerMenu.EscapeHandler = ActivateColorChoice;
+	ColorPickerItems[0].label = colorname;
+	ColorPickerItems[0].a.colorcvar = cvar;
+	SetColorPickerSliders ();
+    M_SwitchMenu (&ColorPickerMenu);
 }
 
 static void CustomizeControls (void)
@@ -2282,9 +2567,9 @@ static void BuildModesList (int hiwidth, int hiheight, int hi_bits)
 
 			switch (c)
 			{
-			case 0: str = &ModesItems[i].b.res1; break;
-			case 1: str = &ModesItems[i].c.res2; break;
-			case 2: str = &ModesItems[i].d.res3; break;
+			default: str = &ModesItems[i].b.res1; break;
+			case 1:  str = &ModesItems[i].c.res2; break;
+			case 2:  str = &ModesItems[i].d.res3; break;
 			}
 			while ((haveMode = I_NextMode (&width, &height, &letterbox)) &&
 				(ratiomatch >= 0 && CheckRatio (width, height) != ratiomatch))
@@ -2329,9 +2614,9 @@ static BOOL GetSelectedSize (int line, int *width, int *height)
 
 		switch (ModesItems[line].a.selmode)
 		{
-		case 0: res = ModesItems[line].b.res1; break;
-		case 1: res = ModesItems[line].c.res2; break;
-		case 2: res = ModesItems[line].d.res3; break;
+		default: res = ModesItems[line].b.res1; break;
+		case 1:  res = ModesItems[line].c.res2; break;
+		case 2:  res = ModesItems[line].d.res3; break;
 		}
 		x = strtol (res, &breakpt, 10);
 		y = strtol (breakpt+1, NULL, 10);
@@ -2462,8 +2747,8 @@ void M_SaveCustomKeys (FConfigFile *config, char *section, char *subsection)
 		return;
 
 	// Start after the normal controls
-	size_t i = sizeof(ControlsItems)/sizeof(ControlsItems[0]);
-	size_t most = CustomControlsItems.Size();
+	unsigned int i = sizeof(ControlsItems)/sizeof(ControlsItems[0]);
+	unsigned int most = CustomControlsItems.Size();
 
 	while (i < most)
 	{

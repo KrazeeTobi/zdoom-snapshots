@@ -139,7 +139,7 @@ typedef enum
   name_,   // a name, eg 'count1' or 'frag'
   number,
   operator_,
-  string,
+  string_,
   unset,
   function          // function name
 } tokentype_t;

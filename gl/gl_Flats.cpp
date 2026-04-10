@@ -516,7 +516,7 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 
 	if (sector->e->ffloors.Size())
 	{
-		player_t * player=players[displayplayer].camera->player;
+		player_t * player=players[consoleplayer].camera->player;
 
 		// do the plane setup only once and just mark all loops that have to be processed
 		gl_ss_renderflags[sub-subsectors]|=SSRF_RENDER3DPLANES;

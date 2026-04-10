@@ -3,7 +3,7 @@
 ** System interface for sound; uses fmod.dll
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2004 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -475,7 +475,7 @@ void FMODSoundRenderer::Shutdown ()
 {
 	if (DidInit)
 	{
-		size_t i;
+		unsigned int i;
 
 		FSOUND_StopSound (FSOUND_ALL);
 		if (ChannelMap)
@@ -642,7 +642,7 @@ long FMODSoundRenderer::StartSound (sfxinfo_t *sfx, int vol, int sep, int pitch,
 	if (!ChannelMap)
 		return 0;
 
-	int id = sfx - &S_sfx[0];
+	int id = int(sfx - &S_sfx[0]);
 	long volume;
 	long pan;
 	long freq;
@@ -690,7 +690,7 @@ long FMODSoundRenderer::StartSound3D (sfxinfo_t *sfx, float vol, int pitch, int 
 	if (!Sound3D || !ChannelMap)
 		return 0;
 
-	int id = sfx - &S_sfx[0];
+	int id = int(sfx - &S_sfx[0]);
 	long freq;
 	long chan;
 

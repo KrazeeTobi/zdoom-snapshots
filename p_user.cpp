@@ -449,7 +449,7 @@ void APlayerPawn::TweakSpeeds (int &forward, int &side)
 // The standard healing radius behavior is the cleric's
 bool APlayerPawn::DoHealingRadius (APlayerPawn *other)
 {
-	if (P_GiveBody (other->player, 50 + (pr_healradius()%50)))
+	if (P_GiveBody (other, 50 + (pr_healradius()%50)))
 	{
 		S_Sound (other, CHAN_AUTO, "MysticIncant", 1, ATTN_NORM);
 		return true;
@@ -754,7 +754,7 @@ void P_MovePlayer (player_t *player)
 // P_FallingDamage
 //
 //==========================================================================
-		
+
 void P_FallingDamage (AActor *actor)
 {
 	int damagestyle;
@@ -824,6 +824,9 @@ void P_FallingDamage (AActor *actor)
 		// is 52. Ouch!
 		damage = mom / 25000;
 		break;
+
+	default:
+		return;
 	}
 
 	if (actor->player)
@@ -851,7 +854,7 @@ void P_DeathThink (player_t *player)
 	int lookDelta;
 
 	P_MovePsprites (player);
-	
+
 	onground = (player->mo->z <= player->mo->floorz);
 	if (player->mo->IsKindOf (RUNTIME_CLASS(APlayerChunk)))
 	{ // Flying bloody skull or flying ice chunk
@@ -931,7 +934,7 @@ void P_DeathThink (player_t *player)
 			player->poisoncount--;
 		}
 	}		
-	
+
 	if (player->cmd.ucmd.buttons & BT_USE ||
 		((deathmatch || alwaysapplydmflags) && (dmflags & DF_FORCE_RESPAWN)))
 	{
@@ -1155,13 +1158,13 @@ void P_PlayerThink (player_t *player)
 				player->mo->pitch -= look;
 				if (look > 0)
 				{ // look up
-					if (player->mo->pitch < (fixed_t)(-ANGLE_1*maxviewpitch))
-						player->mo->pitch = (fixed_t)(-ANGLE_1*maxviewpitch);
+					if (player->mo->pitch < -ANGLE_1*MAX_UP_ANGLE)
+						player->mo->pitch = -ANGLE_1*MAX_UP_ANGLE;
 				}
 				else
 				{ // look down
-					if (player->mo->pitch > (fixed_t)(ANGLE_1*maxviewpitch))
-						player->mo->pitch = (fixed_t)(ANGLE_1*maxviewpitch);
+					if (player->mo->pitch > ANGLE_1*MAX_DN_ANGLE)
+						player->mo->pitch = ANGLE_1*MAX_DN_ANGLE;
 				}
 			}
 		}
@@ -1219,6 +1222,12 @@ void P_PlayerThink (player_t *player)
 		}
 		else if (cmd->ucmd.upmove != 0)
 		{
+			// Clamp the speed to some reasonable maximum.
+			int magnitude = abs (cmd->ucmd.upmove);
+			if (magnitude > 0x300)
+			{
+				cmd->ucmd.upmove = ksgn (cmd->ucmd.upmove) * 0x300;
+			}
 			if (player->mo->waterlevel >= 2 || (player->mo->flags2 & MF2_FLY))
 			{
 				player->mo->momz = cmd->ucmd.upmove << 9;
@@ -1323,8 +1332,7 @@ void P_PlayerThink (player_t *player)
 	}
 
 	// Save buttons
-	player->oldbuttons = (cmd->ucmd.buttons & ~(BT_ATTACK|BT_ALTATTACK)) | 
-						 (player->oldbuttons & (BT_ATTACK|BT_ALTATTACK));
+	player->oldbuttons = cmd->ucmd.buttons;
 }
 
 void P_PredictPlayer (player_t *player)
@@ -1413,7 +1421,7 @@ void P_UnPredictPlayer ()
 		// Make the sector_list match the player's touching_sectorlist before it got predicted.
 		P_DelSeclist (sector_list);
 		sector_list = NULL;
-		for (size_t i = PredictionTouchingSectorsBackup.Size (); i-- > 0; )
+		for (unsigned int i = PredictionTouchingSectorsBackup.Size (); i-- > 0; )
 		{
 			sector_list = P_AddSecnode (PredictionTouchingSectorsBackup[i], act, sector_list);
 		}

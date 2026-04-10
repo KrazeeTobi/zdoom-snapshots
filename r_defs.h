@@ -35,8 +35,8 @@
 #include "actor.h"
 struct FLightNode;
 
-
 #include "dthinker.h"
+
 
 
 #define MAXWIDTH 2048
@@ -373,12 +373,12 @@ struct sector_t
 	short					oldspecial;			//jff 2/16/98 remembers if sector WAS secret (automap)
 };
 
-
 struct ReverbContainer;
 struct zone_t
 {
 	ReverbContainer *Environment;
 };
+
 
 //
 // The SideDef.
@@ -413,6 +413,7 @@ struct side_s
 	short LoopIndex;
 };
 typedef struct side_s side_t;
+
 
 //
 // Move clipping aid for LineDefs.
@@ -703,7 +704,6 @@ public:
 		return Textures[texnum].Texture;
 	}
 
-
 	// Get texture with translation
 	FTexture *operator() (int texnum)
 	{
@@ -779,6 +779,7 @@ private:
 };
 
 extern FTextureManager TexMan;
+
 
 // A vissprite_t is a thing
 //	that will be drawn during a refresh.

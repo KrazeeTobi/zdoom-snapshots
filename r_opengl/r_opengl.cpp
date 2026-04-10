@@ -50,6 +50,10 @@ void *Realloc (void *memblock, size_t size)
 {
 	return realloc (memblock, size);
 }
+void *Malloc (size_t size)
+{
+	return malloc (size);
+}
 #endif
 
 static void CollectExtensions(HDC);

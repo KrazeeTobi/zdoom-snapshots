@@ -3,7 +3,7 @@
 ** Implements the actor that represents decals in the level
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2001 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -117,7 +117,7 @@ void ADecal::FixForSide (side_t *wall)
 {
 	AActor *decal = wall->BoundActors;
 	line_t *line = &lines[wall->linenum];
-	int wallnum = wall - sides;
+	int wallnum = int(wall - sides);
 	vertex_t *v1, *v2;
 
 	if (line->sidenum[0] == wallnum)
@@ -525,7 +525,7 @@ static fixed_t Length (fixed_t dx, fixed_t dy)
 static side_t *NextWall (const side_t *wall)
 {
 	line_t *line = &lines[wall->linenum];
-	int wallnum = wall - sides;
+	int wallnum = int(wall - sides);
 
 	if (line->sidenum[0] == wallnum)
 	{
@@ -573,14 +573,14 @@ void AImpactDecal::SpreadLeft (fixed_t r, vertex_t *v1, side_t *feelwall, F3DFlo
 		side_t *nextwall = NextWall (feelwall);
 		if (nextwall != NULL && nextwall->LeftSide != NO_INDEX)
 		{
-			size_t i;
+			int i;
 
 			for (i = SpreadStack.Size(); i-- > 0; )
 			{
 				if (SpreadStack[i] == nextwall)
 					break;
 			}
-			if (i == (size_t)~0)
+			if (i == -1)
 			{
 				vertex_t *v2;
 
@@ -605,14 +605,14 @@ void AImpactDecal::SpreadRight (fixed_t r, side_t *feelwall, fixed_t wallsize, F
 		side_t *nextwall = NextWall (feelwall);
 		if (nextwall != NULL && nextwall->LeftSide != NO_INDEX)
 		{
-			size_t i;
+			int i;
 
 			for (i = SpreadStack.Size(); i-- > 0; )
 			{
 				if (SpreadStack[i] == nextwall)
 					break;
 			}
-			if (i == (size_t)~0)
+			if (i == -1)
 			{
 				SpreadRight (r, nextwall, wallsize, ffloor);
 			}
@@ -790,7 +790,7 @@ CCMD (spray)
 		{
 			AImpactDecal::StaticCreate (argv[1],
 				trace.X, trace.Y, trace.Z,
-				&sides[trace.Line->sidenum[trace.Side]]);
+				sides + trace.Line->sidenum[trace.Side]);
 		}
 	}
 }

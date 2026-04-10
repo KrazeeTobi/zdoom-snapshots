@@ -179,9 +179,9 @@ static void PrintMessage(const char * string)
 			int part2=strcspn(string+part1+1,"$");
 			strncpy(name,string+part1+1, part2);
 			name[part2]=0;
-			int index=GStrings.FindString(name);
-			if (index==-1) Printf(PRINT_HIGH, "Unknown string name %s",name); 
-			else strcat(temp,GStrings(index));
+			const char * keyname = GStrings[name];
+			if (keyname == NULL) Printf(PRINT_HIGH, "Unknown string name %s",name); 
+			else strcat(temp,keyname);
 			if (string[part1+1+part2]=='$') strcat(temp, string+part1+part2+2);
 			string=temp;
 		}

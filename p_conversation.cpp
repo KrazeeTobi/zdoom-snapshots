@@ -953,8 +953,11 @@ static void PickConversationReply ()
 	{
 		AInventory *item = static_cast<AInventory *> (Spawn (reply->GiveType, 0, 0, 0));
 		// Items given here should not count as items!
-		if (item->flags & MF_COUNTITEM) level.total_items--;
-		item->flags&=~MF_COUNTITEM;
+		if (item->flags & MF_COUNTITEM)
+		{
+			level.total_items--;
+			item->flags &= ~MF_COUNTITEM;
+		}
 		item->flags |= MF_DROPPED;
 		if (!item->DoTryPickup (players[consoleplayer].mo))
 		{

@@ -2010,6 +2010,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\name.cpp">
+			</File>
+			<File
 				RelativePath="nodebuild.cpp">
 				<FileConfiguration
 					Name="Optimized Debug|Win32">
@@ -3436,6 +3439,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\r_polymost.cpp">
+			</File>
+			<File
 				RelativePath=".\r_segs.cpp">
 				<FileConfiguration
 					Name="Optimized Debug|Win32">
@@ -4238,6 +4244,15 @@
 						BrowseInformation="1"/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath=".\zstrformat.cpp">
+			</File>
+			<File
+				RelativePath=".\zstring.cpp">
+			</File>
+			<File
+				RelativePath=".\zstringpool.cpp">
+			</File>
 			<Filter
 				Name="Asm"
 				Filter="">
@@ -4815,6 +4830,9 @@
 				RelativePath="mus2midi.h">
 			</File>
 			<File
+				RelativePath=".\name.h">
+			</File>
+			<File
 				RelativePath="nodebuild.h">
 			</File>
 			<File
@@ -4891,6 +4909,9 @@
 			</File>
 			<File
 				RelativePath="r_plane.h">
+			</File>
+			<File
+				RelativePath=".\r_polymost.h">
 			</File>
 			<File
 				RelativePath="r_segs.h">
@@ -4981,6 +5002,9 @@
 			</File>
 			<File
 				RelativePath="wi_stuff.h">
+			</File>
+			<File
+				RelativePath=".\zstring.h">
 			</File>
 		</Filter>
 		<Filter

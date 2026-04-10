@@ -6,6 +6,7 @@
 #include "a_action.h"
 
 void A_PainAttack (AActor *);
+void A_DualPainAttack (AActor *);
 void A_PainDie (AActor *);
 
 void A_SkullAttack (AActor *self);
@@ -188,6 +189,16 @@ void A_PainAttack (AActor *self)
 
 	A_FaceTarget (self);
 	A_PainShootSkull (self, self->angle);
+}
+
+void A_DualPainAttack (AActor *self)
+{
+	if (!self->target)
+		return;
+
+	A_FaceTarget (self);
+	A_PainShootSkull (self, self->angle + ANG45);
+	A_PainShootSkull (self, self->angle - ANG45);
 }
 
 void A_PainDie (AActor *self)

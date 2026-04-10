@@ -66,8 +66,11 @@ CUSTOM_CVAR (Int, snd_mididevice, -1, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 	if (oldmididev != mididevice && currSong)
 	{
 		MusInfo *song = currSong;
-		I_StopSong (song);
-		I_PlaySong (song, song->m_Looping);
+		if (song->m_Status == MusInfo::STATE_Playing)
+		{
+			I_StopSong (song);
+			I_PlaySong (song, song->m_Looping);
+		}
 	}
 }
 

@@ -414,6 +414,7 @@ void FGLTexture::LoadHiresTextures()
 	char src[9];
 	bool is32bit;
 	int width, height;
+	int type,mode;
 
 	lastLump = 0;
 	src[8] = '\0';
@@ -426,9 +427,16 @@ void FGLTexture::LoadHiresTextures()
 			if (SC_Compare("remap")) // remap an existing texture
 			{
 				SC_MustGetString();
+				
+				// allow selection by type
+				if (SC_Compare("wall")) type=FTexture::TEX_Wall, mode=FTextureManager::TEXMAN_Overridable;
+				else if (SC_Compare("flat")) type=FTexture::TEX_Flat, mode=FTextureManager::TEXMAN_Overridable;
+				else if (SC_Compare("sprite")) type=FTexture::TEX_Sprite, mode=0;
+				else type = FTexture::TEX_Any;
+				
 				sc_String[8]=0;
 
-				int tex = TexMan.CheckForTexture(sc_String, FTexture::TEX_Wall);
+				int tex = TexMan.CheckForTexture(sc_String, type, mode);
 
 				SC_MustGetString();
 				sc_String[8]=0;

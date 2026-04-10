@@ -3,7 +3,7 @@
 ** Parses DECALDEFs and creates a "library" of decals
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2001 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -609,6 +609,7 @@ void FDecalLib::ParseGenerator ()
 	}
 
 	actor->DecalGenerator = decal;
+	decal->Users.Push (type);
 }
 
 void FDecalLib::ParseFader ()
@@ -863,19 +864,27 @@ void FDecalLib::AddDecal (FDecalBase *decal)
 		}
 	}
 	if (node == NULL)
-	{
+	{ // No, add it.
 		decal->SpawnID = 0;
 		*prev = decal;
 		decal->Left = NULL;
 		decal->Right = NULL;
 	}
 	else
-	{
+	{ // Yes, replace the old one.
 		decal->Left = node->Left;
 		decal->Right = node->Right;
 		*prev = decal;
+
+		// Fix references to the old decal so that they use the new one instead.
+		for (unsigned int i = 0; i < node->Users.Size(); ++i)
+		{
+			((AActor *)node->Users[i]->ActorInfo->Defaults)->DecalGenerator = decal;
+		}
+		decal->Users = node->Users;
 		delete node;
 	}
+	// If this decal has an ID, make sure no existing decals have the same ID.
 	if (num != 0)
 	{
 		FDecalBase *spawner = ScanTreeForNum (num, Root);
@@ -1019,7 +1028,7 @@ FDecalLib::FTranslation::FTranslation (DWORD start, DWORD end)
 	DWORD ri, gi, bi, rs, gs, bs;
 	PalEntry *first, *last;
 	BYTE *table;
-	size_t i, tablei;
+	unsigned int i, tablei;
 
 	StartColor = start;
 	EndColor = end;
@@ -1309,7 +1318,7 @@ DThinker *FDecalCombinerAnim::CreateThinker (AActor *actor) const
 
 FDecalAnimator *FDecalLib::FindAnimator (const char *name)
 {
-	size_t i;
+	unsigned int i;
 
 	for (i = Animators.Size ()-1; i >= 0; --i)
 	{

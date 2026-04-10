@@ -49,7 +49,6 @@
 #include "p_local.h"
 
 #include "doomstat.h"
-
 #include "r_sky.h"
 
 #include "c_dispatch.h"
@@ -109,7 +108,7 @@ FTextureManager::FTextureManager ()
 
 FTextureManager::~FTextureManager ()
 {
-	for (size_t i = 0; i < Textures.Size(); ++i)
+	for (unsigned int i = 0; i < Textures.Size(); ++i)
 	{
 		delete Textures[i].Texture;
 	}
@@ -215,7 +214,7 @@ int FTextureManager::ReadTexture (FArchive &arc)
 
 void FTextureManager::UnloadAll ()
 {
-	for (size_t i = 0; i < Textures.Size(); ++i)
+	for (unsigned int i = 0; i < Textures.Size(); ++i)
 	{
 		Textures[i].Texture->Unload ();
 	}
@@ -280,12 +279,10 @@ int FTextureManager::CreateTexture (int lumpnum, int usetype)
 
 			if (compression != 0 || filter != 0 || interlace != 0)
 			{
-				//goto generic;
 				return -1;
 			}
 			if (colortype != 0 && colortype != 3)
 			{
-				//goto generic;
 				return -1;
 			}
 
@@ -305,87 +302,72 @@ int FTextureManager::CreateTexture (int lumpnum, int usetype)
 			out = new FPNGTexture (lumpnum, BELONG((int)width), BELONG((int)height),
 				bitdepth, colortype, interlace);
 		}
-		else 
+		else if ((gameinfo.flags & GI_PAGESARERAW) && data.GetLength() == 64000)
 		{
-			/*
-		generic:
-			out = FGenericTexture::Create (lumpnum);
-			
-			if (out)
+			// This is probably a raw page graphic, but do some checking to be sure
+			patch_t *foo;
+			int height;
+			int width;
+
+			foo = (patch_t *)Malloc (data.GetLength());
+			data.Seek (-4, SEEK_CUR);
+			data.Read (foo, data.GetLength());
+
+			height = SHORT(foo->height);
+			width = SHORT(foo->width);
+
+			if (height > 0 && height < 510 && width > 0 && width < 15997)
 			{
-				type = t_png;
-			}
-			else
-			*/
-				
-			if (usetype==FTexture::TEX_Flat)
-			{
-				// allow PNGs as flats but not Doom patches.
-				return -1;
-			}
-			else if ((gameinfo.flags & GI_PAGESARERAW) && data.GetLength() == 64000)
-			{
-				// This is probably a raw page graphic, but do some checking to be sure
-				patch_t *foo;
-				int height;
-				int width;
-	
-				foo = (patch_t *)Malloc (data.GetLength());
-				data.Seek (-4, SEEK_CUR);
-				data.Read (foo, data.GetLength());
-	
-				height = SHORT(foo->height);
-				width = SHORT(foo->width);
-	
-				if (height > 0 && height < 510 && width > 0 && width < 15997)
+				// The dimensions seem like they might be valid for a patch, so
+				// check the column directory for extra security. At least one
+				// column must begin exactly at the end of the column directory,
+				// and none of them must point past the end of the patch.
+				bool gapAtStart = true;
+				int x;
+
+				for (x = 0; x < width; ++x)
 				{
-					// The dimensions seem like they might be valid for a patch, so
-					// check the column directory for extra security. At least one
-					// column must begin exactly at the end of the column directory,
-					// and none of them must point past the end of the patch.
-					bool gapAtStart = true;
-					int x;
-	
-					for (x = 0; x < width; ++x)
+					DWORD ofs = LONG(foo->columnofs[x]);
+					if (ofs == (DWORD)width * 4 + 8)
 					{
-						DWORD ofs = LONG(foo->columnofs[x]);
-						if (ofs == (DWORD)width * 4 + 8)
+						gapAtStart = false;
+					}
+					else if (ofs >= 64000-1)	// Need one byte for an empty column
+					{
+						break;
+					}
+					else
+					{
+						// Ensure this column does not extend beyond the end of the patch
+						const BYTE *foo2 = (const BYTE *)foo;
+						while (ofs < 64000)
 						{
-							gapAtStart = false;
-						}
-						else if (ofs >= 64000-1)	// Need one byte for an empty column
-						{
-							break;
-						}
-						else
-						{
-							// Ensure this column does not extend beyond the end of the patch
-							const BYTE *foo2 = (const BYTE *)foo;
-							while (ofs < 64000)
-							{
-								if (foo2[ofs] == 255)
-								{
-									break;
-								}
-								ofs += foo2[ofs+1] + 4;
-							}
-							if (ofs >= 64000)
+							if (foo2[ofs] == 255)
 							{
 								break;
 							}
+							ofs += foo2[ofs+1] + 4;
+						}
+						if (ofs >= 64000)
+						{
+							break;
 						}
 					}
-					if (gapAtStart || (x != width))
-					{
-						type = t_raw;
-					}
 				}
-				else
+				if (gapAtStart || (x != width))
 				{
 					type = t_raw;
 				}
-				free (foo);
 			}
+			else
+			{
+				type = t_raw;
+			}
+			free (foo);
+		}
+		else if (usetype==FTexture::TEX_Flat)
+		{
+			return -1;
 		}
 	}
 	switch (type)
@@ -2750,7 +2732,7 @@ void R_InitTextures (void)
 	int lastlump = 0, lump;
 	int texlump1 = -1, texlump2 = -1, texlump1a, texlump2a;
 	int i;
-	int pfile;
+	int pfile = -1;
 
 	// For each PNAMES lump, load the TEXTURE1 and/or TEXTURE2 lumps from the same wad.
 	while ((lump = Wads.FindLump ("PNAMES", &lastlump)) != -1)
@@ -2979,7 +2961,6 @@ void R_InitColormaps ()
 	}
 }
 
-
 // [RH] Returns an index into realcolormaps. Multiply it by
 //		256*NUMCOLORMAPS to find the start of the colormap to use.
 //		WATERMAP is an exception and returns a blending value instead.
@@ -3005,7 +2986,6 @@ DWORD R_BlendForColormap (DWORD map)
 		   map < numfakecmaps ? DWORD(fakecmaps[map].blend) : 0;
 }
 
-
 //
 // R_InitData
 // Locates all the lumps that will be used by all views
@@ -3023,8 +3003,6 @@ void R_InitData ()
 
 	R_InitColormaps ();
 	C_InitConsole (SCREENWIDTH, SCREENHEIGHT, true);
-
-	Printf("%d textures created\n", TexMan.NumTextures());
 }
 
 
@@ -3120,8 +3098,6 @@ void R_PrecacheLevel (void)
 				if (currentrenderer != 1) tex->GetPixels ();
 				else if (gl_precache)
 				{
-//Printf("precaching %s\n", tex->Name);
-
 					FGLTexture * gltex = FGLTexture::ValidateTexture(tex);
 					if (gltex) 
 					{
@@ -3132,7 +3108,6 @@ void R_PrecacheLevel (void)
 			}
 			else
 			{
-//Printf("unloading %s\n", tex->Name);
 				tex->Unload ();
 				if (tex->gltex)
 				{
@@ -3141,7 +3116,6 @@ void R_PrecacheLevel (void)
 			}
 		}
 	}
-//Printf("done precaching\n");
 
 	delete[] hitlist;
 }
@@ -3435,4 +3409,3 @@ CCMD (picnum)
 	Printf ("%d: %s - %s\n", picnum, TexMan[picnum]->Name, TexMan(picnum)->Name);
 }
 #endif
-

@@ -3,7 +3,7 @@
 ** Implements the basic .ini parsing class
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2001 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -50,7 +50,7 @@ FConfigFile::FConfigFile ()
 	Sections = CurrentSection = NULL;
 	LastSectionPtr = &Sections;
 	CurrentEntry = NULL;
-	PathName = NULL;
+	PathName = "";
 }
 
 FConfigFile::FConfigFile (const char *pathname,
@@ -60,7 +60,7 @@ FConfigFile::FConfigFile (const char *pathname,
 	Sections = CurrentSection = NULL;
 	LastSectionPtr = &Sections;
 	CurrentEntry = NULL;
-	PathName = NULL;
+	PathName = "";
 
 	ChangePathName (pathname);
 	LoadConfigFile (nosechandler, userdata);
@@ -71,7 +71,7 @@ FConfigFile::FConfigFile (const FConfigFile &other)
 	Sections = CurrentSection = NULL;
 	LastSectionPtr = &Sections;
 	CurrentEntry = NULL;
-	PathName = NULL;
+	PathName = "";
 	ChangePathName (other.PathName);
 	*this = other;
 }
@@ -94,7 +94,6 @@ FConfigFile::~FConfigFile ()
 		delete[] (char *)section;
 		section = nextsection;
 	}
-	delete[] PathName;
 }
 
 FConfigFile &FConfigFile::operator = (const FConfigFile &other)
@@ -132,14 +131,9 @@ void FConfigFile::ClearConfig ()
 	LastSectionPtr = &Sections;
 }
 
-void FConfigFile::ChangePathName (const char *pathname)
+void FConfigFile::ChangePathName (const string &pathname)
 {
-	if (PathName != NULL)
-	{
-		delete[] PathName;
-	}
-	PathName = new char[strlen (pathname)+1];
-	strcpy (PathName, pathname);
+	PathName = pathname;
 }
 
 bool FConfigFile::SetSection (const char *name, bool allowCreate)
@@ -315,7 +309,7 @@ FConfigFile::FConfigEntry *FConfigFile::NewConfigEntry (
 
 void FConfigFile::LoadConfigFile (void (*nosechandler)(const char *pathname, FConfigFile *config, void *userdata), void *userdata)
 {
-	FILE *file = fopen (PathName, "r");
+	FILE *file = fopen (PathName.GetChars(), "r");
 	bool succ;
 
 	if (file == NULL)
@@ -328,7 +322,7 @@ void FConfigFile::LoadConfigFile (void (*nosechandler)(const char *pathname, FCo
 	{ // First valid line did not define a section
 		if (nosechandler != NULL)
 		{
-			nosechandler (PathName, this, userdata);
+			nosechandler (PathName.GetChars(), this, userdata);
 		}
 	}
 }
@@ -408,7 +402,7 @@ char *FConfigFile::ReadLine (char *string, int n, void *file) const
 
 void FConfigFile::WriteConfigFile () const
 {
-	FILE *file = fopen (PathName, "w");
+	FILE *file = fopen (PathName.GetChars(), "w");
 	FConfigSection *section;
 	FConfigEntry *entry;
 

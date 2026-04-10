@@ -1242,6 +1242,26 @@ void A_SetTranslucent(AActor * self)
 
 //===========================================================================
 //
+// A_FadeIn
+//
+// Fades the actor in
+//
+//===========================================================================
+void A_FadeIn(AActor * self)
+{
+	int index=CheckIndex(1, NULL);
+	if (index<0) return;
+
+	fixed_t reduce = EvalExpressionF (StateParameters[index], self) * FRACUNIT;
+	if (reduce == 0) reduce = FRACUNIT/10;
+
+	if (self->RenderStyle==STYLE_Normal) self->RenderStyle=STYLE_Translucent;
+	self->alpha += reduce;
+	//if (self->alpha<=0) self->Destroy();
+}
+
+//===========================================================================
+//
 // A_FadeOut
 //
 // fades the actor out and destroys it when done

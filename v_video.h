@@ -2,7 +2,7 @@
 ** v_video.h
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2004 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@
 
 #include "doomtype.h"
 #include "m_bbox.h"
+
 #include "v_palette.h"
 #include "v_font.h"
 #include "colormatcher.h"
@@ -43,9 +44,7 @@
 #include "doomdef.h"
 
 // Needed because we are refering to patches.
-/*
 #include "r_data.h"
-*/
 
 extern int CleanWidth, CleanHeight, CleanXfac, CleanYfac;
 extern int DisplayWidth, DisplayHeight, DisplayBits;

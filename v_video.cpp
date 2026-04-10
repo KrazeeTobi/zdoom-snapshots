@@ -29,7 +29,6 @@
 
 #include "i_system.h"
 #include "i_video.h"
-
 #include "r_local.h"
 #include "r_draw.h"
 #include "r_plane.h"
@@ -59,7 +58,6 @@
 #include "gi.h"
 #include "templates.h"
 
-
 IMPLEMENT_ABSTRACT_CLASS (DCanvas)
 IMPLEMENT_ABSTRACT_CLASS (DFrameBuffer)
 
@@ -86,7 +84,7 @@ DFrameBuffer *screen;
 CVAR (Int, vid_defwidth, 640, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR (Int, vid_defheight, 480, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR (Int, vid_defbits, 8, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
-CVAR(Bool, vid_fps, false, 0)
+CVAR (Bool, vid_fps, false, 0)
 CVAR (Bool, ticker, false, 0)
 CVAR (Int, vid_showpalette, 0, 0)
 
@@ -568,15 +566,15 @@ bool DSimpleCanvas::Lock ()
 {
 	if (LockCount == 0)
 	{
-		LockCount++;
 		Buffer = MemBuffer;
 	}
+	LockCount++;
 	return false;		// System surfaces are never lost
 }
 
 void DSimpleCanvas::Unlock ()
 {
-	if (LockCount <= 1)
+	if (--LockCount <= 0)
 	{
 		LockCount = 0;
 		Buffer = NULL;	// Enforce buffer access only between Lock/Unlock
@@ -981,5 +979,5 @@ const int BaseRatioSizes[5][4] =
 	{ 1280, 450, 0,            48*3/4 },			// 426.6667, 150,      multiplied by three
 	{ 1152, 500, 0,            48*5/6 },			// 386,      166.6667, multiplied by three
 	{  960, 600, 0,            48 },
-	{  960, 640, 6.5*FRACUNIT, 48*15/16 }			// 320,      213.3333, multiplied by three
+	{  960, 640, (int)(6.5*FRACUNIT), 48*15/16 }	// 320,      213.3333, multiplied by three
 };

@@ -3,7 +3,7 @@
 ** Miscellaneous console commands.
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2001 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -258,7 +258,7 @@ CCMD (idclev)
 			return;
 
 		// So be it.
-		Printf ("%s\n", GStrings(STSTR_CLEV));
+		Printf ("%s\n", GStrings("STSTR_CLEV"));
       	G_DeferedInitNew (mapname);
 		players[0].health = 0;		// Force reset
 	}
@@ -281,7 +281,7 @@ CCMD (hxvisit)
 			if (Wads.CheckNumForName (mapname) != -1)
 			{
 				// So be it.
-				Printf ("%s\n", GStrings(STSTR_CLEV));
+				Printf ("%s\n", GStrings("STSTR_CLEV"));
       			G_DeferedInitNew (mapname);
 				return;
 			}
@@ -355,17 +355,15 @@ CCMD (print)
 		Printf ("print <name>: Print a string from the string table\n");
 		return;
 	}
-	GStrings.LoadNames ();
-	int strnum = GStrings.FindString (argv[1]);
-	if (strnum < 0)
+	const char *str = GStrings[argv[1]];
+	if (str == NULL)
 	{
 		Printf ("%s unknown\n", argv[1]);
 	}
 	else
 	{
-		Printf ("%s\n", GStrings(strnum));
+		Printf ("%s\n", str);
 	}
-	GStrings.FlushNames ();
 }
 
 CCMD (exec)
@@ -613,6 +611,65 @@ CCMD (warp)
 	}
 }
 
+//==========================================================================
+//
+// CCMD load
+//
+// Load a saved game.
+//
+//==========================================================================
+
+CCMD (load)
+{
+    if (argv.argc() != 2)
+	{
+        Printf ("usage: load <filename>\n");
+        return;
+    }
+	if (netgame)
+	{
+		Printf ("cannot load during a network game\n");
+		return;
+	}
+	string fname = argv[1];
+	DefaultExtension (fname, ".zds");
+    G_LoadGame (fname.GetChars());
+}
+
+//==========================================================================
+//
+// CCMD save
+//
+// Save the current game.
+//
+//==========================================================================
+
+CCMD (save)
+{
+    if (argv.argc() < 2 || argv.argc() > 3)
+	{
+        Printf ("usage: save <filename> [description]\n");
+        return;
+    }
+    if (!usergame)
+	{
+        Printf ("not in a saveable game\n");
+        return;
+    }
+    if (gamestate != GS_LEVEL)
+	{
+        Printf ("not in a level\n");
+        return;
+    }
+    if(players[consoleplayer].health <= 0 && !multiplayer)
+    {
+        Printf ("player is dead in a single-player game\n");
+        return;
+    }
+    string fname = argv[1];
+	DefaultExtension (fname, ".zds");
+	G_SaveGame (fname.GetChars(), argv.argc() > 2 ? argv[2] : argv[1]);
+}
 
 CCMD(crouch)
 {
@@ -623,4 +680,3 @@ CCMD(crouch)
 
 	Net_WriteByte(DEM_CROUCH);
 }
-	

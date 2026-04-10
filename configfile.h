@@ -2,7 +2,7 @@
 ** configfile.h
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2001 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -57,8 +57,8 @@ public:
 	const char *GetValueForKey (const char *key) const;
 	void SetValueForKey (const char *key, const char *value, bool duplicates=false);
 
-	const char *GetPathName () const { return PathName; }
-	void ChangePathName (const char *path);
+	const char *GetPathName () const { return PathName.GetChars(); }
+	void ChangePathName (const string &path);
 
 	void LoadConfigFile (void (*nosechandler)(const char *pathname, FConfigFile *config, void *userdata), void *userdata);
 	void WriteConfigFile () const;
@@ -90,7 +90,7 @@ private:
 	FConfigSection **LastSectionPtr;
 	FConfigSection *CurrentSection;
 	FConfigEntry *CurrentEntry;
-	char *PathName;
+	string PathName;
 
 	FConfigSection *FindSection (const char *name) const;
 	FConfigEntry *FindEntry (FConfigSection *section, const char *key) const;

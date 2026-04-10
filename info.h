@@ -2,7 +2,7 @@
 ** info.h
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2004 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -69,6 +69,7 @@
 #include "dthinker.h"
 #include "farchive.h"
 #include "doomdef.h"
+#include "name.h"
 
 const BYTE SF_STATEPARAM = 0x20;
 const BYTE SF_FULLBRIGHT = 0x40;
@@ -350,6 +351,12 @@ enum
 	ADEF_EOL = 0xED5E		// End Of List
 };
 
+struct FStateName
+{
+	FState *AActor::*State;
+	name Name;
+};
+
 #if _MSC_VER
 // nonstandard extension used : zero-sized array in struct/union
 #pragma warning(disable:4200)
@@ -369,13 +376,19 @@ struct FActorInfo
 	TypeInfo *Class;
 	FState *OwnedStates;
 	BYTE *Defaults;
+	FStateName *StateNames;
 	int NumOwnedStates;
 	BYTE GameFilter;
 	BYTE SpawnID;
 	SWORD DoomEdNum;
 
-	// Followed by a 0-terminated list of default properties
+#if _MSC_VER
+	// A 0-terminated list of default properties
 	BYTE DefaultList[];
+#else
+	// A function to initialize the defaults for this actor
+	void (*DefaultsConstructor)(); 
+#endif
 };
 
 #if _MSC_VER

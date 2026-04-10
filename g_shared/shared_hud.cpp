@@ -88,6 +88,7 @@ static FTexture * fragpic;					// Frags icon
 static FTexture * invgems[4];				// Inventory arrows
 
 static int hudwidth, hudheight;				// current width/height for HUD display
+static bool showlog=false;
 
 void AM_GetPosition(fixed_t & x, fixed_t & y);
 
@@ -129,7 +130,7 @@ static void DrawImageToBox(FTexture * tex, int x, int y, int w, int h, int trans
 
 //---------------------------------------------------------------------------
 //
-// Draws a text but uses a fixed widh for all characters
+// Draws a text but uses a fixed width for all characters
 //
 //---------------------------------------------------------------------------
 
@@ -754,6 +755,17 @@ static void DrawCoordinates(player_t * CPlayer)
 // draw the overlay
 //
 //---------------------------------------------------------------------------
+void HUD_ShowPop(int pop)
+{
+	if (pop == FBaseStatusBar::POP_Log)
+	{
+		showlog=!showlog;
+	}
+	else if (pop == FBaseStatusBar::POP_None) 
+	{
+		showlog=false;
+	}
+}
 
 void DrawHUD()
 {
@@ -804,6 +816,48 @@ void DrawHUD()
 		if (CPlayer->camera->player)
 		{
 			StatusBar->DrawCrosshair();
+		}
+		if (showlog)
+		{
+			if (CPlayer->LogText && *CPlayer->LogText)
+			{
+				int linelen = hudwidth<640? hudwidth-20 : 560;
+				brokenlines_t *lines = V_BreakLines (560, CPlayer->LogText);
+				int height = 20;
+
+				screen->SetFont(SmallFont);
+				for (i = 0; lines[i].width != -1; i++) height += SmallFont->GetHeight () + 1;
+
+				int x,y,w;
+
+				if (linelen<560)
+				{
+					x=hudwidth/20;
+					y=hudheight/8;
+					w=hudwidth;
+				}
+				else
+				{
+					x=(hudwidth>>1)-300;
+					y=hudheight*3/10-(height>>1);
+					if (y<0) y=0;
+					w=600;
+				}
+				screen->Dim(0, 0.5f, Scale(x, SCREENWIDTH, hudwidth), Scale(y, SCREENHEIGHT, hudheight), 
+									 Scale(w, SCREENWIDTH, hudwidth), Scale(height, SCREENHEIGHT, hudheight));
+				x+=20;
+				y+=10;
+				for (i = 0; lines[i].width != -1; i++)
+				{
+
+					screen->DrawText (CR_UNTRANSLATED, x, y, lines[i].string,
+						DTA_KeepRatio, true,
+						DTA_VirtualWidth, hudwidth, DTA_VirtualHeight, hudheight, TAG_DONE);
+					y += SmallFont->GetHeight ()+1;
+				}
+
+				V_FreeBrokenLines (lines);
+			}
 		}
 		if (idmypos) DrawCoordinates(CPlayer);
 	}

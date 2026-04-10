@@ -123,7 +123,6 @@ public:
 	byte RenderStyle;
 	bool clampx;
 	bool clampy;
-	float dv1,dv2;
 	union
 	{
 		// it's either one of them but never more!

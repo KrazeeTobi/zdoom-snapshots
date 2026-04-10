@@ -1678,6 +1678,7 @@ void R_DrawTopBorder ()
 //		and/or vertically (or not at all).
 void R_DetailDouble ()
 {
+	if (!viewactive) return;
 	DetailDoubleCycles = 0;
 	clock (DetailDoubleCycles);
 

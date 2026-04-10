@@ -766,10 +766,17 @@ void GLWall::PutWall(bool translucent)
 void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 {
 	GLWall copyWall;
-	fixed_t lightbottom;
-	float maplightbottom;
+	fixed_t lightbottomleft;
+	fixed_t lightbottomright;
+	float maplightbottomleft;
+	float maplightbottomright;
 	int i;
 	TArray<lightlist_t> & lightlist=frontsector->e->lightlist;
+
+	if (glseg.x1==glseg.x2 && glseg.z1==glseg.z2)
+	{
+		return;
+	}
 
 #ifdef _DEBUG
 	if (seg->linedef-lines==2782)
@@ -778,19 +785,36 @@ void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 
 	if (lightlist.Size()>1)
 	{
+		fixed_t x1 = FROM_MAP(glseg.x1);
+		fixed_t y1 = FROM_MAP(glseg.z1);
+		fixed_t x2 = FROM_MAP(glseg.x2);
+		fixed_t y2 = FROM_MAP(glseg.z2);
+
 		for(i=0;i<lightlist.Size()-1;i++)
 		{
-			// ok, this won't work for diagonal splits...
-			// both edges have to be clipped independently
-			if (i<lightlist.Size()-1) lightbottom=lightlist[i+1].plane.ZatPoint(0,0);
-			else lightbottom= -32000*FRACUNIT;
+			if (i<lightlist.Size()-1) 
+			{
+				lightbottomleft = lightlist[i+1].plane.ZatPoint(x1,y1);
+				lightbottomright= lightlist[i+1].plane.ZatPoint(x2,y2);
+			}
+			else 
+			{
+				lightbottomright = lightbottomleft = -32000*FRACUNIT;
+			}
 				//realsector->floorplane.ZatPoint(0,0);
 
 			//maplighttop=TO_MAP(frontsector->lightlist[i].height);
-			maplightbottom=TO_MAP(lightbottom);
+			maplightbottomleft=TO_MAP(lightbottomleft);
+			maplightbottomright=TO_MAP(lightbottomright);
 
-			// The light is completely below the wall!
-			if (maplightbottom<ybottom[0] && maplightbottom<ybottom[1]) 
+			// The light is completely above the wall!
+			if (maplightbottomleft>=ytop[0] && maplightbottomright>=ytop[1])
+			{
+				continue;
+			}
+
+			// The light's bottom is completely below the wall!
+			if (maplightbottomleft<ybottom[0] && maplightbottomright<ybottom[1]) 
 			{
 				lightlevel=*lightlist[i].p_lightlevel;
 				Colormap.LightColor=(*lightlist[i].p_extra_colormap)->Color;
@@ -798,15 +822,99 @@ void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 				return;
 			}
 
-			if (maplightbottom<ytop[0] && maplightbottom<ytop[1])
+			// check for an intersection with the upper plane
+			if ((maplightbottomleft<ytop[0] && maplightbottomright>ytop[1]) ||
+				(maplightbottomleft>ytop[0] && maplightbottomright<ytop[1]))
+			{
+				float clen = MAX<float>(fabsf(glseg.x2-glseg.x1), fabsf(glseg.z2-glseg.z2));
+
+				float dch=ytop[1]-ytop[0];
+				float dfh=maplightbottomright-maplightbottomleft;
+				float coeff= (ytop[0]-maplightbottomleft)/(dfh-dch);
+				
+				// check for inaccuracies - let's be a little generous here!
+				if (coeff*clen<.1f/MAP_COEFF)
+				{
+					maplightbottomleft=ytop[0];
+				}
+				else if (coeff*clen>clen-.1f/MAP_COEFF)
+				{
+					maplightbottomright=ytop[1];
+				}
+				else
+				{
+					// split the wall in 2 at the intersection and recursively split both halves
+					copyWall=*this;
+
+					glseg.x2 = copyWall.glseg.x1 = glseg.x1 + coeff * (glseg.x2-glseg.x1);
+					glseg.z2 = copyWall.glseg.z1 = glseg.z1 + coeff * (glseg.z2-glseg.z1);
+					ytop[1] = copyWall.ytop[0] = ytop[0] + coeff * (ytop[1]-ytop[0]);
+					ybottom[1] = copyWall.ybottom[0] = ybottom[0] + coeff * (ybottom[1]-ybottom[0]);
+					fracright = copyWall.fracleft = fracleft + coeff * (fracright-fracleft);
+					uprgt.u = copyWall.uplft.u = uplft.u + coeff * (uprgt.u-uplft.u);
+					uprgt.v = copyWall.uplft.v = uplft.v + coeff * (uprgt.v-uplft.v);
+					lorgt.u = copyWall.lolft.u = lolft.u + coeff * (lorgt.u-lolft.u);
+					lorgt.v = copyWall.uplft.v = lolft.v + coeff * (lorgt.v-lolft.v);
+
+					SplitWall(frontsector, translucent);
+					copyWall.SplitWall(frontsector, translucent);
+					return;
+				}
+			}
+
+			// check for an intersection with the lower plane
+			if ((maplightbottomleft<ybottom[0] && maplightbottomright>ybottom[1]) ||
+				(maplightbottomleft>ybottom[0] && maplightbottomright<ybottom[1]))
+			{
+				float clen = MAX<float>(fabsf(glseg.x2-glseg.x1), fabsf(glseg.z2-glseg.z2));
+
+				float dch=ybottom[1]-ybottom[0];
+				float dfh=maplightbottomright-maplightbottomleft;
+				float coeff= (ybottom[0]-maplightbottomleft)/(dfh-dch);
+
+				// check for inaccuracies - let's be a little generous here because there's
+				// some conversions between floats and fixed_t's involved
+				if (coeff*clen<.1f/MAP_COEFF)
+				{
+					maplightbottomleft=ybottom[0];
+				}
+				else if (coeff*clen>clen-.1f/MAP_COEFF)
+				{
+					maplightbottomright=ybottom[1];
+				}
+				else
+				{
+					// split the wall in 2 at the intersection and recursively split both halves
+					copyWall=*this;
+
+					glseg.x2 = copyWall.glseg.x1 = glseg.x1 + coeff * (glseg.x2-glseg.x1);
+					glseg.z2 = copyWall.glseg.z1 = glseg.z1 + coeff * (glseg.z2-glseg.z1);
+					ytop[1] = copyWall.ytop[0] = ytop[0] + coeff * (ytop[1]-ytop[0]);
+					ybottom[1] = copyWall.ybottom[0] = ybottom[0] + coeff * (ybottom[1]-ybottom[0]);
+					fracright = copyWall.fracleft = fracleft + coeff * (fracright-fracleft);
+					uprgt.u = copyWall.uplft.u = uplft.u + coeff * (uprgt.u-uplft.u);
+					uprgt.v = copyWall.uplft.v = uplft.v + coeff * (uprgt.v-uplft.v);
+					lorgt.u = copyWall.lolft.u = lolft.u + coeff * (lorgt.u-lolft.u);
+					lorgt.v = copyWall.uplft.v = lolft.v + coeff * (lorgt.v-lolft.v);
+
+					SplitWall(frontsector, translucent);
+					copyWall.SplitWall(frontsector, translucent);
+					return;
+				}
+			}
+
+			if (maplightbottomleft<ytop[0] && maplightbottomright<ytop[1])
 			{
 				copyWall=*this;
 				copyWall.lightlevel=*lightlist[i].p_lightlevel;
 				copyWall.Colormap.LightColor=(*lightlist[i].p_extra_colormap)->Color;
 
-				ytop[0]=ytop[1]=copyWall.ybottom[0]=copyWall.ybottom[1]=maplightbottom;
-				uprgt.v=uplft.v=copyWall.lolft.v=copyWall.lorgt.v=copyWall.uplft.v+ 
-					(maplightbottom-copyWall.ytop[0])*(copyWall.lolft.v-copyWall.uplft.v)/(ybottom[0]-copyWall.ytop[0]);
+				ytop[0]=copyWall.ybottom[0]=maplightbottomleft;
+				ytop[1]=copyWall.ybottom[1]=maplightbottomright;
+				uplft.v=copyWall.lolft.v=copyWall.uplft.v+ 
+					(maplightbottomleft-copyWall.ytop[0])*(copyWall.lolft.v-copyWall.uplft.v)/(ybottom[0]-copyWall.ytop[0]);
+				uprgt.v=copyWall.lorgt.v=copyWall.uprgt.v+ 
+					(maplightbottomright-copyWall.ytop[1])*(copyWall.lorgt.v-copyWall.uprgt.v)/(ybottom[1]-copyWall.ytop[1]);
 				copyWall.PutWall(translucent);
 			}
 			if (ytop[0]==ybottom[0]) return;
@@ -967,7 +1075,6 @@ bool GLWall::SetWallCoordinates(seg_t * seg, int texturetop,
 
 		glseg.x1=glseg.x1+inter_x*(glseg.x2-glseg.x1);
 		glseg.z1=glseg.z1+inter_x*(glseg.z2-glseg.z1);
-		glseg.noorigverts=true;
 		fracleft = inter_x;
 
 		ybottom[0]=ytop[0]=TO_MAP(inter_y);	
@@ -1010,7 +1117,6 @@ bool GLWall::SetWallCoordinates(seg_t * seg, int texturetop,
 
 		glseg.x2=glseg.x1+inter_x*(glseg.x2-glseg.x1);
 		glseg.z2=glseg.z1+inter_x*(glseg.z2-glseg.z1);
-		glseg.noorigverts=true;
 		fracright = inter_x;
 
 		ybottom[1]=ytop[1]=TO_MAP(inter_y);
@@ -1715,7 +1821,6 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 	glseg.z2= v2->y/(float)MAP_SCALE;
 	fracleft=0;
 	fracright=1;
-	glseg.noorigverts=false;
 	clampx=clampy=false;
 
 	lightlevel=frontsector->lightlevel;
@@ -1948,7 +2053,6 @@ void GLWall::ProcessLowerMiniseg(seg_t *seg, sector_t * frontsector, sector_t * 
 		glseg.z1= v1->y/(float)MAP_SCALE;
 		glseg.x2=-v2->x/(float)MAP_SCALE;
 		glseg.z2= v2->y/(float)MAP_SCALE;
-		glseg.noorigverts=true;
 		clampx=clampy=false;
 
 		lightlevel=frontsector->lightlevel;

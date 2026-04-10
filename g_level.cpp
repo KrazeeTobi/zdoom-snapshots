@@ -3,7 +3,7 @@
 ** Parses MAPINFO and controls movement between levels
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2004 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -120,7 +120,7 @@ SDWORD ACS_GlobalVars[NUM_GLOBALVARS];
 TAutoGrowArray<SDWORD> ACS_GlobalArrays[NUM_GLOBALVARS];
 
 extern BOOL netdemo;
-extern char BackupSaveName[PATH_MAX];
+extern string BackupSaveName;
 
 BOOL savegamerestore;
 
@@ -140,7 +140,7 @@ int numwadlevelinfos = 0;
 // MAPINFO is parsed slightly differently when the map name is just a number.
 static bool HexenHack;
 
-static level_info_t TheDefaultLevelInfo = { "", 0, "", "", "", "SKY1", 0, 0, 0, NULL, "Unnamed", "COLORMAP", +8, -8 };
+static level_info_t TheDefaultLevelInfo = { "", 0, "", "", "", "SKY1", 0, 0, 0, 0, NULL, "Unnamed", "COLORMAP", +8, -8 };
 
 static cluster_info_t TheDefaultClusterInfo = { 0 };
 
@@ -177,6 +177,7 @@ static const char *MapInfoMapLevel[] =
 	"outsidefog",
 	"titlepatch",
 	"par",
+	"sucktime",
 	"music",
 	"nointermission",
 	"intermission",
@@ -297,6 +298,7 @@ MapHandlers[] =
 	{ MITYPE_COLOR,		lioffset(outsidefog), 0 },
 	{ MITYPE_LUMPNAME,	lioffset(pname), 0 },
 	{ MITYPE_INT,		lioffset(partime), 0 },
+	{ MITYPE_INT,		lioffset(sucktime), 0 },
 	{ MITYPE_MUSIC,		lioffset(music), lioffset(musicorder) },
 	{ MITYPE_SETFLAG,	LEVEL_NOINTERMISSION, 0 },
 	{ MITYPE_CLRFLAG,	LEVEL_NOINTERMISSION, 0 },
@@ -501,12 +503,10 @@ void G_ParseMapInfo ()
 	}
 
 	// Parse any extra MAPINFOs.
-	GStrings.LoadNames ();
 	while ((lump = Wads.FindLump ("MAPINFO", &lastlump)) != -1)
 	{
 		G_DoParseMapInfo (lump);
 	}
-	GStrings.FlushNames ();
 	EndSequences.ShrinkToFit ();
 
 	if (EpiDef.numitems == 0)
@@ -1065,7 +1065,7 @@ static void ParseEpisodeInfo ()
 
 static int FindEndSequence (int type, const char *picname)
 {
-	size_t i, num;
+	unsigned int i, num;
 
 	num = EndSequences.Size ();
 	for (i = 0; i < num; i++)
@@ -1234,10 +1234,9 @@ void G_NewInit ()
 	{
 		players[i].playerstate = PST_DEAD;
 	}
-	BackupSaveName[0] = 0;
+	BackupSaveName = "";
 	consoleplayer = 0;
 	NextSkill = -1;
-	respawnmonsters = 0;
 }
 
 void G_DoNewGame (void)
@@ -1378,6 +1377,12 @@ void G_InitNew (char *mapname, bool bTitleLevel)
 	viewactive = true;
 	BorderNeedRefresh = screen->GetPageCount ();
 
+	//Added by MC: Initialize bots.
+	if (!deathmatch)
+	{
+		bglobal.Init ();
+	}
+
 	strncpy (level.mapname, mapname, 8);
 	level.mapname[8] = 0;
 	if (bTitleLevel)
@@ -1448,13 +1453,20 @@ void G_SecretExitLevel (int position)
 	goOn (position, false, true);
 }
 
-
-
 void G_DoCompleted (void)
 {
 	int i; 
 
 	gameaction = ga_nothing;
+
+	if (gamestate == GS_TITLELEVEL)
+	{
+		strncpy (level.mapname, level.nextmap, 8);
+		G_DoLoadLevel (startpos, false);
+		startpos = 0;
+		viewactive = true;
+		return;
+	}
 
 	// [RH] Mark this level as having been visited
 	if (!(level.flags & LEVEL_CHANGEMAPCHEAT))
@@ -1513,6 +1525,7 @@ void G_DoCompleted (void)
 	wminfo.maxsecret = level.total_secrets;
 	wminfo.maxfrags = 0;
 	wminfo.partime = TICRATE * level.partime;
+	wminfo.sucktime = level.sucktime;
 	wminfo.pnum = consoleplayer;
 	wminfo.totaltime = totalgametime;
 
@@ -1533,70 +1546,68 @@ void G_DoCompleted (void)
 	//		the player and clear the world vars. If this is just an
 	//		ordinary cluster (not a hub), take stuff from the player, but
 	//		leave the world vars alone.
+	cluster_info_t *thiscluster = FindClusterInfo (level.cluster);
+	cluster_info_t *nextcluster = FindClusterInfo (CheckLevelRedirect (FindLevelInfo (level.nextmap))->cluster);
+	EFinishLevelType mode;
+
+	if (thiscluster != nextcluster || deathmatch ||
+		!(thiscluster->flags & CLUSTER_HUB))
 	{
-		cluster_info_t *thiscluster = FindClusterInfo (level.cluster);
-		cluster_info_t *nextcluster = FindClusterInfo (CheckLevelRedirect (FindLevelInfo (level.nextmap))->cluster);
-		EFinishLevelType mode;
-
-		if (thiscluster != nextcluster || deathmatch ||
-			!(thiscluster->flags & CLUSTER_HUB))
+		if (nextcluster->flags & CLUSTER_HUB)
 		{
-			if (nextcluster->flags & CLUSTER_HUB)
-			{
-				mode = FINISH_NextHub;
-			}
-			else
-			{
-				mode = FINISH_NoHub;
-			}
+			mode = FINISH_NextHub;
 		}
 		else
 		{
-			mode = FINISH_SameHub;
+			mode = FINISH_NoHub;
 		}
+	}
+	else
+	{
+		mode = FINISH_SameHub;
+	}
 
-		// Intermission stats for entire hubs
-		G_LeavingHub(mode, thiscluster, &wminfo);
+	// Intermission stats for entire hubs
+	G_LeavingHub(mode, thiscluster, &wminfo);
 
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i])
-			{ // take away appropriate inventory
-				G_PlayerFinishLevel (i, mode);
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i])
+		{ // take away appropriate inventory
+			G_PlayerFinishLevel (i, mode);
+		}
+	}
+
+	if (mode == FINISH_SameHub)
+	{ // Remember the level's state for re-entry.
+		G_SnapshotLevel ();
+	}
+	else
+	{ // Forget the states of all existing levels.
+		G_ClearSnapshots ();
+
+		if (mode == FINISH_NextHub)
+		{ // Reset world variables for the new hub.
+			memset (ACS_WorldVars, 0, sizeof(ACS_WorldVars));
+			for (i = 0; i < NUM_WORLDVARS; ++i)
+			{
+				ACS_WorldArrays[i].Clear ();
 			}
 		}
-
-		if (mode == FINISH_SameHub)
-		{ // Remember the level's state for re-entry.
-			G_SnapshotLevel ();
+		// It doesn't make much sense to handle this differently if there is a 
+		// total game time counter
+		//else if (mode == FINISH_NoHub)
+		{ // Reset time to zero if not entering/staying in a hub.
+			level.time = 0;
 		}
-		else
-		{ // Forget the states of all existing levels.
-			G_ClearSnapshots ();
+	}
 
-			if (mode == FINISH_NextHub)
-			{ // Reset world variables for the new hub.
-				memset (ACS_WorldVars, 0, sizeof(ACS_WorldVars));
-				for (i = 0; i < NUM_WORLDVARS; ++i)
-				{
-					ACS_WorldArrays[i].Clear ();
-				}
-			}
-			// It doesn't make much sense to handle this differently if there is a 
-			// total game time counter
-			//else if (mode == FINISH_NoHub)
-			{ // Reset time to zero if not entering/staying in a hub.
-				level.time = 0;
-			}
-		}
-
-		if (!deathmatch &&
-			((level.flags & LEVEL_NOINTERMISSION) ||
-			((nextcluster == thiscluster) && (thiscluster->flags & CLUSTER_HUB))))
-		{
-			G_WorldDone ();
-			return;
-		}
+	if (!deathmatch &&
+		((level.flags & LEVEL_NOINTERMISSION) ||
+		((nextcluster == thiscluster) && (thiscluster->flags & CLUSTER_HUB))))
+	{
+		G_WorldDone ();
+		return;
 	}
 
 	gamestate = GS_INTERMISSION;
@@ -1713,7 +1724,10 @@ void G_DoLoadLevel (int position, bool autosave)
 	paused = 0;
 
 	//Added by MC: Initialize bots.
-	bglobal.Init ();
+	if (deathmatch)
+	{
+		bglobal.Init ();
+	}
 
 	if (timingdemo)
 	{
@@ -1730,7 +1744,7 @@ void G_DoLoadLevel (int position, bool autosave)
 	level.thisleveltime = 0;
 	G_UnSnapshotLevel (!savegamerestore);	// [RH] Restore the state of the level.
 	G_FinishTravel ();
-	displayplayer = consoleplayer;		// view the guy you are playing
+	players[consoleplayer].camera = players[consoleplayer].mo;	// view the guy you are playing
 	StatusBar->AttachToPlayer (&players[consoleplayer]);
 	P_DoDeferedScripts ();	// [RH] Do script actions that were triggered on another map.
 	
@@ -1986,6 +2000,7 @@ void G_InitLevelLocals ()
 		cluster_info_t *clus = FindClusterInfo (info->cluster);
 
 		level.partime = info->partime;
+		level.sucktime = info->sucktime;
 		level.cluster = info->cluster;
 		level.clusterflags = clus ? clus->flags : 0;
 		level.flags |= info->flags;
@@ -2008,6 +2023,7 @@ void G_InitLevelLocals ()
 	else
 	{
 		level.partime = level.cluster = 0;
+		level.sucktime = 0;
 		strcpy (level.level_name, "Unnamed");
 		level.nextmap[0] =
 			level.secretmap[0] = 0;
@@ -2142,16 +2158,15 @@ const char *G_MaybeLookupLevelName (level_info_t *ininfo)
 	if (info != NULL && info->flags & LEVEL_LOOKUPLEVELNAME)
 	{
 		const char *thename;
-		int strnum;
+		const char *lookedup;
 
-		strnum = GStrings.FindString (info->level_name);
-		if (strnum < 0)
+		lookedup = GStrings[info->level_name];
+		if (lookedup == NULL)
 		{
 			thename = info->level_name;
 		}
 		else
 		{
-			const char *lookedup = GStrings(strnum);
 			char checkstring[32];
 
 			// Strip out the header from the localized string
@@ -2424,6 +2439,19 @@ void G_UnSnapshotLevel (bool hubLoad)
 			arc.SetHubTravel ();
 		G_SerializeLevel (arc, hubLoad);
 		arc.Close ();
+
+		TThinkerIterator<APlayerPawn> it;
+		APlayerPawn *pawn, *next;
+
+		next = it.Next();
+		while ((pawn = next) != 0)
+		{
+			next = it.Next();
+			if (pawn->player == NULL || pawn->player->mo == NULL || !playeringame[pawn->player - players])
+			{
+				pawn->Destroy ();
+			}
+		}
 	}
 	// No reason to keep the snapshot around once the level's been entered.
 	delete level.info->snapshot;

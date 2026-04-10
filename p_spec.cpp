@@ -93,6 +93,14 @@ void DScroller::Serialize (FArchive &arc)
 		<< m_LastHeight
 		<< m_vdx << m_vdy
 		<< m_Accel;
+	if (SaveVersion < 307)
+	{
+		if (m_Type == sc_carry)
+		{
+			m_dx = FixedDiv (m_dx, CARRYFACTOR);
+			m_dy = FixedDiv (m_dy, CARRYFACTOR);
+		}
+	}
 }
 
 DPusher::DPusher ()
@@ -303,7 +311,7 @@ static void ParseAnim (bool istex)
 	int picnum;
 	int framenum;
 	int min, max;
-	size_t i;
+	unsigned int i;
 	bool optional = false, missing = false;
 
 	SC_MustGetString ();
@@ -569,7 +577,7 @@ void P_InitPicAnims (void)
 				I_FatalError ("P_InitPicAnims: bad cycle from %s to %s",
 						 anim_p + 10 /* .startname */,
 						 anim_p + 1 /* .endname */);
-
+			
 			anim.Frames[0].SpeedMin =
 						/* .speed */
 						(anim_p[19] << 0) |
@@ -611,7 +619,7 @@ void P_AddSimpleAnim (int picnum, int animcount, int animtype, int animspeed)
 // animation range use the same setting for bNoDecals.
 static void P_FixAnimations ()
 {
-	size_t i;
+	unsigned int i;
 	int j;
 
 	for (i = 0; i < Anims.Size(); ++i)
@@ -933,7 +941,7 @@ void P_PlayerInSpecialSector (player_t *player, sector_t * sector)
 		{
 		case Sector_Heal:
 			// CoD's healing sector
-			if (!(level.time&0x1f)) P_GiveBody(player,1);
+			if (!(level.time&0x1f)) P_GiveBody(player->mo,1);
 			break;
 
 		case Damage_InstantDeath:
@@ -1127,7 +1135,7 @@ EXTERN_CVAR (Float, timelimit)
 
 void P_UpdateSpecials ()
 {
-	size_t j;
+	unsigned int j;
 	int i;
 	
 	// LEVEL TIMER
@@ -1135,7 +1143,7 @@ void P_UpdateSpecials ()
 	{
 		if (level.time >= (int)(timelimit * TICRATE * 60))
 		{
-			Printf ("%s\n", GStrings(TXT_TIMELIMIT));
+			Printf ("%s\n", GStrings("TXT_TIMELIMIT"));
 			G_ExitLevel(0, false);
 		}
 	}
@@ -1208,7 +1216,7 @@ void P_UpdateSpecials ()
 			}
 		}
 	}
-	
+
 	// [RH] Scroll the sky
 	sky1pos = sky1pos + level.skyspeed1;
 	sky2pos = sky2pos + level.skyspeed2;
@@ -1461,7 +1469,7 @@ void P_SpawnSpecials (void)
 			break;
 		}
 	}
-
+	
 	// Init other misc stuff
 
 	P_SpawnScrollers(); // killough 3/7/98: Add generalized scrollers
@@ -1562,7 +1570,7 @@ void P_SpawnSpecials (void)
 			}
 			break;
 		}
-	
+
 	// [RH] Start running any open scripts on this map
 	FBehavior::StaticStartTypedScripts (SCRIPT_Open, NULL, false);
 }
@@ -1821,8 +1829,6 @@ static void P_SpawnScrollers(void)
 
 			if (l->args[2] > 0)
 			{ // carry objects on the floor
-				dx = FixedMul (dx, CARRYFACTOR);
-				dy = FixedMul (dy, CARRYFACTOR);
 				for (s=-1; (s = P_FindSectorFromTag (l->args[0],s)) >= 0;)
 					new DScroller (DScroller::sc_carry, dx, dy, control, s, accel);
 			}
@@ -2393,4 +2399,3 @@ void sector_t::AdjustFloorClip () const
 		}
 	}
 }
-

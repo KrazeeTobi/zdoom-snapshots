@@ -500,6 +500,9 @@ void HandleMissingTextures()
 			}
 		}
 
+//		if (!MissingUpperTextures[i].seg->PartnerSeg) continue;
+//		if (!MissingUpperTextures[i].seg->PartnerSeg->Subsector) continue;
+
 		{
 			// It isn't a hole. Now check whether it might be a fake bridge
 			sector_t * fakesector = gl_FakeFlat(MissingUpperTextures[i].seg->frontsector, &fake, false);
@@ -567,6 +570,9 @@ void HandleMissingTextures()
 				continue;
 			}
 		}
+
+//		if (!MissingLowerTextures[i].seg->PartnerSeg) continue;
+//		if (!MissingLowerTextures[i].seg->PartnerSeg->Subsector) continue;
 
 		{
 			// It isn't a hole. Now check whether it might be a fake bridge

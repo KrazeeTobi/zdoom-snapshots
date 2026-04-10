@@ -549,7 +549,7 @@ static void gl_DrawBlend(sector_t * viewsector)
 	float extra_red;
 	float extra_green;
 	float extra_blue;
-	player_t * player=players[displayplayer].camera->player;
+	player_t * player=players[consoleplayer].camera->player;
 
 	// [RH] Amount of red flash for up to 114 damage points. Calculated by hand
 	//		using a logarithmic scale and my trusty HP48G.
@@ -782,7 +782,7 @@ void gl_RenderView (AActor * camera, GL_IRECT * bounds, float fov, float ratio, 
 		}
 	}
 
-	if (camera->player && camera->player-players==displayplayer &&
+	if (camera->player && camera->player-players==consoleplayer &&
 		camera->player->cheats&CF_CHASECAM && camera==camera->player->mo)
 	{
 		viewactor=NULL;
@@ -864,7 +864,7 @@ void gl_RenderViewToCanvas(DCanvas * pic, int x, int y, int width, int height)
 	bounds.width=width;
 	bounds.height=height;
 	gl.Flush();
-	gl_RenderView(players[displayplayer].camera, &bounds, FieldOfView * 360.0f / FINEANGLES, 1.6f, true);
+	gl_RenderView(players[consoleplayer].camera, &bounds, FieldOfView * 360.0f / FINEANGLES, 1.6f, true);
 	gl.Flush();
 
 	byte * scr = (byte *)Malloc(width * height * 4);

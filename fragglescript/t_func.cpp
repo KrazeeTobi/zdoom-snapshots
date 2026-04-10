@@ -714,7 +714,7 @@ void SF_Message(void)
 	int i;
 	char tempstr[256]="";
 	
-	if(!current_script->trigger || current_script->trigger->player != &players[displayplayer])
+	if(!current_script->trigger || !current_script->trigger->CheckLocalView(consoleplayer))
 	{
 		return;
 	}
@@ -4620,7 +4620,7 @@ void init_functions(void)
 {
 	// add all the functions
 	add_game_int("consoleplayer", &consoleplayer);
-	add_game_int("displayplayer", &displayplayer);
+	add_game_int("displayplayer", &consoleplayer);
 	add_game_int("zoom", &zoom);
 	add_game_int("fov", &zoom); // haleyjd: temporary alias (?)
 	add_game_mobj("trigger", &trigger_obj);

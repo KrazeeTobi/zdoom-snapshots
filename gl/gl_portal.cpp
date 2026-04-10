@@ -519,7 +519,7 @@ void GLHorizonPortal::DrawContents()
 	PalEntry color;
 	int lightlevel;
 	float z;
-	player_t * player=&players[displayplayer];
+	player_t * player=&players[consoleplayer];
 
 	gltexture=FGLTexture::ValidateTexture(sp->texture);
 	if (!gltexture) return;

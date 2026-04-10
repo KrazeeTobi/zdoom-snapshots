@@ -371,6 +371,7 @@ ACTOR(KlaxonBlare)
 ACTOR(20e10)
 ACTOR(Countdown)
 ACTOR(AlertMonsters)
+ACTOR(FireAssaultGun)
 ACTOR(PlaySound)
 ACTOR(PlayWeaponSound)
 ACTOR(LoopActiveSound)
@@ -399,6 +400,7 @@ ACTOR(Recoil)
 ACTOR(SelectWeapon)
 ACTOR(Print)
 ACTOR(SetTranslucent)
+ACTOR(FadeIn)
 ACTOR(FadeOut)
 ACTOR(SpawnDebris)
 ACTOR(SetSolid)
@@ -417,6 +419,7 @@ ACTOR(SetUserVar)
 ACTOR(SetUserVarRandom)
 ACTOR(KillMaster)
 ACTOR(KillChildren)
+ACTOR(DualPainAttack)
 
 
 #include "d_dehackedactions.h"
@@ -468,6 +471,7 @@ AFuncDesc AFTable[]=
 	FUNC(A_Hoof, NULL)
 	FUNC(A_CyberAttack, NULL)
 	FUNC(A_PainAttack, "m")
+	FUNC(A_DualPainAttack, "m")
 	FUNC(A_PainDie, "m")
 	FUNC(A_KeenDie, NULL)
 	FUNC(A_BrainPain, NULL)
@@ -538,6 +542,7 @@ AFuncDesc AFTable[]=
 	FUNC(A_KlaxonBlare, NULL)
 	FUNC(A_Countdown, NULL)
 	FUNC(A_AlertMonsters, NULL)
+	FUNC(A_FireAssaultGun, NULL)
 	{"A_CheckTerrain", A_20e10, NULL },	// This needs a better name!
 
 	// Only selected original weapon functions will be available. 
@@ -576,6 +581,7 @@ AFuncDesc AFTable[]=
 	FUNC(A_SelectWeapon, "M")
 	FUNC(A_Print, "T")
 	FUNC(A_SetTranslucent, "Xx")
+	FUNC(A_FadeIn, "x")
 	FUNC(A_FadeOut, "x")
 	FUNC(A_SpawnDebris, "M")
 	FUNC(A_CheckSight, "L")

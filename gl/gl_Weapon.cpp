@@ -123,7 +123,7 @@ void gl_DrawPlayerSprites(sector_t * viewsector)
 	fixed_t ofsx, ofsy;
 	FColormap cm;
 	sector_t * fakesec, fs;
-	AActor * playermo=players[displayplayer].camera;
+	AActor * playermo=players[consoleplayer].camera;
 	player_t * player=playermo->player;
 	
 	if(!player || playermo->renderflags&RF_INVISIBLE || !r_drawplayersprites ||

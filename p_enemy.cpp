@@ -143,7 +143,7 @@ void P_RecursiveSound (sector_t *sec, AActor *soundtarget, bool splash, int soun
 		{
 			continue;
 		}
-		
+
 		if ( sides[ check->sidenum[0] ].sector == sec)
 			other = sides[ check->sidenum[1] ].sector;
 		else
@@ -1859,7 +1859,7 @@ void A_DoChase(AActor * actor, bool fastchase, FState * meleestate, FState * mis
 
 void A_Chase(AActor * actor)
 {
-	A_DoChase(actor, false, actor->MeleeState, actor->MissileState, true, gameinfo.gametype == GAME_Heretic);
+	A_DoChase(actor, false, actor->MeleeState, actor->MissileState, true, !!(gameinfo.gametype & GAME_Raven));
 }
 
 void A_FastChase(AActor * actor)
@@ -2305,7 +2305,7 @@ int P_Massacre ()
 				actor->flags2 &= ~(MF2_DORMANT|MF2_INVULNERABLE);
 				do
 				{
-					P_DamageMobj (actor, NULL, NULL, 1000000, MOD_UNKNOWN);
+					P_DamageMobj (actor, NULL, NULL, 1000000, MOD_MASSACRE);
 				}
 				while (actor->health > 0);
 			}

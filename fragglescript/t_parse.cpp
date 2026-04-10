@@ -89,7 +89,7 @@ extern char * scriptstart;
 
 static void next_token()
 {
-	if(tok[0] || tt==string)
+	if(tok[0] || tt==string_)
     {
 		num_tokens++;
 		tokens[num_tokens-1] = tokens[num_tokens-2]
@@ -157,8 +157,8 @@ static void next_token()
     }
 	else if(*rover == '\"')
     {
-		tt = string;
-		if(tokentype[num_tokens-2] == string)
+		tt = string_;
+		if(tokentype[num_tokens-2] == string_)
 			num_tokens--;   // join strings
 		rover++;
     }
@@ -233,7 +233,7 @@ void get_tokens(char *s)
 				// a { or } section brace has been found
 				break;        // stop parsing now
 			}
-			else if(tt != string)
+			else if(tt != string_)
 			{
 				if(*rover == ';') break;     // check for end of command ';'
 			}
@@ -241,7 +241,7 @@ void get_tokens(char *s)
 			switch(tt)
 			{
 			case unset:
-			case string:
+			case string_:
 				while(*rover != '\"')     // dedicated loop for speed
 				{
 					if(*rover == '\\')       // escape sequences
@@ -325,7 +325,7 @@ void print_tokens()	// DEBUG
 		Printf("\n'%s' \t\t --", tokens[i]);
 		switch (tokentype[i])
 		{
-		case string:
+		case string_:
 			Printf("string");
 			break;
 		case operator_:
@@ -585,7 +585,7 @@ static svalue_t simple_evaluate(int n)
 	
 	switch(tokentype[n])
     {
-    case string: returnvar.type = svt_string;
+    case string_: returnvar.type = svt_string;
 		returnvar.value.s = tokens[n];
 		return returnvar;
 		

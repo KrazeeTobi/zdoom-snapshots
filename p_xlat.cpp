@@ -3,7 +3,7 @@
 ** Translate old Doom format maps to the Hexen format
 **
 **---------------------------------------------------------------------------
-** Copyright 1998-2001 Randy Heit
+** Copyright 1998-2005 Randy Heit
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -376,8 +376,6 @@ void P_TranslateLineDef (line_t *ld, maplinedef_t *mld)
 	memset (ld->args, 0, sizeof(ld->args));
 }
 
-
-
 // Now that ZDoom again gives the option of using Doom's original teleport
 // behavior, only teleport dests in a sector with a 0 tag need to be
 // given a TID. And since Doom format maps don't have TIDs, we can safely
@@ -458,9 +456,9 @@ int P_TranslateSectorSpecial (int special)
 					return high | (special + 100);
 				}
 			}
-			else if (level.flags&LEVEL_CAVERNS_OF_DARKNESS)
+			else if (level.flags & LEVEL_CAVERNS_OF_DARKNESS)
 			{
-				// CoD uses 18 as an instant death sector type and 19 for healing the player
+				// CoD uses 18 as an instant death sector type and 19 for healing the palyer
 				if (special == 18) return high | Damage_InstantDeath;
 				if (special == 19) return high | Sector_Heal;
 			}

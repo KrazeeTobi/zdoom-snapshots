@@ -194,7 +194,12 @@ void DRotatePoly::Tick ()
 			return;
 		}
 		m_Dist -= absSpeed;
-		if (m_Dist <= 0)
+
+		// we can't turn m_Dist in to an unsigned.
+		// It breaks all the other polyobj types so
+		// the only thing we can do here is to check
+		// whether m_Dist has turned negative right here!
+		if (m_Dist <= 0 && m_Dist+absSpeed>0)
 		{
 			polyobj_t *poly = GetPolyobj (m_PolyObj);
 			if (poly->specialdata == this)
@@ -204,7 +209,7 @@ void DRotatePoly::Tick ()
 			SN_StopSequence (poly);
 			Destroy ();
 		}
-		else if (m_Dist < absSpeed)
+		else if ((unsigned int)m_Dist < (unsigned int)absSpeed)
 		{
 			m_Speed = m_Dist * (m_Speed < 0 ? -1 : 1);
 		}
