@@ -61,6 +61,7 @@ int numgamesubsectors;
 void P_GetPolySpots (int lump, TArray<FNodeBuilder::FPolyStart> &spots, TArray<FNodeBuilder::FPolyStart> &anchors);
 
 extern bool	UsingGLNodes;
+extern bool gl_disabled;
 
 // fixed 32 bit gl_vert format v2.0+ (glBsp 1.91)
 typedef struct
@@ -700,6 +701,7 @@ void gl_CheckNodes(int lumpnum)
 		numgamenodes = numnodes;
 		gamesubsectors = subsectors;
 		numgamesubsectors = numsubsectors;
+		if (gl_disabled) return;
 	}
 	else
 	{

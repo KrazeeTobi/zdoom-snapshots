@@ -43,20 +43,8 @@
 
 enum
 {
-	// new line types
-	Sector_Set3DFloor = 160,
-	Sector_SetContents = 161,
-
 	// crappy hack to make certain WADs look better
 	sec_outside = 87,
-
-	// new static init types
-	// put them in the middle to avoid collisions with eventual additions by ZDoom
-	Init_Upcurrent=134,
-	Init_Downcurrent=135,
-	Init_Attach3dSide=136,
-	Init_Upwind=137,
-	Init_Downwind=138,
 };
 
 
@@ -246,7 +234,6 @@ static int P_Set3DFloor(line_t * line, int param,int param2, int alpha)
 
 void P_PlayerOnSpecial3DFloor(player_t* player)
 {
-	bool   instantdamage = false;
 	sector_t * sector = player->mo->Sector;
 
 	for(size_t i=0;i<sector->e->ffloors.Size();i++)
@@ -270,7 +257,8 @@ void P_PlayerOnSpecial3DFloor(player_t* player)
 				continue;
 		}
 		
-		if (rover->model->special) P_PlayerInSpecialSector(player, rover->model);
+		if (rover->model->special || rover->model->damage) P_PlayerInSpecialSector(player, rover->model);
+		break;
 	}
 }
 
@@ -861,6 +849,7 @@ void P_CreateExtSectors()
 		sector->e=extsectordata+i;
 		sector->sectornum = i;
 		sector->oldspecial = !!(sector->special&SECRET_MASK);
+		sector->floor_reflect = sector->ceiling_reflect = 0;
 
 		// apply outside fog to all sectors specially marked
 		// (mostly added to make Herian's maps 07 and 19 look better)

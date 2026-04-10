@@ -294,7 +294,7 @@ inline FArchive &operator<< (FArchive &arc, player_s *&p)
 
 EXTERN_CVAR(Float, maxviewpitch)
 
-#define MAX_DN_ANGLE	((int)(currentrenderer==0? 56 : maxviewpitch))		// Max looking down angle
-#define MAX_UP_ANGLE	((int)(currentrenderer==0? 32 : maxviewpitch))		// Max looking up angle
+#define MAX_DN_ANGLE	((int)((netgame || currentrenderer==0)? 56 : maxviewpitch))		// Max looking down angle
+#define MAX_UP_ANGLE	((int)((netgame || currentrenderer==0)? 32 : maxviewpitch))		// Max looking up angle
 
 #endif // __D_PLAYER_H__

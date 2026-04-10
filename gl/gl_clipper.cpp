@@ -78,7 +78,7 @@ void Clipper::Clear()
 	{
 		temp = node;
 		node = node->next;
-		delete temp;
+		temp->free();
 	}
 	
 	cliphead = NULL;

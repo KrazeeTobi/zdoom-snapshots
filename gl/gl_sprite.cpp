@@ -446,7 +446,7 @@ void GLSprite::Process(AActor* thing,sector_t * sector)
 		trans = transsouls;
 	}
 
-	if (enhancedvision)
+	if (enhancedvision && gl_enhanced_lightamp)
 	{
 		if (RenderStyle==STYLE_Fuzzy)
 		{

@@ -80,6 +80,9 @@ Clock RenderAll;
 extern UniqueList<GLSkyInfo> UniqueSkies;
 extern UniqueList<GLHorizonInfo> UniqueHorizons;
 extern UniqueList<GLSectorStackInfo> UniqueStacks;
+extern UniqueList<secplane_t> UniquePlaneMirrors;
+
+
 EXTERN_CVAR (Bool, cl_capfps)
 CVAR(Bool, gl_blendcolormaps, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 
@@ -286,19 +289,20 @@ static void gl_StartDrawScene(GL_IRECT * bounds, float fov, float ratio)
 	UniqueSkies.Clear();
 	UniqueHorizons.Clear();
 	UniqueStacks.Clear();
+	UniquePlaneMirrors.Clear();
 	currentFoV=fov;
 }
 
 
 
-
+CVAR(Float, r_test, 0, 0)
 //-----------------------------------------------------------------------------
 //
 // gl_SetupView
 // Setup the view rotation matrix for the given viewpoint
 //
 //-----------------------------------------------------------------------------
-void gl_SetupView(fixed_t viewx, fixed_t viewy, fixed_t viewz, angle_t viewangle, bool mirror, bool nosectorclear)
+void gl_SetupView(fixed_t viewx, fixed_t viewy, fixed_t viewz, angle_t viewangle, bool mirror, bool planemirror, bool nosectorclear)
 {
 	float fviewangle=(float)(viewangle>>ANGLETOFINESHIFT)*360.0f/FINEANGLES;
 	float xCamera,yCamera;
@@ -318,21 +322,15 @@ void gl_SetupView(fixed_t viewx, fixed_t viewy, fixed_t viewz, angle_t viewangle
 	
 	gl.MatrixMode(GL_MODELVIEW);
 	gl.LoadIdentity();
+
+	float mult = mirror? -1:1;
+	float planemult = planemirror? -1:1;
+
 	gl.Rotatef(roll,  0.0f, 0.0f, 1.0f);
 	gl.Rotatef(pitch, 1.0f, 0.0f, 0.0f);
-
-	if (!mirror)
-	{
-		gl.Rotatef(yaw,   0.0f, 1.0f, 0.0f);
-		gl.Translatef(-xCamera, -trY, -yCamera);
-		gl.Scalef(1, 1, 1);
-	}
-	else
-	{
-		gl.Rotatef(yaw,   0.0f, -1.0f, 0.0f);
-		gl.Translatef(xCamera, -trY, -yCamera);
-		gl.Scalef(-1, 1, 1);
-	}
+	gl.Rotatef(yaw,   0.0f, mult, 0.0f);
+	gl.Translatef(-xCamera*mult, -trY*planemult, -yCamera);
+	gl.Scalef(mult, planemult, 1);
 
 	// Clear the flat render info 
 	if (!nosectorclear)
@@ -470,6 +468,7 @@ void gl_DrawScene()
 			gl_drawlist[GLDL_LIT].Draw(GLPASS_LIGHT);
 			gl_drawlist[GLDL_LITFOG].Draw(GLPASS_LIGHT);
 			gl_drawlist[GLDL_MASKED].Draw(GLPASS_LIGHT);
+			gl.BlendEquation(GL_FUNC_ADD);
 		}
 		else gl_lights=false;
 	}
@@ -799,7 +798,7 @@ void gl_RenderView (AActor * camera, GL_IRECT * bounds, float fov, float ratio, 
 	gl_StartDrawScene(bounds, fov, ratio);	// switch to perspective mode and set up clipper
 
 	gl_StartDrawInfo(GlobalDrawList);
-	gl_SetupView(viewx, viewy, viewz, viewangle, false);
+	gl_SetupView(viewx, viewy, viewz, viewangle, false, false);
 
 	clipper.Clear();
 	angle_t a1 = gl_FrustumAngle();

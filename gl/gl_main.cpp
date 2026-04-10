@@ -51,7 +51,7 @@
 
 void gl_SetVSync(bool self)
 {
-	gl.SetVSync(self);
+	if (gl.SetVSync!=NULL) gl.SetVSync(self);
 }
 
 //==========================================================================

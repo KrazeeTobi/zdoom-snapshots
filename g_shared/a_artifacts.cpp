@@ -328,7 +328,7 @@ void APowerInvulnerable::EndEffect ()
 
 IMPLEMENT_STATELESS_ACTOR (APowerStrength, Any, -1, 0)
 	PROP_Powerup_EffectTics (1)
-	PROP_Powerup_Color (128, 255, 0, 0)
+	PROP_Powerup_Color (96, 255, 0, 0)
 	PROP_Inventory_FlagsSet (IF_HUBPOWER)
 END_DEFAULTS
 

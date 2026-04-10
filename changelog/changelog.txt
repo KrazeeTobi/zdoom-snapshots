@@ -1,3 +1,62 @@
+20. Nov. 2005
+- Added -nogl command line switch which completely disables all GL related code.
+- Added gl_vid_compatibility CVAR to force the system to use a GL mode that is
+  compatible with OpenGL 1.1. Some drivers don't report hardware support properly
+  so with those this has to be used to disable any more modern features.
+  
+  
+19. Nov. 2005
+- Added reflective planes. They are defined by the new line special 159:
+  Sector_SetPlaneReflection(tag, floor_reflect, ceiling_reflect).
+  This does not work for slopes!
+- Fixed: Some translucent 3D-floor-walls weren't rendered.
+- Fixed: Exiting a level while crouched destroyed the view height information
+  for the next level.
+- Added gl_render_segs CVAR for those who happen to own a graphics card that
+  likes to create white dots at the edges of sectors.
+- Fixed: The different pitch handling between hardware and software renderer
+  could cause desyncs in netgames. Now netgames force the limited pitch of
+  the software renderer.
+- Fixed: When upgrading to ZDoom 2.0.98 I forgot to copy some code to handle
+  the 'right' key in the menu.
+- Fixed: FlickerLight2 didn't work when the secondary size was smaller than 
+  the primary size.
+- Fixed: ZDoom's new scrolling code was doing some incorrect comparisons which
+  resulted in the player being stuck in one place in Strife's MAP11.
+
+
+17. Nov 2005
+- Reduced the intensity of the berserk effect.
+
+
+13. Nov. 2005
+- Fixed: Setting a software renderer mode didn't clear the setmodeneeded variable.
+  This caused various strange effects in the console.
+  
+
+12. Nov. 2005
+- Fixed: Static_Init to set a sector's color was broken when using ZDoom format.
+- Fixed: The deep water splash code was missing a NULL pointer check.
+- Fixed: Hub intermission data wasn't serialized properly if the hub was empty.
+- Fixed: The GL initialization code forgot to clear its vertex array when a 
+  new level was started.
+- Fixed: Some enhanced vision effects were active even when gl_enhanced_lightamp
+  was off.
+- Fixed: When upgrading to ZDoom 2.0.98 I accidentally deleted the
+  HealState handling in A_VileChase. ZDoom really needs to upgrade as well. :(
+  
+
+10. Nov. 2005
+- Fixed: A_ThrowGrenade was missing some MF4_RANDOMIZE checks.
+
+
+6. Nov. 2005
+- Fixed: Sector color assignment with Static_Init was broken.
+- Fixed: Dynamic lights affected weapon sprites when nightvision was on.
+- Fixed: Transparent textures on 3D-floors were drawn with black holes.
+- Fixed: non-existent weapon sprites crashed the software renderer.
+
+
 4. Nov. 2005
 - Fixed some bugs introduced by ZDoom 2.0.98.
 - Fixed: The sloped 3D-light code coulds cause an infinite recursion.

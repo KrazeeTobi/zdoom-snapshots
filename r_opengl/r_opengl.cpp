@@ -45,6 +45,10 @@ BOOL APIENTRY DllMain( HANDLE hModule,
     return TRUE;
 }
 
+void __cdecl I_Error (const char *error, ...)
+{
+}
+
 #if !defined(_DEBUG) || !defined(_MSC_VER)
 void *Realloc (void *memblock, size_t size)
 {
@@ -66,6 +70,8 @@ HWND m_Window;
 HDC m_hDC;
 HGLRC m_hRC;
 RenderContext * gl;
+
+int occlusion_type=0;
 
 
 //==========================================================================
@@ -289,6 +295,31 @@ static bool CheckExtension(const char *ext)
 
 //==========================================================================
 //
+// These 2 functions use a different set arguments than the ARB equivalents
+//
+//==========================================================================
+static PFNGLBEGINOCCLUSIONQUERYNVPROC glBeginOcclusionQueryNV;
+static PFNGLENDOCCLUSIONQUERYNVPROC glEndOcclusionQueryNV;
+
+static void APIENTRY BeginOcclusionQuery(GLenum type, GLuint id)
+{
+	if (glBeginOcclusionQueryNV && type==GL_SAMPLES_PASSED_ARB) 
+	{
+		glBeginOcclusionQueryNV(id);
+	}
+		
+}
+
+static void APIENTRY EndOcclusionQuery(GLenum type)
+{
+	if (glEndOcclusionQueryNV && type==GL_SAMPLES_PASSED_ARB) 
+	{
+		glEndOcclusionQueryNV();
+	}
+}
+
+//==========================================================================
+//
 // 
 //
 //==========================================================================
@@ -307,7 +338,6 @@ static void APIENTRY LoadExtensions()
 	// If that fails use a no-op dummy
 	if (!gl->BlendEquation) gl->BlendEquation = glBlendEquationDummy;
 
-	gl->flags=0;
 	if (CheckExtension("GL_ARB_texture_non_power_of_two")) gl->flags|=RFL_NPOT_TEXTURE;
 
 	PFNWGLSWAPINTERVALEXTPROC vs = (PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
@@ -315,7 +345,7 @@ static void APIENTRY LoadExtensions()
 
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE,&gl->max_texturesize);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
+	
 	if (CheckExtension("GL_ARB_fragment_program"))
 	{
 		gl->GenProgramsARB = (PFNGLGENPROGRAMSARBPROC)wglGetProcAddress("glGenProgramsARB");
@@ -375,6 +405,28 @@ static void APIENTRY LoadExtensions()
 
 		gl->flags|=RFL_GLSL;
 	}
+	/*
+	if (CheckExtension("GL_ARB_occlusion_query"))
+	{
+        gl->GenQueries         = (PFNGLGENQUERIESARBPROC)wglGetProcAddress("glGenQueriesARB");
+        gl->DeleteQueries      = (PFNGLDELETEQUERIESARBPROC)wglGetProcAddress("glDeleteQueriesARB");
+        gl->GetQueryObjectuiv  = (PFNGLGETQUERYOBJECTUIVARBPROC)wglGetProcAddress("glGetQueryObjectuivARB");
+        gl->BeginQuery         = (PFNGLBEGINQUERYARBPROC)wglGetProcAddress("glBeginQueryARB");
+        gl->EndQuery           = (PFNGLENDQUERYARBPROC)wglGetProcAddress("glEndQueryARB");
+		gl->flags|=RFL_OCCLUSION_QUERY;
+	}
+	else if (CheckExtension("GL_NV_occlusion_query"))
+	{
+        gl->GenQueries             = (PFNGLGENOCCLUSIONQUERIESNVPROC)wglGetProcAddress("glGenOcclusionQueriesNV");
+        gl->DeleteQueries          = (PFNGLDELETEOCCLUSIONQUERIESNVPROC)wglGetProcAddress("glDeleteOcclusionQueriesNV");
+        gl->GetQueryObjectuiv      = (PFNGLGETOCCLUSIONQUERYUIVNVPROC)wglGetProcAddress("glGetOcclusionQueryuivNV");
+        glBeginOcclusionQueryNV    = (PFNGLBEGINOCCLUSIONQUERYNVPROC)wglGetProcAddress("glBeginOcclusionQueryNV");
+        glEndOcclusionQueryNV      = (PFNGLENDOCCLUSIONQUERYNVPROC)wglGetProcAddress("glEndOcclusionQueryNV");
+        gl->BeginQuery             = BeginOcclusionQuery;
+        gl->EndQuery               = EndOcclusionQuery;
+		gl->flags|=RFL_OCCLUSION_QUERY;
+	}
+	*/
 }
 
 //==========================================================================
@@ -402,7 +454,7 @@ static void APIENTRY PrintStartupLog(PrintTextFunc pf)
 //
 //==========================================================================
 
-static bool SetupPixelFormat(bool allowsoftware, int multisample, PrintTextFunc Printf)
+static bool SetupPixelFormat(bool allowsoftware, bool nostencil, int multisample, PrintTextFunc Printf)
 {
 	int colorDepth;
 	HDC deskDC;
@@ -410,127 +462,167 @@ static bool SetupPixelFormat(bool allowsoftware, int multisample, PrintTextFunc 
 	int pixelFormat;
 	unsigned int numFormats;
 	float attribsFloat[] = {0.0f, 0.0f};
+	int stencil;
 	
 	deskDC = GetDC(GetDesktopWindow());
 	colorDepth = GetDeviceCaps(deskDC, BITSPIXEL);
 	ReleaseDC(GetDesktopWindow(), deskDC);
 
-	if (colorDepth < 32)
+	if (!nostencil && colorDepth < 32)
 	{
 		Printf("R_OPENGL: Desktop not in 32 bit mode!\n");
 		return false;
 	}
 
-	int stencil;
-	for (stencil=1;stencil>=0;stencil--)
+	if (!nostencil)
 	{
-		if (wglChoosePixelFormatARB && stencil)
+		for (stencil=1;stencil>=0;stencil--)
 		{
-			attributes[0]	=	WGL_RED_BITS_ARB; //bits
-			attributes[1]	=	8;
-			attributes[2]	=	WGL_GREEN_BITS_ARB; //bits
-			attributes[3]	=	8;
-			attributes[4]	=	WGL_BLUE_BITS_ARB; //bits
-			attributes[5]	=	8;
-			attributes[6]	=	WGL_ALPHA_BITS_ARB;
-			attributes[7]	=	8;
-			attributes[8]	=	WGL_DEPTH_BITS_ARB;
-			attributes[9]	=	24;
-			attributes[10]	=	WGL_STENCIL_BITS_ARB;
-			attributes[11]	=	8;
-		
-			attributes[12]	=	WGL_DRAW_TO_WINDOW_ARB;	//required to be true
-			attributes[13]	=	true;
-			attributes[14]	=	WGL_SUPPORT_OPENGL_ARB;
-			attributes[15]	=	true;
-			attributes[16]	=	WGL_DOUBLE_BUFFER_ARB;
-			attributes[17]	=	true;
-		
-			attributes[18]	=	WGL_ACCELERATION_ARB;	//required to be FULL_ACCELERATION_ARB
-			if (allowsoftware)
+			if (wglChoosePixelFormatARB && stencil)
 			{
-				attributes[19]	=	WGL_NO_ACCELERATION_ARB;
-			}
-			else
-			{
-				attributes[19]	=	WGL_FULL_ACCELERATION_ARB;
-			}
-		
-			if (multisample > 0)
-			{
-				attributes[20]	=	WGL_SAMPLE_BUFFERS_ARB;
-				attributes[21]	=	true;
-				attributes[22]	=	WGL_SAMPLES_ARB;
-				attributes[23]	=	multisample;
-			}
-			else
-			{
-				attributes[20]	=	0;
-				attributes[21]	=	0;
-				attributes[22]	=	0;
-				attributes[23]	=	0;
-			}
-		
-			attributes[24]	=	0;
-			attributes[25]	=	0;
-		
-			if (!wglChoosePixelFormatARB(m_hDC, attributes, attribsFloat, 1, &pixelFormat, &numFormats))
-			{
-				Printf("R_OPENGL: Couldn't choose pixel format. Retrying in compatibility mode\n");
-				continue;//return false;
-			}
-		
-			if (numFormats == 0)
-			{
-				Printf("R_OPENGL: No valid pixel formats found. Retrying in compatibility mode\n");
-				continue;//return false;
-			}
-
-			break;
-		}
-		else
-		{
-			// If wglChoosePixelFormatARB is not found we have to do it the old fashioned way.
-			static PIXELFORMATDESCRIPTOR pfd = {
-				sizeof(PIXELFORMATDESCRIPTOR),
-					1,
-					PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
-					PFD_TYPE_RGBA,
-					32, // color depth
-					0, 0, 0, 0, 0, 0,
-					0,
-					0,
-					0,
-					0, 0, 0, 0,
-					32, // z depth
-					stencil*8, // stencil buffer
-					0,
-					PFD_MAIN_PLANE,
-					0,
-					0, 0, 0
-			};
-
-			pixelFormat = ChoosePixelFormat(m_hDC, &pfd);
-			DescribePixelFormat(m_hDC, pixelFormat, sizeof(pfd), &pfd);
-
-			if (pfd.dwFlags & PFD_GENERIC_FORMAT)
-			{
-				if (!allowsoftware)
+				attributes[0]	=	WGL_RED_BITS_ARB; //bits
+				attributes[1]	=	8;
+				attributes[2]	=	WGL_GREEN_BITS_ARB; //bits
+				attributes[3]	=	8;
+				attributes[4]	=	WGL_BLUE_BITS_ARB; //bits
+				attributes[5]	=	8;
+				attributes[6]	=	WGL_ALPHA_BITS_ARB;
+				attributes[7]	=	8;
+				attributes[8]	=	WGL_DEPTH_BITS_ARB;
+				attributes[9]	=	24;
+				attributes[10]	=	WGL_STENCIL_BITS_ARB;
+				attributes[11]	=	8;
+			
+				attributes[12]	=	WGL_DRAW_TO_WINDOW_ARB;	//required to be true
+				attributes[13]	=	true;
+				attributes[14]	=	WGL_SUPPORT_OPENGL_ARB;
+				attributes[15]	=	true;
+				attributes[16]	=	WGL_DOUBLE_BUFFER_ARB;
+				attributes[17]	=	true;
+			
+				attributes[18]	=	WGL_ACCELERATION_ARB;	//required to be FULL_ACCELERATION_ARB
+				if (allowsoftware)
 				{
-					if (stencil==0)
+					attributes[19]	=	WGL_NO_ACCELERATION_ARB;
+				}
+				else
+				{
+					attributes[19]	=	WGL_FULL_ACCELERATION_ARB;
+				}
+			
+				if (multisample > 0)
+				{
+					attributes[20]	=	WGL_SAMPLE_BUFFERS_ARB;
+					attributes[21]	=	true;
+					attributes[22]	=	WGL_SAMPLES_ARB;
+					attributes[23]	=	multisample;
+				}
+				else
+				{
+					attributes[20]	=	0;
+					attributes[21]	=	0;
+					attributes[22]	=	0;
+					attributes[23]	=	0;
+				}
+			
+				attributes[24]	=	0;
+				attributes[25]	=	0;
+			
+				if (!wglChoosePixelFormatARB(m_hDC, attributes, attribsFloat, 1, &pixelFormat, &numFormats))
+				{
+					Printf("R_OPENGL: Couldn't choose pixel format. Retrying in compatibility mode\n");
+					continue;//return false;
+				}
+			
+				if (numFormats == 0)
+				{
+					Printf("R_OPENGL: No valid pixel formats found. Retrying in compatibility mode\n");
+					continue;//return false;
+				}
+
+				break;
+			}
+			else
+			{
+				// If wglChoosePixelFormatARB is not found we have to do it the old fashioned way.
+				static PIXELFORMATDESCRIPTOR pfd = {
+					sizeof(PIXELFORMATDESCRIPTOR),
+						1,
+						PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+						PFD_TYPE_RGBA,
+						32, // color depth
+						0, 0, 0, 0, 0, 0,
+						0,
+						0,
+						0,
+						0, 0, 0, 0,
+						32, // z depth
+						stencil*8, // stencil buffer
+						0,
+						PFD_MAIN_PLANE,
+						0,
+						0, 0, 0
+				};
+
+				pixelFormat = ChoosePixelFormat(m_hDC, &pfd);
+				DescribePixelFormat(m_hDC, pixelFormat, sizeof(pfd), &pfd);
+
+				if (pfd.dwFlags & PFD_GENERIC_FORMAT)
+				{
+					if (!allowsoftware)
 					{
-						// not accelerated!
-						Printf("R_OPENGL: OpenGL driver not accelerated!  Falling back to software renderer.\n");
-						return false;
-					}
-					else
-					{
-						Printf("R_OPENGL: OpenGL driver not accelerated! Retrying in compatibility mode\n");
-						continue;
+						if (stencil==0)
+						{
+							// not accelerated!
+							Printf("R_OPENGL: OpenGL driver not accelerated!  Falling back to software renderer.\n");
+							return false;
+						}
+						else
+						{
+							Printf("R_OPENGL: OpenGL driver not accelerated! Retrying in compatibility mode\n");
+							continue;
+						}
 					}
 				}
+				break;
 			}
-			break;
+		}
+	}
+	else
+	{
+		// Use the cheapest mode available and let's hope the driver can handle this...
+		stencil=0;
+
+		// If wglChoosePixelFormatARB is not found we have to do it the old fashioned way.
+		static PIXELFORMATDESCRIPTOR pfd = {
+			sizeof(PIXELFORMATDESCRIPTOR),
+				1,
+				PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+				PFD_TYPE_RGBA,
+				16, // color depth
+				0, 0, 0, 0, 0, 0,
+				0,
+				0,
+				0,
+				0, 0, 0, 0,
+				16, // z depth
+				0, // stencil buffer
+				0,
+				PFD_MAIN_PLANE,
+				0,
+				0, 0, 0
+		};
+
+		pixelFormat = ChoosePixelFormat(m_hDC, &pfd);
+		DescribePixelFormat(m_hDC, pixelFormat, sizeof(pfd), &pfd);
+
+		if (pfd.dwFlags & PFD_GENERIC_FORMAT)
+		{
+			if (!allowsoftware)
+			{
+				Printf("R_OPENGL: OpenGL driver not accelerated! Falling back to software renderer.\n");
+				return false;
+			}
 		}
 	}
 	if (stencil==0)
@@ -554,12 +646,12 @@ static bool SetupPixelFormat(bool allowsoftware, int multisample, PrintTextFunc 
 //
 //==========================================================================
 
-static bool APIENTRY InitHardware (HWND Window, bool allowsoftware, int multisample, PrintTextFunc pf)
+static bool APIENTRY InitHardware (HWND Window, bool allowsoftware, bool nostencil, int multisample, PrintTextFunc pf)
 {
 	m_Window=Window;
 	m_hDC = GetDC(Window);
 
-	if (!SetupPixelFormat(allowsoftware, multisample, pf))
+	if (!SetupPixelFormat(allowsoftware, nostencil, multisample, pf))
 	{
 		pf ("R_OPENGL: Reverting to software mode...\n");
 		return false;
@@ -595,6 +687,26 @@ static void APIENTRY Shutdown()
 }
 
 
+static BOOL APIENTRY SetFullscreen(int w, int h, int bits, int hz)
+{
+	DEVMODE dm;
+
+	if (w==0)
+	{
+		ChangeDisplaySettings(0, 0);
+	}
+	else
+	{
+		dm.dmSize = sizeof(DEVMODE);
+		dm.dmPelsWidth = w;
+		dm.dmPelsHeight = h;
+		dm.dmBitsPerPel = bits;
+		dm.dmDisplayFrequency = hz;
+		dm.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL | DM_DISPLAYFREQUENCY;
+		ChangeDisplaySettings(&dm, CDS_FULLSCREEN);
+	}
+	return true;
+}
 //==========================================================================
 //
 // 
@@ -678,6 +790,7 @@ static void APIENTRY ArrayPointer(void * data, int stride)
 	glVertexPointer(3,GL_FLOAT, stride, data);
 }
 
+
 //==========================================================================
 //
 // 
@@ -703,6 +816,7 @@ void APIENTRY GetContext(RenderContext & gl)
 	gl.SwapBuffers = iSwapBuffers;
 	gl.GetGammaRamp = GetGammaRamp;
 	gl.SetGammaRamp = SetGammaRamp;
+	gl.SetFullscreen = SetFullscreen;
 
 	gl.Begin = glBegin;
 	gl.End = glEnd;
@@ -774,6 +888,7 @@ void APIENTRY GetContext(RenderContext & gl)
 
 	gl.ReadPixels = glReadPixels;
 	gl.PolygonOffset = glPolygonOffset;
+	gl.ClipPlane = glClipPlane;
 
 	gl.Finish = glFinish;
 	gl.Flush = glFlush;

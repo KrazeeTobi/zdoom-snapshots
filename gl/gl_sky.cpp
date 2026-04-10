@@ -59,7 +59,7 @@ enum
 //  Calculate sky texture
 //
 //==========================================================================
-void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, bool ceiling)
+void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, secplane_t * plane, bool ceiling, float reflect)
 {
 	// JUSTHIT is used as an indicator that a skybox is in use.
 	// This is to avoid recursion
@@ -82,6 +82,13 @@ void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, bool ceiling)
 			stackinfo.isupper= ceiling;
 			stack=&stackinfo;
 		}
+	}
+	else if (!(gl.flags&RFL_NOSTENCIL) && !skyboxx && reflect!=0)
+	{
+		if (ceiling && viewz >= plane->ZatPoint(viewx, viewy)) return;
+		if (!ceiling && viewz <= plane->ZatPoint(viewx, viewy)) return;
+		flag=RENDERWALL_PLANEMIRROR;
+		planemirror=plane;
 	}
 	else
 	{
@@ -150,19 +157,19 @@ void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, bool ceiling)
 //==========================================================================
 void GLWall::SkyNormal(sector_t * fs,vertex_t * v1,vertex_t * v2)
 {
-	if (fs->ceilingpic==skyflatnum || (fs->CeilingSkyBox && fs->CeilingSkyBox->bAlways))
+	if (fs->ceilingpic==skyflatnum || (fs->CeilingSkyBox && fs->CeilingSkyBox->bAlways) || fs->ceiling_reflect)
 	{
 		ytop[0]=ytop[1]=10000.0f;
 		ybottom[0]=yceil[0];
 		ybottom[1]=yceil[1];
-		SkyTexture(fs->sky,fs->CeilingSkyBox, true);
+		SkyTexture(fs->sky,fs->CeilingSkyBox, &fs->ceilingplane, true, fs->ceilingpic==skyflatnum ? 0:fs->ceiling_reflect);
 	}
-	if (fs->floorpic==skyflatnum || (fs->FloorSkyBox && fs->FloorSkyBox->bAlways))
+	if (fs->floorpic==skyflatnum || (fs->FloorSkyBox && fs->FloorSkyBox->bAlways) || fs->floor_reflect)
 	{
 		ytop[0]=yfloor[0];
 		ytop[1]=yfloor[1];
 		ybottom[0]=ybottom[1]=-10000.0f;
-		SkyTexture(fs->sky,fs->FloorSkyBox, false);
+		SkyTexture(fs->sky,fs->FloorSkyBox, &fs->floorplane, false, fs->ceilingpic==skyflatnum ? 0:fs->floor_reflect);
 	}
 }
 
@@ -208,20 +215,19 @@ void GLWall::SkyTop(seg_t * seg,sector_t * fs,sector_t * bs,vertex_t * v1,vertex
 			ybottom[1]=TO_MAP(bs->ceilingplane.ZatPoint(v2));
 		}
 
-		SkyTexture(fs->sky,fs->CeilingSkyBox, true);
+		SkyTexture(fs->sky,fs->CeilingSkyBox, NULL, true, 0);
 	}
-	else if (fs->CeilingSkyBox && fs->CeilingSkyBox->Mate && fs->CeilingSkyBox!=bs->CeilingSkyBox)
+	else if ((fs->CeilingSkyBox && fs->CeilingSkyBox->bAlways && fs->CeilingSkyBox!=bs->CeilingSkyBox) ||
+			 fs->ceiling_reflect)
 	{
 		// stacked sectors
-		fixed_t bsc1=bs->ceilingplane.ZatPoint(v1);
-		fixed_t bsc2=bs->ceilingplane.ZatPoint(v2);
 		fixed_t fsc1=fs->ceilingplane.ZatPoint(v1);
 		fixed_t fsc2=fs->ceilingplane.ZatPoint(v2);
 
 		ytop[0]=ytop[1]=10000.0f;
-		ybottom[0]=TO_MAP(MAX(bsc1,fsc1));
-		ybottom[1]=TO_MAP(MAX(bsc2,fsc2));
-		SkyTexture(fs->sky,fs->CeilingSkyBox, true);
+		ybottom[0]=TO_MAP(fsc1);
+		ybottom[1]=TO_MAP(fsc2);
+		SkyTexture(fs->sky,fs->CeilingSkyBox, &fs->ceilingplane, true, fs->ceiling_reflect);
 	}
 
 }
@@ -269,21 +275,19 @@ void GLWall::SkyBottom(seg_t * seg,sector_t * fs,sector_t * bs,vertex_t * v1,ver
 			ytop[1]=TO_MAP(bs->floorplane.ZatPoint(v2));
 		}
 
-		SkyTexture(fs->sky,fs->FloorSkyBox, false);
+		SkyTexture(fs->sky,fs->FloorSkyBox, NULL, false, 0);
 	}
-	else if (fs->FloorSkyBox && fs->FloorSkyBox->Mate && fs->FloorSkyBox!=bs->FloorSkyBox)
+	else if ((fs->FloorSkyBox && fs->FloorSkyBox->bAlways && fs->FloorSkyBox!=bs->FloorSkyBox) || fs->floor_reflect)
 	{
 		// stacked sectors
-		fixed_t bsc1=bs->floorplane.ZatPoint(v1);
-		fixed_t bsc2=bs->floorplane.ZatPoint(v2);
 		fixed_t fsc1=fs->floorplane.ZatPoint(v1);
 		fixed_t fsc2=fs->floorplane.ZatPoint(v2);
 
 		ybottom[0]=ybottom[1]=-10000.0f;
-		ytop[0]=TO_MAP(MIN(bsc1,fsc1));
-		ytop[1]=TO_MAP(MIN(bsc2,fsc2));
+		ytop[0]=TO_MAP(fsc1);
+		ytop[1]=TO_MAP(fsc2);
 
-		SkyTexture(fs->sky,fs->FloorSkyBox, false);
+		SkyTexture(fs->sky,fs->FloorSkyBox, &fs->floorplane, false, fs->floor_reflect);
 	}
 }
 

@@ -259,7 +259,16 @@ void A_VileChase (AActor *self)
 					A_FaceTarget (self);
 					self->target = temp;
 										
-					self->SetState (&AArchvile::States[S_VILE_HEAL]);
+					// Make the state the monster enters customizable - but leave the
+					// default for Dehacked compatibility!
+					if (self->HealState)
+					{
+						self->SetState(self->HealState);
+					}
+					else
+					{
+						self->SetState (&AArchvile::States[S_VILE_HEAL]);
+					}
 					S_Sound (corpsehit, CHAN_BODY, "vile/raise", 1, ATTN_IDLE);
 					info = corpsehit->GetDefault ();
 					

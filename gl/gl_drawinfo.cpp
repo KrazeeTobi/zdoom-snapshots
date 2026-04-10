@@ -752,7 +752,10 @@ static int __cdecl dicmp (const void *a, const void *b)
 void GLDrawList::Sort()
 {
 	sortinfo=this;
-	qsort(&drawitems[0], drawitems.Size(), sizeof(drawitems[0]), dicmp);
+	if (drawitems.Size()!=0)
+	{
+		qsort(&drawitems[0], drawitems.Size(), sizeof(drawitems[0]), dicmp);
+	}
 }
 
 //==========================================================================

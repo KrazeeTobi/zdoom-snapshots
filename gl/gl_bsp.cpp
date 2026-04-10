@@ -50,7 +50,7 @@
 
 
 extern Clock RenderWall,SetupWall,ClipWall;
-
+EXTERN_CVAR(Bool, gl_render_segs)
 
 Clipper clipper;
 
@@ -262,10 +262,13 @@ static void AddLine (seg_t *seg,sector_t * sector,subsector_t * polysub)
 	seg->linedef->flags |= ML_MAPPED;
 	ClipWall.Stop();
 
-	// rendering per linedef as opposed per seg is significantly more efficient
-	// so mark the linedef as rendered here and render it completely.
-	if (seg->linedef->validcount!=validcount) seg->linedef->validcount=validcount;
-	else return;
+	if (!gl_render_segs)
+	{
+		// rendering per linedef as opposed per seg is significantly more efficient
+		// so mark the linedef as rendered here and render it completely.
+		if (seg->linedef->validcount!=validcount) seg->linedef->validcount=validcount;
+		else return;
+	}
 
 	GLWall wall;
 

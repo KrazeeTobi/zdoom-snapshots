@@ -1949,11 +1949,15 @@ void M_OptResponder (event_t *ev)
 		{
 			case slider:
 			case absslider:
+			case intslider:
 				{
 					UCVarValue newval;
 					bool reversed;
 
-					value = item->a.cvar->GetGenericRep (CVAR_Float);
+					if (item->type == intslider)
+						value.Float = item->a.fval;
+					else
+						value = item->a.cvar->GetGenericRep (CVAR_Float);
 					reversed = item->type == absslider && value.Float < 0.f;
 					newval.Float = (reversed ? -value.Float : value.Float) + item->d.step;
 
@@ -1967,12 +1971,19 @@ void M_OptResponder (event_t *ev)
 						newval.Float = -newval.Float;
 					}
 
-					if (item->e.cfunc)
+					if (item->type == intslider)
+						item->a.fval = newval.Float;
+					else if (item->e.cfunc)
 						item->e.cfunc (item->a.cvar, newval.Float);
 					else
 						item->a.cvar->SetGenericRep (newval, CVAR_Float);
 				}
 				S_Sound (CHAN_VOICE, "menu/change", 1, ATTN_NONE);
+				break;
+
+			case palettegrid:
+				SelColorIndex = (SelColorIndex + 1) & 15;
+				S_Sound (CHAN_VOICE, "menu/cursor", 1, ATTN_NONE);
 				break;
 
 			case discrete:

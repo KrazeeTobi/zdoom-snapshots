@@ -450,6 +450,7 @@ void D_Display (bool screenshot)
 				C_NewModeAdjust ();
 				// Reload crosshair if transitioned to a different size
 				crosshair.Callback ();
+				setmodeneeded = false;
 			}
 			break;
 

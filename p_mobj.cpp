@@ -1307,12 +1307,12 @@ void P_XYMovement (AActor *mo, fixed_t scrollx, fixed_t scrolly)
 	// because BOOM relied on the speed being fast enough to accumulate
 	// despite friction. If the speed is too low, then its movement will get
 	// cancelled, and it won't accumulate to the desired speed.
-	if (scrollx > CARRYSTOPSPEED)
+	if (abs(scrollx) > CARRYSTOPSPEED)
 	{
 		scrollx = FixedMul (scrollx, CARRYFACTOR);
 		mo->momx += scrollx;
 	}
-	if (scrolly > CARRYSTOPSPEED)
+	if (abs(scrolly) > CARRYSTOPSPEED)
 	{
 		scrolly = FixedMul (scrolly, CARRYFACTOR);
 		mo->momy += scrolly;

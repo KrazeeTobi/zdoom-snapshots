@@ -1437,6 +1437,26 @@ static void goOn (int position, bool keepFacing, bool secret)
 			NoWipe = 4;
 		D_DrawIcon = "TELEICON";
 	}
+
+	// un-crouch all players here!
+	for(int i=0;i<MAXPLAYERS;i++) if (playeringame[i])
+	{
+		player_t * player = &players[i];
+		player->crouchoffset = 0;
+		player->crouchdir = 0;
+		player->crouching = 0;
+		player->defaultviewheight=playerviewheight;
+		if (player->mo)
+		{
+			player->mo->height = player->mo->GetDefault()->height;
+			player->mo->yscale = player->mo->GetDefault()->yscale;
+			if (player->morphTics && player->mo->tracer)
+			{
+				player->mo->tracer->height = player->mo->tracer->GetDefault()->height;
+				player->mo->tracer->yscale = player->mo->tracer->GetDefault()->yscale;
+			}
+		}
+	}
 }
 
 void G_ExitLevel (int position, bool keepFacing)

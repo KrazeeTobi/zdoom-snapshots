@@ -174,6 +174,7 @@ public:
    const char *GetName() const { return m_Name; }
    void SetAngle(angle_t angle) { m_Angle = angle; }
    void SetArg(int arg, byte val) { m_Args[arg] = val; }
+   byte GetArg(int arg) { return m_Args[arg]; }
    void SetOffset(fixed_t x, fixed_t y, fixed_t z) { m_X = x; m_Y = y; m_Z = z; }
    void SetSubtractive(bool subtract) { m_subtractive = subtract; }
    void SetHalo(bool halo) { m_halo = halo; }
@@ -539,76 +540,82 @@ void gl_ParseFlickerLight()
 
 void gl_ParseFlickerLight2()
 {
-   int type;
-   float floatVal, floatTriple[3];
-   int intVal;
-   std::string name;
-   FLightDefaults *defaults;
+	int type;
+	float floatVal, floatTriple[3];
+	int intVal;
+	std::string name;
+	FLightDefaults *defaults;
 
-   // get name
-   SC_GetString();
-   name = sc_String;
+	// get name
+	SC_GetString();
+	name = sc_String;
 
-   // check for opening brace
-   SC_GetString();
-   if (SC_Compare("{"))
-   {
-      defaults = new FLightDefaults(name.c_str(), RandomFlickerLight);
-      ScriptDepth++;
-      while (ScriptDepth)
-      {
-         SC_GetString();
-         if ((type = SC_MatchString(LightTags)) != -1)
-         {
-            switch (type)
-            {
-            case LIGHTTAG_OPENBRACE:
-               ScriptDepth++;
-               break;
-            case LIGHTTAG_CLOSEBRACE:
-               ScriptDepth--;
-               break;
-            case LIGHTTAG_COLOR:
-               gl_ParseTriple(floatTriple);
-               defaults->SetArg(LIGHT_RED, clamp<int>((int)(floatTriple[0] * 255), 0, 255));
-               defaults->SetArg(LIGHT_GREEN, clamp<int>((int)(floatTriple[1] * 255), 0, 255));
-               defaults->SetArg(LIGHT_BLUE, clamp<int>((int)(floatTriple[2] * 255), 0, 255));
-               break;
-            case LIGHTTAG_OFFSET:
-               gl_ParseTriple(floatTriple);
-               defaults->SetOffset((fixed_t)(floatTriple[0] * FRACUNIT), (fixed_t)(floatTriple[1] * FRACUNIT), (fixed_t)(floatTriple[2] * FRACUNIT));
-               break;
-            case LIGHTTAG_SIZE:
-               intVal = clamp<int>(gl_ParseInt(), 0, 255);
-               defaults->SetArg(LIGHT_INTENSITY, intVal);
-               break;
-            case LIGHTTAG_SECSIZE:
-               intVal = clamp<int>(gl_ParseInt(), 0, 255);
-               defaults->SetArg(LIGHT_SECONDARY_INTENSITY, intVal);
-               break;
-            case LIGHTTAG_INTERVAL:
-               floatVal = gl_ParseFloat();
-               defaults->SetAngle((angle_t)(floatVal * ANGLE_MAX));
-               break;
-            case LIGHTTAG_SUBTRACTIVE:
-               defaults->SetSubtractive(gl_ParseInt() != 0);
-               break;
-            case LIGHTTAG_HALO:
-               defaults->SetHalo(gl_ParseInt() != 0);
-               break;
-            }
-         }
-         else
-         {
-            SC_ScriptError("Unknown tag: %s\n", sc_String);
-         }
-      }
-      gl_AddLightDefaults(defaults);
-   }
-   else
-   {
-      SC_ScriptError("Expected '{'.\n");
-   }
+	// check for opening brace
+	SC_GetString();
+	if (SC_Compare("{"))
+	{
+		defaults = new FLightDefaults(name.c_str(), RandomFlickerLight);
+		ScriptDepth++;
+		while (ScriptDepth)
+		{
+			SC_GetString();
+			if ((type = SC_MatchString(LightTags)) != -1)
+			{
+				switch (type)
+				{
+				case LIGHTTAG_OPENBRACE:
+					ScriptDepth++;
+					break;
+				case LIGHTTAG_CLOSEBRACE:
+					ScriptDepth--;
+					break;
+				case LIGHTTAG_COLOR:
+					gl_ParseTriple(floatTriple);
+					defaults->SetArg(LIGHT_RED, clamp<int>((int)(floatTriple[0] * 255), 0, 255));
+					defaults->SetArg(LIGHT_GREEN, clamp<int>((int)(floatTriple[1] * 255), 0, 255));
+					defaults->SetArg(LIGHT_BLUE, clamp<int>((int)(floatTriple[2] * 255), 0, 255));
+					break;
+				case LIGHTTAG_OFFSET:
+					gl_ParseTriple(floatTriple);
+					defaults->SetOffset((fixed_t)(floatTriple[0] * FRACUNIT), (fixed_t)(floatTriple[1] * FRACUNIT), (fixed_t)(floatTriple[2] * FRACUNIT));
+					break;
+				case LIGHTTAG_SIZE:
+					intVal = clamp<int>(gl_ParseInt(), 0, 255);
+					defaults->SetArg(LIGHT_INTENSITY, intVal);
+					break;
+				case LIGHTTAG_SECSIZE:
+					intVal = clamp<int>(gl_ParseInt(), 0, 255);
+					defaults->SetArg(LIGHT_SECONDARY_INTENSITY, intVal);
+					break;
+				case LIGHTTAG_INTERVAL:
+					floatVal = gl_ParseFloat();
+					defaults->SetAngle((angle_t)(floatVal * ANGLE_MAX));
+					break;
+				case LIGHTTAG_SUBTRACTIVE:
+					defaults->SetSubtractive(gl_ParseInt() != 0);
+					break;
+				case LIGHTTAG_HALO:
+					defaults->SetHalo(gl_ParseInt() != 0);
+					break;
+				}
+			}
+			else
+			{
+				SC_ScriptError("Unknown tag: %s\n", sc_String);
+			}
+		}
+		if (defaults->GetArg(LIGHT_SECONDARY_INTENSITY) < defaults->GetArg(LIGHT_INTENSITY))
+		{
+			byte v = defaults->GetArg(LIGHT_SECONDARY_INTENSITY);
+			defaults->SetArg(LIGHT_SECONDARY_INTENSITY, defaults->GetArg(LIGHT_INTENSITY));
+			defaults->SetArg(LIGHT_INTENSITY, v);
+		}
+		gl_AddLightDefaults(defaults);
+	}
+	else
+	{
+		SC_ScriptError("Expected '{'.\n");
+	}
 }
 
 

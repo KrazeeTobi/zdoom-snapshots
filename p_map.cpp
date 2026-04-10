@@ -4913,6 +4913,8 @@ void SpawnShootDecal (AActor *t1, const FTraceResults &trace)
 static void SpawnDeepSplash (AActor *t1, const FTraceResults &trace, AActor *puff,
 	fixed_t vx, fixed_t vy, fixed_t vz)
 {
+	if (!trace.CrossedWater->heightsec) return;
+	
 	fixed_t num, den, hitdist;
 	const secplane_t *plane = &trace.CrossedWater->heightsec->floorplane;
 

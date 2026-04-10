@@ -9,6 +9,7 @@ enum RenderFlags
 	RFL_NOSTENCIL=2,
 	RFL_FRAGMENT_PROGRAM=4,
 	RFL_GLSL=8,
+	RFL_OCCLUSION_QUERY=16,
 };
 
 enum TexMode
@@ -31,11 +32,12 @@ struct RenderContext
 	void (APIENTRY * ArrayPointer) (void * data, int stride);
 	void (APIENTRY * PrintStartupLog) (PrintTextFunc pf);
 	BOOL (APIENTRY * SetVSync) (int on);
-	bool (APIENTRY * InitHardware) (HWND, bool allowsoftware, int multisample, PrintTextFunc pf);
+	bool (APIENTRY * InitHardware) (HWND, bool allowsoftware, bool nostencil, int multisample, PrintTextFunc pf);
 	void (APIENTRY * Shutdown) ();
 	void (APIENTRY * SwapBuffers) ();
 	void (APIENTRY * SetGammaRamp) (void * ramp);
 	BOOL (APIENTRY * GetGammaRamp) (void * ramp);
+	BOOL (APIENTRY * SetFullscreen) (int w, int h, int bits, int hz);
 
 
 	void (APIENTRY * Begin) (GLenum mode);
@@ -108,6 +110,7 @@ struct RenderContext
 
 	void (APIENTRY * ReadPixels) (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 	void (APIENTRY * PolygonOffset) (GLfloat factor, GLfloat units);
+	void (APIENTRY * ClipPlane) (GLenum which, const GLdouble *);
 
 	void (APIENTRY * Finish) (void);
 	void (APIENTRY * Flush) (void);
@@ -162,8 +165,12 @@ struct RenderContext
 	PFNGLGETUNIFORMFVARBPROC GetUniformfvARB;
 	PFNGLGETUNIFORMIVARBPROC GetUniformivARB;
 	PFNGLGETSHADERSOURCEARBPROC GetShaderSourceARB;
-
-
+	
+	PFNGLGENQUERIESARBPROC GenQueries;
+	PFNGLDELETEQUERIESARBPROC DeleteQueries;
+	PFNGLBEGINQUERYARBPROC BeginQuery;
+	PFNGLENDQUERYARBPROC EndQuery;
+	PFNGLGETQUERYOBJECTUIVARBPROC GetQueryObjectuiv;
 };
 
 

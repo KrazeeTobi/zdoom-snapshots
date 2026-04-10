@@ -156,7 +156,7 @@ void gl_DrawSavePic(DCanvas * canvas, const char * Filename, int x, int y, int d
 // Scene
 
 void gl_Set2DMode();
-void gl_SetupView(fixed_t viewx, fixed_t viewy, fixed_t viewz, angle_t viewangle, bool mirror, bool nosectorclear=false);
+void gl_SetupView(fixed_t viewx, fixed_t viewy, fixed_t viewz, angle_t viewangle, bool mirror, bool planemirror, bool nosectorclear=false);
 void gl_SetViewArea();
 void gl_DrawScene();
 void gl_EndDrawScene();

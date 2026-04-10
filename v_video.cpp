@@ -58,6 +58,9 @@
 #include "gi.h"
 #include "templates.h"
 
+extern bool gl_disabled;
+EXTERN_CVAR(Bool, gl_vid_compatibility)
+
 IMPLEMENT_ABSTRACT_CLASS (DCanvas)
 IMPLEMENT_ABSTRACT_CLASS (DFrameBuffer)
 
@@ -900,15 +903,11 @@ void V_Init (void)
 
 	if (bits == 0)
 	{
-		switch (currentrenderer)
+		if (currentrenderer==1)
 		{
-		case 1:
-			bits = 32;
-			break;
-		default:
-			bits = vid_defbits;
-			break;
+			bits = gl_vid_compatibility? 16:32;
 		}
+		else bits = 8;//vid_defbits;
 	}
 
 	atterm (FreeCanvasChain);

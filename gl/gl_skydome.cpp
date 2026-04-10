@@ -664,7 +664,7 @@ void GLSkyPortal::DrawContents()
 	gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	gl.PushMatrix();
-	gl_SetupView(0,0,0/*viewx, viewy, viewz*/, viewangle, !!(MirrorFlag&1), true);
+	gl_SetupView(0,0,0/*viewx, viewy, viewz*/, viewangle, !!(MirrorFlag&1), !!(PlaneMirrorFlag&1), true);
 
 	if (origin->texture[0] && origin->texture[0]->bSkybox)
 	{

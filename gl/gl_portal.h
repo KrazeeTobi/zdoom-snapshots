@@ -54,9 +54,11 @@ class GLPortal
 	static int recursion;
 protected:
 	static int MirrorFlag;
+	static int PlaneMirrorFlag;
 	static int renderdepth;
 
 public:
+	static int PlaneMirrorMode;
 	static line_t * mirrorline;
 	static 	bool inupperstack;
 	static bool	inlowerstack;
@@ -178,12 +180,27 @@ struct GLSectorStackPortal : public GLPortal
 protected:
 	virtual void DrawContents();
 	virtual void * GetSource() const { return origin; }
-	virtual bool IsSky() { return false; }
 	GLSectorStackInfo * origin;
 
 public:
 	
 	GLSectorStackPortal(GLSectorStackInfo * pt) 
+	{
+		origin=pt;
+	}
+
+};
+
+struct GLPlaneMirrorPortal : public GLPortal
+{
+protected:
+	virtual void DrawContents();
+	virtual void * GetSource() const { return origin; }
+	secplane_t * origin;
+
+public:
+
+	GLPlaneMirrorPortal(secplane_t * pt) 
 	{
 		origin=pt;
 	}

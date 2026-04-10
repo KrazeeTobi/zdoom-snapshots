@@ -369,6 +369,7 @@ struct sector_t
 	vertex_t *Triangle[3];	// Three points that can define a plane
 
 	extsector_t			*	e;
+	float					ceiling_reflect, floor_reflect;
 	int						sectornum;			// for comparing sector copies
 	short					oldspecial;			//jff 2/16/98 remembers if sector WAS secret (automap)
 };

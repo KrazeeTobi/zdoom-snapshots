@@ -142,6 +142,11 @@ void P_SerializeWorld (FArchive &arc)
 				<< desaturate;
 			sec->ColorMap = GetSpecialLights (color, fade, desaturate);
 		}
+		if (SaveVersion>=308)
+		{
+			arc << sec->ceiling_reflect << sec->floor_reflect;
+		}
+		else sec->ceiling_reflect = sec->floor_reflect = 0;
 	}
 
 	// do lines

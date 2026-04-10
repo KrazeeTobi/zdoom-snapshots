@@ -126,10 +126,11 @@ public:
 	union
 	{
 		// it's either one of them but never more!
-		AActor * skybox;		// for skyboxes
-		GLSkyInfo * sky;		// for normal sky
-		GLHorizonInfo * horizon;// for horizon information
-		GLSectorStackInfo * stack;// for sector stacks
+		AActor * skybox;			// for skyboxes
+		GLSkyInfo * sky;			// for normal sky
+		GLHorizonInfo * horizon;	// for horizon information
+		GLSectorStackInfo * stack;	// for sector stacks
+		secplane_t * planemirror;	// for plane mirrors
 	};
 
 
@@ -152,7 +153,7 @@ private:
 	int Intersection(GL_RECT * rc,GLWall * result);
 
 	void FloodPlane(int pass);
-	void SkyTexture(int sky1,ASkyViewpoint *, bool which);
+	void SkyTexture(int sky1,ASkyViewpoint * skyboxx, secplane_t * plane, bool ceiling, float reflect);
 	void SkyNormal(sector_t * fs,vertex_t * v1,vertex_t * v2);
 	void SkyTop(seg_t * seg,sector_t * fs,sector_t * bs,vertex_t * v1,vertex_t * v2);
 	void SkyBottom(seg_t * seg,sector_t * fs,sector_t * bs,vertex_t * v1,vertex_t * v2);
@@ -274,7 +275,6 @@ public:
 	float vt,vb;
 	float x1,y1,z1;
 	float x2,y2,z2;
-	float splitz1,splitz2;
 
 	FGLTexture *gltexture;
 	float trans;

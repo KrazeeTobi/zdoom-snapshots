@@ -1147,7 +1147,11 @@ void A_ThrowGrenade(AActor * self)
 		bo->momx += self->momx>>1;
 		bo->momy += self->momy>>1;
 		bo->target= self;
-		bo->tics -= pr_grenade()&3;
+		if (bo->flags4&MF4_RANDOMIZE) 
+		{
+			bo->tics -= pr_grenade()&3;
+			if (bo->tics<1) bo->tics=1;
+		}
 		P_CheckMissileSpawn (bo);
 		StateCall.Result=true;
 	} 

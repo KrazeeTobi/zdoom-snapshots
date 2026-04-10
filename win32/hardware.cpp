@@ -67,12 +67,18 @@ void I_RestartRenderer();
 void RebuildAllLights();
 int currentrenderer=1;
 bool changerenderer;
+bool gl_disabled;
 
 // [ZDoomGL]
 CUSTOM_CVAR (Int, vid_renderer, 1, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)// | CVAR_NOINITCALL)
 {
 	// 0: Software renderer
 	// 1: OpenGL renderer
+
+	if (gl_disabled) 
+	{
+		return;
+	}
 
 	if (self != currentrenderer)
 	{
@@ -95,11 +101,13 @@ CUSTOM_CVAR (Int, vid_renderer, 1, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)// | CVAR_NO
 
 CCMD (vid_restart)
 {
-	changerenderer = true;
+	if (!gl_disabled) changerenderer = true;
 }
 
 void I_CheckRestartRenderer()
 {
+	if (gl_disabled) return;
+	
 	while (changerenderer)
 	{
 		currentrenderer = vid_renderer;
@@ -119,19 +127,14 @@ void I_RestartRenderer()
 	RebuildAllLights();	// Build the lightmaps for all colormaps. If the hardware renderer is active 
 						// this time consuming step is skipped.
 	
+	changerenderer=false;
+	if (gl_disabled) currentrenderer=0;
 	if (currentrenderer==1) Video = new Win32GLVideo(0);
 	else Video = new Win32Video (0);
 	if (Video == NULL) I_FatalError ("Failed to initialize display");
 	
-	switch (currentrenderer)
-	{
-	case 0:
-		bits = 8;
-		break;
-	default:
-		bits = 32; //anything less really doesn't make sense anymore for hardware rendering.
-		break;
-	}
+	if (currentrenderer==0) bits=8;
+	else bits=32;
 	
 	V_DoModeSetup(NewWidth, NewHeight, bits);
 	screen->SetFont(font);
@@ -153,9 +156,11 @@ void I_InitHardware ()
 	ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
 	ilEnable(IL_ORIGIN_SET);
 	
+	gl_disabled = !!Args.CheckParm("-nogl");
 	val.Bool = !!Args.CheckParm ("-devparm");
 	ticker.SetGenericRepDefault (val, CVAR_Bool);
 
+	if (gl_disabled) currentrenderer=0;
 	if (currentrenderer==1) Video = new Win32GLVideo(0);
 	else Video = new Win32Video (0);
 

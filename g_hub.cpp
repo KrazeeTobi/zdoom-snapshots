@@ -121,12 +121,16 @@ static void G_SerializeHub(FArchive & arc)
 {
 	int i=hubdata.Size();
 	arc << i;
-	if (arc.IsStoring()) arc.Write(&hubdata[0], i * sizeof(wbstartstruct_t));
-	else 
+	if (i>0)
 	{
-		hubdata.Resize(i);
-		arc.Read(&hubdata[0], i * sizeof(wbstartstruct_t));
+		if (arc.IsStoring()) arc.Write(&hubdata[0], i * sizeof(wbstartstruct_t));
+		else 
+		{
+			hubdata.Resize(i);
+			arc.Read(&hubdata[0], i * sizeof(wbstartstruct_t));
+		}
 	}
+	else hubdata.Clear();
 }
 
 void G_WriteHubInfo (FILE *file)

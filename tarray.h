@@ -38,6 +38,8 @@
 #include <stdlib.h>
 #include "m_alloc.h"
 
+void __cdecl I_Error (const char *error, ...);
+
 // Specialize this function for any type that needs to have its destructor called.
 template<class T>
 bool NeedsDestructor ()
@@ -118,6 +120,12 @@ public:
 	}
 	T &operator[] (unsigned int index) const
 	{
+#if defined _DEBUG || defined ARRAY_CHECK
+		if ((index<0 || index>=Count) && index!=0)
+		{
+			I_Error("Array index out of bounds! (%d of %d)\n", index, Count);
+		}
+#endif
 		return Array[index];
 	}
 	unsigned int Push (const T &item)

@@ -21,13 +21,14 @@ RenderContext gl;
 
 
 CVAR(Bool, gl_vid_allowsoftware, false, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
+CVAR(Bool, gl_vid_compatibility, false, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 CVAR(Int, gl_vid_refreshHz, 0, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 
 Win32GLVideo::Win32GLVideo(int parm) : m_Modes(NULL), m_IsFullscreen(false)
 {
 	m_DisplayWidth = vid_defwidth;
 	m_DisplayHeight = vid_defheight;
-	m_DisplayBits = 32;
+	m_DisplayBits = gl_vid_compatibility? 16:32;
 	m_DisplayHz = 60;
 	MakeModesList();
 
@@ -44,7 +45,7 @@ Win32GLVideo::~Win32GLVideo()
 	FreeModes();
 	FGLTexture::FlushAll();
 	// TODO: move into r_opengl.dll!
-	ChangeDisplaySettings(0, 0);
+	gl.SetFullscreen(0,0,0,0);
 	if (hmRender) FreeLibrary(hmRender);
 }
 
@@ -164,8 +165,6 @@ void Win32GLVideo::FreeModes()
 
 bool Win32GLVideo::GoFullscreen(bool yes)
 {
-	DEVMODE dm;
-
 	m_IsFullscreen = yes;
 
 	m_trueHeight = m_DisplayHeight;
@@ -178,21 +177,13 @@ bool Win32GLVideo::GoFullscreen(bool yes)
 		}
 	}
 
-	// TODO: move into r_opengl.dll!
 	if (yes)
 	{
-		dm.dmSize = sizeof(dm);
-		dm.dmSize = sizeof(DEVMODE);
-		dm.dmPelsWidth = m_DisplayWidth;
-		dm.dmPelsHeight = m_trueHeight;
-		dm.dmBitsPerPel = m_DisplayBits;
-		dm.dmDisplayFrequency = m_DisplayHz;
-		dm.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL | DM_DISPLAYFREQUENCY;
-		ChangeDisplaySettings(&dm, CDS_FULLSCREEN);
+		gl.SetFullscreen(m_DisplayWidth, m_trueHeight, m_DisplayBits, m_DisplayHz);
 	}
 	else
 	{
-		ChangeDisplaySettings(0, 0);
+		gl.SetFullscreen(0,0,0,0);
 	}
 	return yes;
 }
@@ -204,7 +195,7 @@ DFrameBuffer *Win32GLVideo::CreateFrameBuffer(int width, int height, bool fs, DF
 
 	m_DisplayWidth = width;
 	m_DisplayHeight = height;
-	m_DisplayBits = 32;
+	m_DisplayBits = gl_vid_compatibility? 16:32;
 	m_DisplayHz = 60;
 
 	if (gl_vid_refreshHz == 0)
@@ -285,7 +276,7 @@ Win32GLFrameBuffer::Win32GLFrameBuffer(int width, int height, int bits, int refr
 	SetWindowLong(Window, GWL_EXSTYLE, exStyle);
 	SetWindowPos(Window, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 
-	if (!gl.InitHardware(Window, gl_vid_allowsoftware, gl_vid_multisample, DoPrintText))
+	if (!gl.InitHardware(Window, gl_vid_allowsoftware, gl_vid_compatibility, gl_vid_multisample, DoPrintText))
 	{
 		vid_renderer = 0;
 		return;

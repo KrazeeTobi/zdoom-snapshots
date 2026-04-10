@@ -48,6 +48,7 @@
 #include "gl/gl_functions.h"
 #include "gl/gl_intern.h"
 #include "gl/gl_basic.h"
+#include "gl/gl_geometric.h"
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -67,7 +68,9 @@ CUSTOM_CVAR(Int, r_mirror_recursions,4,CVAR_GLOBALCONFIG|CVAR_ARCHIVE)
 TArray<GLPortal *> GLPortal::portals;
 int GLPortal::recursion;
 int GLPortal::MirrorFlag;
+int GLPortal::PlaneMirrorFlag;
 int GLPortal::renderdepth;
+int GLPortal::PlaneMirrorMode;
 
 line_t * GLPortal::mirrorline;
 bool	 GLPortal::inupperstack;
@@ -206,7 +209,7 @@ void GLPortal::End(bool usestencil)
 		viewangle=savedviewangle;
 		viewactor=savedviewactor;
 		in_area=savedviewarea;
-		gl_SetupView(viewx, viewy, viewz, viewangle, !!(MirrorFlag&1));
+		gl_SetupView(viewx, viewy, viewz, viewangle, !!(MirrorFlag&1), !!(PlaneMirrorFlag&1));
 
 
 		// first step: reset the depth buffer to max. depth
@@ -344,10 +347,14 @@ GLPortal * GLPortal::FindPortal(const void * src)
 static int skyboxrecursion=0;
 void GLSkyboxPortal::DrawContents()
 {
+	int old_pm=PlaneMirrorMode;
+
 	if (skyboxrecursion>=2) return;
 	skyboxrecursion++;
 	origin->flags|=MF_JUSTHIT;
 	extralight = 0;
+
+	PlaneMirrorMode=0;
 
 	gl.Disable(GL_DEPTH_CLAMP_NV);
 
@@ -367,7 +374,7 @@ void GLSkyboxPortal::DrawContents()
 
 	validcount++;
 	inskybox=true;
-	gl_SetupView(viewx, viewy, viewz, viewangle, !!(MirrorFlag&1));
+	gl_SetupView(viewx, viewy, viewz, viewangle, !!(MirrorFlag&1), !!(PlaneMirrorFlag&1));
 	gl_SetViewArea();
 	ClearClipper();
 	gl_DrawScene();
@@ -375,6 +382,8 @@ void GLSkyboxPortal::DrawContents()
 	inskybox=false;
 	gl.Enable(GL_DEPTH_CLAMP_NV);
 	skyboxrecursion--;
+
+	PlaneMirrorMode=old_pm;
 }
 
 
@@ -396,11 +405,45 @@ void GLSectorStackPortal::DrawContents()
 	if (origin->isupper) inupperstack=true;
 	else inlowerstack=true;
 
-	gl_SetupView(viewx, viewy, viewz, viewangle, !!(MirrorFlag&1));
+	gl_SetupView(viewx, viewy, viewz, viewangle, !!(MirrorFlag&1), !!(PlaneMirrorFlag&1));
 	ClearClipper();
 	gl_DrawScene();
 }
 
+
+//-----------------------------------------------------------------------------
+//
+// GLPlaneMirrorPortal::DrawContents
+//
+//-----------------------------------------------------------------------------
+void GLPlaneMirrorPortal::DrawContents()
+{
+	if (renderdepth>r_mirror_recursions) return;
+
+	int old_pm=PlaneMirrorMode;
+
+	fixed_t planez = origin->ZatPoint(viewx, viewy);
+	viewz = 2*planez - viewz;
+	viewactor = NULL;
+	PlaneMirrorMode = ksgn(origin->c);
+
+	validcount++;
+
+	PlaneMirrorFlag++;
+	gl_SetupView(viewx, viewy, viewz, viewangle, !!(MirrorFlag&1), !!(PlaneMirrorFlag&1));
+	ClearClipper();
+
+	gl.Enable(GL_CLIP_PLANE0+renderdepth);
+	// This only works properly for non-sloped planes so don't bother with the math.
+	//double d[4]={-origin->a/65536., origin->c/65536., origin->b/65536., TO_MAP(origin->d)};
+	double d[4]={0, PlaneMirrorMode, 0, TO_MAP(origin->d)};
+	gl.ClipPlane(GL_CLIP_PLANE0+renderdepth, d);
+
+	gl_DrawScene();
+	gl.Disable(GL_CLIP_PLANE0+renderdepth);
+	PlaneMirrorFlag--;
+	PlaneMirrorMode=old_pm;
+}
 
 
 //-----------------------------------------------------------------------------
@@ -466,7 +509,7 @@ void GLMirrorPortal::DrawContents()
 	validcount++;
 
 	MirrorFlag++;
-	gl_SetupView(viewx, viewy, viewz, viewangle, !!(MirrorFlag&1));
+	gl_SetupView(viewx, viewy, viewz, viewangle, !!(MirrorFlag&1), !!(PlaneMirrorFlag&1));
 
 	clipper.Clear();
 

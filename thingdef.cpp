@@ -1699,6 +1699,14 @@ static int FinishStates (FActorInfo *actor, AActor *defaults, Baggage &bag)
 	int i;
 	int currange;
 
+	if (count==0)
+	{
+		actor->OwnedStates=NULL;
+		actor->NumOwnedStates=0;
+		NumRanges = 0;
+		return count;
+	}
+
 	memcpy(realstates,&StateArray[0],count*sizeof(FState));
 	actor->OwnedStates=realstates;
 	actor->NumOwnedStates=count;

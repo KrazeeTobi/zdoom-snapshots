@@ -63,6 +63,7 @@ gl_sectordata * gl_sectors;
 gl_subsectordata * gl_subsectors;
 byte * gl_ss_renderflags;
 static line_t ** gl_linebuffer;
+extern bool gl_disabled;
 
 // A simple means so that I don't have to link to the debug stuff when I don't need it!
 void (*gl_DebugHook)();
@@ -399,6 +400,8 @@ void gl_PreprocessLevel()
 			}
 		}
 	}
+	
+	if (gl_disabled) return;
 
 	gl_subsectors = new gl_subsectordata[numsubsectors];
 	memset(gl_subsectors, 0, numsubsectors * sizeof(gl_subsectordata));
@@ -415,6 +418,7 @@ void gl_PreprocessLevel()
 	pitch=0.0f;
 
 	gl_vertices.Resize(100);	
+	gl_vertices.Clear();	
 
 	// Create the flat vertex array
 	for (i=0; i<numsubsectors; i++)

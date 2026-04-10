@@ -223,7 +223,7 @@ static void SetTextureNoErr (short *texture, DWORD *color, char *name8, bool *va
 		{
 			*color = strtoul (name, &stop, 16);
 			*texture = 0;
-			*validcolor = (*stop == 0) && (stop == name2 + 6);
+			*validcolor = (*stop == 0) && (stop == name + 6);
 			return;
 		}
 		else	// Support for Legacy's color format!
@@ -1870,10 +1870,9 @@ void P_LoadSideDefs2 (int lump)
 			// upper "texture" is light color
 			// lower "texture" is fog color
 			{
-				if (sidetemp[i].a.tag==14)
-					__asm nop
 				DWORD color, fog;
 				bool colorgood, foggood;
+
 
 				SetTextureNoErr (&sd->bottomtexture, &fog, msd->bottomtexture, &foggood);
 				SetTextureNoErr (&sd->toptexture, &color, msd->toptexture, &colorgood);
