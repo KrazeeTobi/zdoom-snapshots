@@ -127,20 +127,13 @@ static void ParseInfoCmd(char *line)
 		}
 		else if (SC_Compare("music"))
 		{
-			SC_MustGetString();
-			SC_MustGetString();
+			bool FS_ChangeMusic(const char * string);
 
-			if (Wads.CheckNumForName(sc_String)<0 || !S_ChangeMusic(sc_String,true))
+			SC_MustGetString();
+			SC_MustGetString();
+			if (!FS_ChangeMusic(sc_String))
 			{
-				// Retry with D_ prepended to the music name.
-				// Originally this was the only valid method but I don't want to limit myself this way!
-				char buffer[12];
-				sprintf(buffer, "D_%.8s", sc_String);
-				buffer[8]=0;
-				if (Wads.CheckNumForName(buffer)<0 || !S_ChangeMusic(buffer,true))
-				{
-					S_ChangeMusic(level.music, level.musicorder);
-				}
+				S_ChangeMusic(level.music, level.musicorder);
 			}
 		}
 		else if (SC_Compare("skyname"))
@@ -284,7 +277,11 @@ void T_LoadLevelInfo(int lumpnum)
 		}
 		rover++;
     }
-	if (HasScripts) new DFraggleThinker;
+	if (HasScripts) 
+	{
+		new DFraggleThinker;
+		if (!(level.flags&LEVEL_HEXENFORMAT)) level.airsupply=0;	// Legacy doesn't to water damage.
+	}
 	delete lump;
 }
 

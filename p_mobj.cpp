@@ -3711,11 +3711,20 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 
 	if (i == NULL)
 	{
-		// [RH] Don't die if the map tries to spawn an unknown thing
-		Printf ("Unknown type %i at (%i, %i)\n",
-				 mthing->type,
-				 mthing->x, mthing->y);
-		i = RUNTIME_CLASS(AUnknown);
+		// I'm not defining a new thing for this so that loading
+		// a DECORATE WAD with Skulltag monsters works without error messages.
+		if (mthing->type==5004)
+		{
+			i=RUNTIME_CLASS(AMapSpot);
+		}
+		else
+		{
+			// [RH] Don't die if the map tries to spawn an unknown thing
+			Printf ("Unknown type %i at (%i, %i)\n",
+					mthing->type,
+					mthing->x, mthing->y);
+			i = RUNTIME_CLASS(AUnknown);
+		}
 	}
 	// [RH] If the thing's corresponding sprite has no frames, also map
 	//		it to the unknown thing.

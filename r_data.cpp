@@ -3102,7 +3102,11 @@ void R_PrecacheLevel (void)
 				else if (gl_precache)
 				{
 					FGLTexture * gltex = FGLTexture::ValidateTexture(tex);
-					if (gltex) gltex->Bind (CM_DEFAULT);
+					if (gltex) 
+					{
+						if (tex->UseType==FTexture::TEX_Sprite) gltex->BindPatch(CM_DEFAULT);
+						else gltex->Bind (CM_DEFAULT);
+					}
 				}
 			}
 			else

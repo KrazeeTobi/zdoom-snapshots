@@ -195,7 +195,7 @@ void gl_DrawBuffer(byte * sbuffer, int width, int height, int x, int y, int dx, 
 		}
 	}
 
-	GLTexture * gltex = new GLTexture(width, height, false);
+	GLTexture * gltex = new GLTexture(width, height, false, false);
 	gltex->CreateTexture(buffer, width, height, false, CM_DEFAULT);
 	delete[] buffer;
 

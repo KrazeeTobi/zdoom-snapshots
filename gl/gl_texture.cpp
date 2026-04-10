@@ -1182,7 +1182,7 @@ const WorldTextureInfo * FGLTexture::GetWorldTextureInfo()
 {
 
 	if (tex->UseType==FTexture::TEX_Null) return NULL;		// Cannot register a NULL texture!
-	if (!gltexture) gltexture=new GLTexture(Width, Height, true);
+	if (!gltexture) gltexture=new GLTexture(Width, Height, true, true);
 	if (gltexture) return (WorldTextureInfo*)this; 	
 	return NULL;
 }
@@ -1197,7 +1197,22 @@ const WorldTextureInfo * FGLTexture::GetWorldTextureInfo()
 const PatchTextureInfo * FGLTexture::GetPatchTextureInfo()
 {
 	if (tex->UseType==FTexture::TEX_Null) return NULL;		// Cannot register a NULL texture!
-	if (!glpatch) glpatch=new GLTexture(Width, Height, false);
+	if (!glpatch) 
+	{
+		glpatch=new GLTexture(Width, Height, false, false);
+
+		if (!GLTexture::supportsNonPower2 && CheckExternalFile()) 
+		{
+			int w,h;
+
+			// Special handling required for hires sprites:
+			// To get the real texture size I have to create the actual texture here!
+			unsigned char * buffer = CreateTexBuffer(CM_DEFAULT, 0, NULL, w, h);
+			ProcessData(buffer, w, h, CM_DEFAULT, false);
+			glpatch->CreateTexture(buffer, w, h, true, CM_DEFAULT);
+			delete buffer;
+		}
+	}
 	if (glpatch) return (PatchTextureInfo*)this; 	
 	return NULL;
 }

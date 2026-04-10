@@ -1,4 +1,20 @@
 11. Sep. 2005
+
+- Fixed: If non-power-of-2 textures are not supported a patch's scaling
+  factor has to be retrieved before the texture can be used to set
+  texture coordinates.
+- Fixed: Legacy doesn't have water damage so it has to be disabled when
+  FraggleScript is found. Maybe I'll add an option later.
+- Fixed: Sprites should be precached as patches, not textures.
+- Added support for Legacy's digital music names which start with 'O_'.
+  But since ZDoom already handles all music types it can be any format, not
+  just MP3 or OGG.
+- Relaxed: Legacy ignores duplicate variable definitions so I turned the
+  error into a warning
+- Fixed: The token buffer for FraggleScript was too small. That caused a
+  crash in DSV4(Legacy)'s MAP01.
+- Fixed: I forgot to recompile the latest changes so line type 272 wasn't
+  working
 - Time for 0.9.4!
 - To have some more test material I converted the XG scripts of the first 3 
   Doom64 maps to FS. For that I also added some new functions and options.

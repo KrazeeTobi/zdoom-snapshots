@@ -2280,6 +2280,27 @@ void SF_LineTrigger()
 //
 //
 //==========================================================================
+bool FS_ChangeMusic(const char * string)
+{
+	char buffer[40];
+
+	if (Wads.CheckNumForName(string)<0 || !S_ChangeMusic(string,true))
+	{
+		// Retry with O_ prepended to the music name, then with D_
+		sprintf(buffer, "O_%s", string);
+		if (Wads.CheckNumForName(string)<0 || !S_ChangeMusic(string,true))
+		{
+			sprintf(buffer, "D_%s", string);
+			if (Wads.CheckNumForName(buffer)<0) 
+			{
+				S_ChangeMusic(NULL, 0);
+				return false;
+			}
+			else S_ChangeMusic(buffer,true);
+		}
+	}
+	return true;
+}
 
 void SF_ChangeMusic(void)
 {
@@ -2292,15 +2313,7 @@ void SF_ChangeMusic(void)
     }
 
 	const char * string = stringvalue(t_argv[0]);
-	if (Wads.CheckNumForName(string)<0 || !S_ChangeMusic(string,true))
-	{
-		// Retry with D_ prepended to the music name.
-		// Originally this was the only valid method but I don't want to limit myself this way!
-		char buffer[40];
-		sprintf(buffer, "D_%s", string);
-		if (Wads.CheckNumForName(buffer)<0) S_ChangeMusic(NULL, 0);
-		else S_ChangeMusic(buffer,true);
-	}
+	FS_ChangeMusic(stringvalue(t_argv[0]));
 }
 
 

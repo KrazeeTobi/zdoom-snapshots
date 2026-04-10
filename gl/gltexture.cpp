@@ -34,6 +34,7 @@
 **
 */
 
+#include "templates.h"
 #include "r_draw.h"
 #include "m_crc32.h"
 #include "c_cvars.h"
@@ -255,13 +256,22 @@ void GLTexture::LoadImage(unsigned char * buffer,int w, int h, unsigned int & gl
 //	Creates a texture
 //
 //===========================================================================
-GLTexture::GLTexture(int _width, int _height, bool _mipmap) 
+GLTexture::GLTexture(int _width, int _height, bool _mipmap, bool wrap) 
 {
 	mipmap=_mipmap;
 	texwidth=_width;
 	texheight=_height;
-	scalexfac=1.f;
-	scaleyfac=1.f;
+
+	if (wrap || supportsNonPower2)
+	{
+		scaleyfac=scalexfac=1.f;
+	}
+	else
+	{
+		scalexfac=MIN<float>(1.f,(float)texwidth/GLTexture::GetTexDimension(texwidth));
+		scaleyfac=MIN<float>(1.f,(float)texheight/GLTexture::GetTexDimension(texheight));
+	}
+
 	cm_arraysize=CM_FIRSTCOLORMAP + numfakecmaps;
 	glTexID = new unsigned[cm_arraysize];
 	memset(glTexID,0,sizeof(unsigned int)*cm_arraysize);

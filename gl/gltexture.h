@@ -58,7 +58,7 @@ private:
 	unsigned * GetTexID(int cm, int translation, const unsigned char * translationtbl);
 
 public:
-	GLTexture(int w, int h, bool mip);
+	GLTexture(int w, int h, bool mip, bool wrap);
 	~GLTexture();
 
 	unsigned int Bind(int cm, int translation=0, const unsigned char * translationtbl=NULL);

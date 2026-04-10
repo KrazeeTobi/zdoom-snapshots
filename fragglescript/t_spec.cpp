@@ -225,8 +225,9 @@ static void create_variable(int start, int stop)
 	// the current script
 	if(variableforname(newvar_script, tokens[start]))
 	{
-		// haleyjd: this should cause an error
-		script_error("redefined symbol: '%s'\n", tokens[start]);
+		// In Eternity this was fatal and in Legacy it was ignored
+		// So make this a warning.
+		Printf("FS: redefined symbol: '%s'\n", tokens[start]);
 		return;  // already one
 	}
 	

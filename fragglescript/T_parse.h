@@ -30,7 +30,7 @@ typedef struct script_s script_t;
 typedef struct svalue_s svalue_t;
 typedef struct operator_s operator_t;
 
-#define T_MAXTOKENS 64
+#define T_MAXTOKENS 256
 #define TOKENLENGTH 128
 
 struct svalue_s

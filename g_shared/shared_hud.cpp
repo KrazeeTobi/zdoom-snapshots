@@ -771,7 +771,7 @@ void DrawHUD()
 		int i;
 
 		// No HUD in the title level!
-		if (gamestate == GS_TITLELEVEL) return;
+		if (gamestate == GS_TITLELEVEL || !CPlayer) return;
 
 		if (!deathmatch) DrawStatus(CPlayer, 5, hudheight-50);
 		else
@@ -788,7 +788,10 @@ void DrawHUD()
 		DrawWeapons(CPlayer, hudwidth-5, i);
 		DrawInventory(CPlayer, 144, hudheight-28);
 		screen->SetFont(SmallFont);
-		StatusBar->DrawCrosshair();
+		if (CPlayer->camera->player)
+		{
+			StatusBar->DrawCrosshair();
+		}
 		if (idmypos) DrawCoordinates(CPlayer);
 	}
 	else
