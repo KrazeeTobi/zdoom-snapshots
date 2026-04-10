@@ -991,11 +991,21 @@ void P_PlayerThink (player_t *player)
 				{
 					player->crouching=0;
 				}
+				// Check validity of the crouching action
+				if (!P_TryMove(player->mo, player->mo->x, player->mo->y, false, false))
+				{
+					player->mo->height-=FRACUNIT;
+					player->viewheight-=crouchdelta;
+					player->defaultviewheight-=crouchdelta;
+					//player->crouchdir=-1;
+					//player->crouching=0;
+				}
+
 			}
 			else
 			{
-				player->crouchdir=-1;
-				player->crouching=0;
+				//player->crouchdir=-1;
+				//player->crouching=0;
 			}
 		}
 		else if (player->crouching < player->mo->height)
@@ -1004,6 +1014,7 @@ void P_PlayerThink (player_t *player)
 			player->mo->height-=FRACUNIT;
 			player->viewheight-=crouchdelta;
 			player->defaultviewheight-=crouchdelta;
+			P_TryMove(player->mo, player->mo->x, player->mo->y, false, false);
 			if (player->defaultviewheight<7*FRACUNIT || player->mo->height <= player->crouching)
 			{
 				player->crouching=0;
@@ -1149,6 +1160,12 @@ void P_PlayerThink (player_t *player)
 		// [RH] check for jump
 		if (cmd->ucmd.buttons & BT_JUMP)
 		{
+			if (player->crouchoffset!=0)
+			{
+				// Jumping while crouching will force an un-crouch but not jump
+				player->crouching = player->mo->GetDefault()->height;
+			}
+			else
 			if (player->mo->waterlevel >= 2)
 			{
 				player->mo->momz = 4*FRACUNIT;

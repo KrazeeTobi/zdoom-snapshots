@@ -775,6 +775,7 @@ FTexture::FTexture ()
   Rotations(0xFFFF), Width(0xFFFF), Height(0), WidthMask(0)
 {
 	gltex=NULL;
+	*Name=0;
 }
 
 FTexture::~FTexture ()

@@ -285,12 +285,20 @@ void GLTexture::Clean(bool all)
 {
 	if (all)
 	{
-		gl.DeleteTextures(cm_arraysize,glTexID);
+		for (int i=0;i<cm_arraysize;i++)
+		{
+			if (glTexID[i]!=0) gl.DeleteTextures(1, &glTexID[i]);
+		}
+		//gl.DeleteTextures(cm_arraysize,glTexID);
 		memset(glTexID,0,sizeof(unsigned int)*cm_arraysize);
 	}
 	else
 	{
-		gl.DeleteTextures(cm_arraysize-1,glTexID+1);
+		for (int i=1;i<cm_arraysize;i++)
+		{
+			if (glTexID[i]!=0) gl.DeleteTextures(1, &glTexID[i]);
+		}
+		//gl.DeleteTextures(cm_arraysize-1,glTexID+1);
 		memset(glTexID+1,0,sizeof(unsigned int)*(cm_arraysize-1));
 	}
 	for(int i=0;i<glTexID_Translated.Size();i++)

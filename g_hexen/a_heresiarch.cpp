@@ -1290,6 +1290,7 @@ void A_SpawnBishop(AActor *actor)
 	{
 		if (!P_TestMobjLocation(mo))
 		{
+			if (mo->flags&MF_COUNTKILL) level.total_monsters--;
 			mo->Destroy ();
 		}
 		else if (actor->target != NULL)

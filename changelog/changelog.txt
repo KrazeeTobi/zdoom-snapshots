@@ -1,4 +1,22 @@
+7. Oct 2005
+- More crouching fixes.
+
+
+6. Oct 2005
+- Fixed: A_SpawnBishop and A_GenWizard didn't keep track of the monster count
+  properly.
+- Fixed: AMinotaur::Die didn't properly check for valid friendly Minotaurs
+- Fixed: The FraggleScript actor translation table had Megasphere misspelled.
+- Released 0.9.8 because the particle crash is rather serious.
+- Fixed: Particles in sectors with 3D-floors caused a crash because I read
+  the sector from an incorrect variable.
+- Fixed: Crouching outside of a game crashed
+
+
 5. Oct 2005
+- Did a few minor adjustments to the crouching code. It's still not polished
+  enough for an official feature though.
+- Released 0.9.7
 - Fixed: 3D floors could block switches.
 
 

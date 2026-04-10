@@ -690,6 +690,7 @@ void A_GenWizard (AActor *actor)
 	{
 		if (!P_TestMobjLocation (mo))
 		{ // Didn't fit
+			if (mo->flags&MF_COUNTKILL) level.total_monsters--;
 			mo->Destroy ();
 		}
 		else

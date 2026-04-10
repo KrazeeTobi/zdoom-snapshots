@@ -898,7 +898,7 @@ bool GLWall::DoHorizon(seg_t * seg,sector_t * fs, vertex_t * v1,vertex_t * v2)
 //
 //==========================================================================
 bool GLWall::SetWallCoordinates(seg_t * seg, int texturetop,
-								int topleft,int topright, int bottomleft,int bottomright)
+								int topleft,int topright, int bottomleft,int bottomright, int t_ofs)
 
 {
 	//
@@ -910,7 +910,7 @@ bool GLWall::SetWallCoordinates(seg_t * seg, int texturetop,
 	float l_ul;
 	float length= seg->sidedef? seg->sidedef->TexelLength: 
 								(P_AproxDistance (seg->v2->x-seg->v1->x, seg->v2->y-seg->v1->y)>>16);
-	fixed_t t_ofs = seg->sidedef? seg->sidedef->textureoffset : 0;
+	//fixed_t t_ofs = seg->sidedef? seg->sidedef->textureoffset : 0;
 	
 	
 	if (gltexture) 
@@ -1042,7 +1042,7 @@ void GLWall::DoTexture(int type,seg_t * seg,int peg,
 
 	ceilingrefheight+= 	gltexture->RowOffset(seg->sidedef->rowoffset)+
 						(peg ? (gltexture->TextureHeight()<<FRACBITS)-lh-v_offset:0);
-	if (!SetWallCoordinates(seg, ceilingrefheight, topleft, topright, bottomleft, bottomright)) return;
+	if (!SetWallCoordinates(seg, ceilingrefheight, topleft, topright, bottomleft, bottomright, seg->sidedef->textureoffset)) return;
 
 	//
 	//
@@ -1192,10 +1192,18 @@ void GLWall::DoMidTexture(seg_t * seg, bool drawfogsheet,
 	// set up texture coordinate stuff
 	//
 	// 
+	fixed_t t_ofs = seg->sidedef->textureoffset;
+
 	if (gltexture)
 	{
 		// Determine clamping based on the linedef, not the seg - even if segs are rendered!
-		fixed_t textureoffset=gltexture->TextureOffset(seg->sidedef->textureoffset);
+		fixed_t textureoffset=gltexture->TextureOffset(t_ofs);
+
+		/*	
+		if (t_ofs<0)
+		{
+		}
+		*/
 
 		int righttex=textureoffset+seg->sidedef->TexelLength;
 		
@@ -1203,7 +1211,7 @@ void GLWall::DoMidTexture(seg_t * seg, bool drawfogsheet,
 			(righttex==gltexture->TextureWidth() && textureoffset>0);
 		clampy=true;
 	}
-	SetWallCoordinates(seg, texturetop, topleft, topright, bottomleft, bottomright);
+	SetWallCoordinates(seg, texturetop, topleft, topright, bottomleft, bottomright, t_ofs);
 
 	//
 	//
@@ -1938,7 +1946,7 @@ void GLWall::ProcessLowerMiniseg(seg_t *seg, sector_t * frontsector, sector_t * 
 		if (gltexture) 
 		{
 			flag=RENDERWALL_BOTTOM;
-			SetWallCoordinates(seg, bfh, bfh, bfh, ffh, ffh);
+			SetWallCoordinates(seg, bfh, bfh, bfh, ffh, ffh, 0);
 			PutWall(false);
 		}
 	}
