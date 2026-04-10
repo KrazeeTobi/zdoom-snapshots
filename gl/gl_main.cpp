@@ -77,9 +77,19 @@ void gl_Set2DMode()
 	gl.Disable(GL_DEPTH_TEST);
 }
 
-
-AT_GAME_SET(OpenGL)
+void gl_ClearScreen()
 {
-	const TypeInfo * ti = TypeInfo::FindType("WallTorch");
-	GetDefaultByType(ti)->radius = 3*FRACUNIT;
+	gl.MatrixMode(GL_MODELVIEW);
+	gl.PushMatrix();
+	gl.MatrixMode(GL_PROJECTION);
+	gl.PushMatrix();
+	gl_Set2DMode();
+	gl_Dim(0, 1.f, 0, 0, SCREENWIDTH, SCREENHEIGHT);
+	gl.Enable(GL_DEPTH_TEST);
+	gl.MatrixMode(GL_PROJECTION);
+	gl.PopMatrix();
+	gl.MatrixMode(GL_MODELVIEW);
+	gl.PopMatrix();
 }
+
+

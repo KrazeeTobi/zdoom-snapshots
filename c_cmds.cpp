@@ -618,6 +618,7 @@ CCMD (warp)
 // Load a saved game.
 //
 //==========================================================================
+EXTERN_CVAR (String, savedir)
 
 CCMD (load)
 {
@@ -631,7 +632,7 @@ CCMD (load)
 		Printf ("cannot load during a network game\n");
 		return;
 	}
-	string fname = argv[1];
+	string fname = savedir + "/" + argv[1];
 	DefaultExtension (fname, ".zds");
     G_LoadGame (fname.GetChars());
 }
@@ -666,7 +667,7 @@ CCMD (save)
         Printf ("player is dead in a single-player game\n");
         return;
     }
-    string fname = argv[1];
+    string fname = savedir + "/" + argv[1];
 	DefaultExtension (fname, ".zds");
 	G_SaveGame (fname.GetChars(), argv.argc() > 2 ? argv[2] : argv[1]);
 }

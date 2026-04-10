@@ -1,3 +1,36 @@
+14. Dec 2005
+- Fixed: The code that moved objects out of walls contained several
+  serious bugs.
+- Fixed: save and load CCMDs didn't use the savedir CVAR.
+- Fixed: Hexen's wall torch was missing the FIXMAPTHINGPOS flag.
+
+
+13. Dec 2005
+- Fixed: The player could use things through closed doors if the door was
+  farther away than 64 map units.
+
+
+12. Dec 2005
+- Fixed: The order of checks in the model parser was incorrect and could
+  crash if it tried to access a non-existing actor class.
+- Added drag&drop for *.pk3 and *.zip files.
+- Fixed: Lump names with '.' in them weren't handled when loading from ZIPs.
+
+
+10. Dec 2005
+- Fixed: 2-sided mid texture offsets were broken by a non functioning bug fix.
+- Fixed: The intermission background drawer must clear the screen in widescreen mode.
+
+
+8. Dec 2005
+- Fixed: The order of gravity application and calculation were reversed from
+  Doom's original method.
+- Fixed: Portals that don't draw anything due to exceeded recursive depth
+  have to clear the screen to avoid HOM.
+- Fixed: Intermission texts from external lumps weren't 0-terminated.
+- Added NULL pointer check to the path follower's interpolation method.
+
+
 6. Dec 2005
 - Added more flexible color correction options to the menu.
 - Added first stage of model support: Assignment to sprite frames

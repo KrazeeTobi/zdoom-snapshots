@@ -750,14 +750,14 @@ void P_MoveThingOutOfWalls(AActor * mo)
 	fixed_t		closestdist, dist, off, linelen, minrad;
 
 
-	minrad = mo->radius/2;
-	closestline = NULL;
+	minrad = MIN<fixed_t>(mo->radius, 8*FRACUNIT);	// Avoid moving out the torch too much
 
-	mo->UnlinkFromWorld();
 
 	// Check multiple times in case more than one wall intersects with this object.
 	for (i=0;i<4;i++)
 	{
+		closestdist=32767*FRACUNIT;
+		closestline = NULL;
 		// get the sector inside the loop in case the torch is pushed over a sector boundary
 		mo->Sector=R_PointInSubsector(mo->x,mo->y)->sector;
 
@@ -765,6 +765,7 @@ void P_MoveThingOutOfWalls(AActor * mo)
 		{
 			li = mo->Sector->lines[k];
 			if(li->backsector) continue;
+
 			linelen = P_AproxDistance(li->v2->x - li->v1->x, li->v2->y - li->v1->y);
 			dist = P_PointLineDistance(li, mo->x, mo->y, &off);
 			if(off > -minrad && off < linelen+minrad &&
@@ -782,14 +783,19 @@ void P_MoveThingOutOfWalls(AActor * mo)
 			dy = -FIX2FLT(li->v2->x - li->v1->x);
 			dx = FIX2FLT(li->v2->y - li->v1->y);
 			len = sqrtf(dx*dx + dy*dy);
+
+
 			dx *= offlen / len;
 			dy *= offlen / len;
+			mo->UnlinkFromWorld();
 			mo->x += (fixed_t)(FRACUNIT * dx);
 			mo->y += (fixed_t)(FRACUNIT * dy);
+			mo->LinkToWorld();
+
+			Printf("Moving %s at (%d,%d) by (%f,%f)\n", RUNTIME_TYPE(mo)->Name, mo->x>>16, mo->y>>16, dx, dy);
 		}
 		else break;
 	}
-	mo->LinkToWorld();
 }
 
 

@@ -608,6 +608,7 @@ void WI_drawBackground()
 			// placing the animations precisely where they belong on the base pic
 			animwidth = background->GetWidth();
 			animheight = background->GetHeight();
+			screen->Clear(0,0, SCREENWIDTH, SCREENHEIGHT, 0);
 			screen->DrawTexture(background, 0, 0, DTA_VirtualWidth, animwidth,
 				DTA_VirtualHeight, animheight, TAG_DONE);
 		}

@@ -1322,8 +1322,9 @@ static void GetFinaleText (const char *msgLumpName)
 	if (msgLump != -1)
 	{
 		FinaleTextLen = Wads.LumpLength(msgLump);
-		FinaleText = new char[FinaleTextLen];
+		FinaleText = new char[FinaleTextLen+1];
 		Wads.ReadLump (msgLump, FinaleText);
+		FinaleText[FinaleTextLen+1]=0;
 	}
 	else
 	{

@@ -645,7 +645,7 @@ static void DrawInventory(player_t * CPlayer, int x,int y)
 	int numitems = (hudwidth - 2*x) / 32;
 	int i;
 
-	rover=StatusBar->ValidateInvFirst(numitems);
+	CPlayer->InvFirst = rover = StatusBar->ValidateInvFirst(numitems);
 	if (rover!=NULL)
 	{
 		if(rover->PrevInv())

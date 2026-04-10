@@ -3496,7 +3496,9 @@ BOOL PTR_UseTraverse (intercept_t *in)
 	// lines further than 64 units away.
 	if (in->frac > FRACUNIT/2)
 	{
-		return true;
+		P_LineOpening (in->d.line, trace.x + FixedMul (trace.dx, in->frac),
+			trace.y + FixedMul (trace.dy, in->frac));
+		return openrange>0;
 	}
 
 	if (in->d.line->special == 0 || (GET_SPAC(in->d.line->flags) != SPAC_USETHROUGH &&

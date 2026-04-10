@@ -1360,11 +1360,15 @@ void GLWall::DoMidTexture(seg_t * seg, bool drawfogsheet,
 
 	if (gltexture)
 	{
-		fixed_t texlength = seg->sidedef->TexelLength;
+		#if 0
+		// This code will be activated once ZDoom's floating point code can be used.
+		float texlength = gltexture->GetWidth();
 
 		// move the left edge's texture offset into the range [0..texlength]
-		t_ofs%=texlength;
-		if (t_ofs<0) t_ofs+=texlength;
+		// This is actually faster than using fmod which creates a CRT function call
+		while (t_ofs<0) t_ofs+=texlength;
+		while (t_ofs>=texlength) ofs-=texlength;
+		#endif
 
 		// Determine clamping based on the linedef, not the seg - even if segs are rendered!
 		fixed_t textureoffset=gltexture->TextureOffset(t_ofs);
@@ -1828,7 +1832,7 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 #ifdef _DEBUG
 	if (seg->linedef-lines==break_renderlinedef && IsDebuggerPresent())
 		__asm int 3;	
-	if (seg->linedef-lines==512)
+	if (seg->linedef-lines==1415)
 		__asm nop
 #endif
 

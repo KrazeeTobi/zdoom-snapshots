@@ -392,7 +392,12 @@ void GLSkyboxPortal::DrawContents()
 {
 	int old_pm=PlaneMirrorMode;
 
-	if (skyboxrecursion>=2) return;
+	if (skyboxrecursion>=3)
+	{
+		gl_ClearScreen();
+		return;
+	}
+
 	skyboxrecursion++;
 	origin->flags|=MF_JUSTHIT;
 	extralight = 0;
@@ -461,7 +466,11 @@ void GLSectorStackPortal::DrawContents()
 //-----------------------------------------------------------------------------
 void GLPlaneMirrorPortal::DrawContents()
 {
-	if (renderdepth>r_mirror_recursions) return;
+	if (renderdepth>r_mirror_recursions) 
+	{
+		gl_ClearScreen();
+		return;
+	}
 
 	int old_pm=PlaneMirrorMode;
 
@@ -506,7 +515,11 @@ void GLPlaneMirrorPortal::DrawContents()
 //-----------------------------------------------------------------------------
 void GLMirrorPortal::DrawContents()
 {
-	if (renderdepth>r_mirror_recursions) return;
+	if (renderdepth>r_mirror_recursions) 
+	{
+		gl_ClearScreen();
+		return;
+	}
 
 	mirrorline=linedef;
 	angle_t startang = viewangle;
@@ -608,8 +621,11 @@ void GLHorizonPortal::DrawContents()
 	player_t * player=&players[consoleplayer];
 
 	gltexture=FGLTexture::ValidateTexture(sp->texture);
-	if (!gltexture) return;
-
+	if (!gltexture) 
+	{
+		gl_ClearScreen();
+		return;
+	}
 
 
 	z=TO_MAP(sp->texheight);

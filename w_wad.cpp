@@ -514,7 +514,13 @@ void FWadCollection::AddFile (const char *filename, const char * data, int lengt
 				continue;
 			}
 
-			ExtractFileBase(name, base);
+			//ExtractFileBase(name, base);
+			char * lname=strrchr(name,'/');
+			if (!lname) lname=name;
+			else lname++;
+			strcpy(base, lname);
+			char * dot = strrchr(base,'.');
+			if (dot) *dot=0;
 			strupr(base);
 			strncpy(lump_p->name, base, 8);
 			lump_p->fullname = copystring(name);

@@ -1786,6 +1786,9 @@ void P_ZMovement (AActor *mo)
 		mo->player->viewheight -= mo->floorz - mo->z;
 		mo->player->deltaviewheight = (mo->player->defaultviewheight/*VIEWHEIGHT*/ - mo->player->viewheight)>>3;
 	}
+
+	mo->z += mo->momz;
+
 //
 // apply gravity
 //
@@ -1814,10 +1817,10 @@ void P_ZMovement (AActor *mo)
 			}
 		}
 	}
+
 //
 // adjust height
 //
-	mo->z += mo->momz;
 	if ((mo->flags & MF_FLOAT) && mo->target)
 	{	// float down towards target if too close
 		if (!(mo->flags & MF_SKULLFLY) && !(mo->flags & MF_INFLOAT))

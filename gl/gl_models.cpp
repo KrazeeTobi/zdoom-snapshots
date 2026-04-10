@@ -552,8 +552,8 @@ void gl_InitModels()
 				smf.xscale=smf.yscale=smf.zscale=1.f;
 
 				smf.type = TypeInfo::FindType(sc_String);
-				GetDefaultByType(smf.type)->hasmodel=true;
 				if (!smf.type) SC_ScriptError("MODELDEF: Unknown actor type '%s'\n", sc_String);
+				GetDefaultByType(smf.type)->hasmodel=true;
 				SC_MustGetStringName("{");
 				while (!SC_CheckString("}"))
 				{
@@ -607,14 +607,20 @@ void gl_InitModels()
 							smf.skins[index]=LoadSkin(path.GetChars(), sc_String);
 						}
 					}
-					else if (SC_Compare("frameindex"))
+					else if (SC_Compare("frameindex") || SC_Compare("frame"))
 					{
+						bool isframe=!!SC_Compare("frame");
+
 						SC_MustGetString();
 						smf.sprite = -1;
 						for (i = 0; i < (int)sprites.Size (); ++i)
 						{
 							if (strncmp (sprites[i].name, sc_String, 4) == 0)
 							{
+								if (sprites[i].numframes==0)
+								{
+									//SC_ScriptError("Sprite %s has no frames", sc_String);
+								}
 								smf.sprite = i;
 								break;
 							}
@@ -633,60 +639,28 @@ void gl_InitModels()
 						{
 							SC_ScriptError("Too many models in %s", smf.type->Name+1);
 						}
-						SC_MustGetNumber();
-						smf.modelframes[index] = sc_Number;
+						if (isframe)
+						{
+							SC_MustGetString();
+							if (smf.models[index]!=NULL) smf.modelframes[index] = smf.models[index]->FindFrame(sc_String);
+							else smf.modelframes[index] = -1;
+						}
+						else
+						{
+							SC_MustGetNumber();
+							smf.modelframes[index] = sc_Number;
+						}
 
 						for(i=0; framechars[i]>0; i++)
 						{
 							char map[29]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 							char c = toupper(framechars[i])-'A';
 
-							if (c<0 || c>=29 || map[c]) continue;
-							smf.frame=c;
-							SpriteModelFrames.Push(smf);
-							map[c]=1;
-						}
-					}
-					else if (SC_Compare("frame"))
-					{
-						SC_MustGetString();
-
-						smf.sprite = -1;
-						for (i = 0; i < (int)sprites.Size (); ++i)
-						{
-							if (strncmp (sprites[i].name, sc_String, 4) == 0)
+							if (c<0 || c>=29)
 							{
-								smf.sprite = i;
-								break;
+								SC_ScriptError("Invalid frame character %c found", c+'A');
 							}
-						}
-						if (smf.sprite==-1)
-						{
-							SC_ScriptError("Unknown sprite %s in model definition for %s", sc_String, smf.type->Name+1);
-						}
-
-						SC_MustGetString();
-						string framechars = sc_String;
-
-						SC_MustGetNumber();
-						index=sc_Number;
-						if (index<0 || index>=MAX_MODELS_PER_FRAME)
-						{
-							SC_ScriptError("Too many models in %s", smf.type->Name+1);
-						}
-
-						SC_MustGetString();
-						
-						if (smf.models[index]!=NULL) smf.modelframes[index] = smf.models[index]->FindFrame(sc_String);
-						else smf.modelframes[index] = -1;
-
-
-						for(i=0; framechars[i]>0; i++)
-						{
-							char map[29]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-							char c = toupper(framechars[i])-'A';
-
-							if (c<0 || c>=29 || map[c]) continue;
+							if (map[c]) continue;
 							smf.frame=c;
 							SpriteModelFrames.Push(smf);
 							map[c]=1;
@@ -728,11 +702,11 @@ FSpriteModelFrame * gl_FindModelFrame(const TypeInfo * ti, int sprite, int frame
 		smf.sprite=sprite;
 		smf.frame=frame;
 
-		int hash = ModelFrameHash(&smf) % SpriteModelFrames.Size();
+		int hash = SpriteModelHash[ModelFrameHash(&smf) % SpriteModelFrames.Size()];
 
 		while (hash>=0)
 		{
-			FSpriteModelFrame * smff = &SpriteModelFrames[SpriteModelHash[hash]];
+			FSpriteModelFrame * smff = &SpriteModelFrames[hash];
 			if (smff->type==ti && smff->sprite==sprite && smff->frame==frame) return smff;
 			hash=smff->hashnext;
 		}
