@@ -20,7 +20,7 @@
 **    derived from this software without specific prior written permission.
 ** 4. When not used as part of GZDoom or a GZDoom derivative, this code will be
 **    covered by the terms of the GNU Lesser General Public License as published
-**    by the Free Software Foundation; either version 2 of the License, or (at
+**    by the Free Software Foundation; either version 2.1 of the License, or (at
 **    your option) any later version.
 **
 ** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
@@ -698,7 +698,7 @@ static void DrawFloodedPlane(wallseg * ws, float planez, sector_t * sec, bool ce
 	}
 
 	gl_SetFog(lightlevel, Colormap.FadeColor, STYLE_Normal);
-	gl_SetColor(lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,1.0f);
+	gl_SetColor(lightlevel+(extralight*gl_weaponlight), Colormap.LightColor,1.0f);
 	gltexture->Bind(Colormap.LightColor.a);
 	gl_SetPlaneTextureRotation(&plane, gltexture);
 
@@ -853,6 +853,7 @@ void DrawUnhandledMissingTextures()
 		if (seg->linedef->validcount==validcount) continue;		// already done
 		seg->linedef->validcount=validcount;
 		if (seg->frontsector->ceilingtexz < viewz) continue;	// out of sight
+		//if (seg->frontsector->ceilingpic==skyflatnum) continue;
 		if (gl_sectors[seg->backsector->sectornum].transdoor) continue;
 		if (seg->backsector->CeilingSkyBox && seg->backsector->CeilingSkyBox->bAlways) continue;
 

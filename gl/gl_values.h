@@ -93,8 +93,5 @@ enum EColorManipulation
 #define F_TO_MAP(v) ((v)/(float)MAP_COEFF)
 #define MIN_EQ (0.0005f/MAP_COEFF)
 
-#define LIGHTSEGSHIFT      3
-
-
 
 #endif

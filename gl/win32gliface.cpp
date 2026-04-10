@@ -17,6 +17,8 @@ CUSTOM_CVAR(Int, gl_vid_multisample, 0, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 	//Printf("ZGL: This won't take effect until ZDoomGL is restarted.\n");
 }
 
+CVAR(Bool, gl_atifog, false, 0)
+
 RenderContext gl;
 
 
@@ -35,6 +37,7 @@ Win32GLVideo::Win32GLVideo(int parm) : m_Modes(NULL), m_IsFullscreen(false)
 
 	hmRender = LoadLibrary("r_opengl.dll");
 	if (hmRender) gc=(GetContextProc)GetProcAddress(hmRender, "_GetContext@4");
+	else I_FatalError("r_opengl.dll not found!");
 	if (gc) gc(gl);
 }
 
@@ -323,6 +326,8 @@ void Win32GLFrameBuffer::InitializeState()
 			Printf("Support for non power 2 textures enabled.\n");
 		}
 	}
+
+	if (!strncmp(gl.vendorstring, "ATI ", 4)) gl_atifog=true;
 
 
 	gl.ClearColor(0.0f, 0.0f, 0.0f, 0.0f);

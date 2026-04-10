@@ -20,7 +20,7 @@
 **    derived from this software without specific prior written permission.
 ** 4. When not used as part of GZDoom or a GZDoom derivative, this code will be
 **    covered by the terms of the GNU Lesser General Public License as published
-**    by the Free Software Foundation; either version 2 of the License, or (at
+**    by the Free Software Foundation; either version 2.1 of the License, or (at
 **    your option) any later version.
 **
 ** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
@@ -211,7 +211,7 @@ void GLWall::DoRenderGlowingPoly(bool textured, bool dolight, ADynamicLight * li
 
 		if (dolight)
 		{
-			gl_GetLightColor(lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,&color_o[0],&color_o[1],&color_o[2]);
+			gl_GetLightColor(lightlevel+(extralight*gl_weaponlight), Colormap.LightColor,&color_o[0],&color_o[1],&color_o[2]);
 			color_o[3]=alpha;
 			memcpy(color_b,color_o,sizeof(color_b));
 			if (glowbot)
@@ -431,7 +431,7 @@ void GLWall::RenderTwoSidedWall(int pass)
 	if (flag==RENDERWALL_COLOR)
 	{
 		// this is always translucent and thus always GLPASS_UNLIT
-		gl_SetColor(lightlevel, Colormap.LightColor, (float)fabs(alpha));
+		gl_SetColor(lightlevel+(extralight*gl_weaponlight), Colormap.LightColor, (float)fabs(alpha));
 		DoRenderWall(false,NULL);
 	}
 	else
@@ -443,7 +443,7 @@ void GLWall::RenderTwoSidedWall(int pass)
 		}
 		else
 		{
-			if (pass!=GLPASS_TEXTURE) gl_SetColor(lightlevel, Colormap.LightColor, (float)fabs(alpha));
+			if (pass!=GLPASS_TEXTURE) gl_SetColor(lightlevel+(extralight*gl_weaponlight), Colormap.LightColor, (float)fabs(alpha));
 			DoRenderWall(true,NULL);
 		}
 	}
@@ -489,9 +489,13 @@ void GLWall::RenderOneSidedWall(int pass)
 	switch(pass)
 	{
 	case GLPASS_UNLIT:
-		if (!renderglowing) gl_SetColor(lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,1.0f);
+		if (!renderglowing) gl_SetColor(lightlevel+(extralight*gl_weaponlight), Colormap.LightColor,1.0f);
 		gl_SetFog(lightlevel, Colormap.FadeColor, STYLE_Normal);
-		if (gltexture) gltexture->Bind(Colormap.LightColor.a);
+		if (gltexture) 
+		{
+			gltexture->Bind(Colormap.LightColor.a);
+			if (gltexture->tex->bMasked) gl.AlphaFunc(GL_GEQUAL, 0);
+		}
 		else 
 		{
 			gl.Disable(GL_TEXTURE_2D);
@@ -500,11 +504,12 @@ void GLWall::RenderOneSidedWall(int pass)
 		if (!renderglowing) DoRenderWall(true,NULL);
 		else DoRenderGlowingPoly();
 		if (!gltexture) gl.Enable(GL_TEXTURE_2D);
+		else if (gltexture->tex->bMasked) gl.AlphaFunc(GL_GEQUAL, 0.5f);
 		break;
 
 
 	case GLPASS_BASE:
-		if (!renderglowing) gl_SetColor(lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,1.0f);
+		if (!renderglowing) gl_SetColor(lightlevel+(extralight*gl_weaponlight), Colormap.LightColor,1.0f);
 		gl_SetFog(lightlevel, Colormap.FadeColor, STYLE_Normal);
 		if (!renderglowing) DoRenderWall(true,NULL);
 		else DoRenderGlowingPoly(false, true); 
@@ -514,8 +519,10 @@ void GLWall::RenderOneSidedWall(int pass)
 		if (gltexture) 
 		{
 			gltexture->Bind(Colormap.LightColor.a);
+			if (gltexture->tex->bMasked) gl.AlphaFunc(GL_GEQUAL, 0);
 			if (!renderglowing) DoRenderWall(true,NULL);
 			else DoRenderGlowingPoly(true, false); 
+			if (gltexture->tex->bMasked) gl.AlphaFunc(GL_GEQUAL, 0.5f);
 		}
 		break;
 
@@ -1798,11 +1805,11 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 			bch1 = bch2 = backsector->ceilingtexz;
 		}
 
-			// upper sky
+		// upper sky
 		SkyTop(seg,frontsector,backsector,v1,v2);
 		
 		// upper texture
-		if (!((frontsector->ceilingpic==skyflatnum) && (backsector->ceilingpic==skyflatnum)))
+		if (frontsector->ceilingpic!=skyflatnum || backsector->ceilingpic!=skyflatnum)
 		{
 			fixed_t bch1a=bch1, bch2a=bch2;
 			if (frontsector->floorpic!=skyflatnum || backsector->floorpic!=skyflatnum)
@@ -1907,7 +1914,7 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 							bfh1,bfh2,ffh1,ffh2, realfront->floortexz-realfront->ceilingtexz);
 					}
 				}
-				else
+				else if (backsector->floorpic!=skyflatnum)
 				{
 					AddLowerMissingTexture(seg, bfh1);
 				}

@@ -24,6 +24,7 @@ struct RenderContext
 {
 	unsigned int flags;
 	int max_texturesize;
+	char * vendorstring;
 
 	void (APIENTRY * LoadExtensions) ();
 	void (APIENTRY * SetTextureMode) (int type);

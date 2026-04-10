@@ -20,7 +20,7 @@
 **    derived from this software without specific prior written permission.
 ** 4. When not used as part of GZDoom or a GZDoom derivative, this code will be
 **    covered by the terms of the GNU Lesser General Public License as published
-**    by the Free Software Foundation; either version 2 of the License, or (at
+**    by the Free Software Foundation; either version 2.1 of the License, or (at
 **    your option) any later version.
 **
 ** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
@@ -55,6 +55,9 @@ CUSTOM_CVAR (Bool, gl_lights, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 	if (self) gl_RecreateAllAttachedLights();
 	else gl_DeleteAllAttachedLights();
 }
+
+CVAR(Int, gl_weaponlight, 8, CVAR_ARCHIVE);
+
 CVAR (Bool, gl_attachedlights, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 CVAR (Bool, gl_bulletlight, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 CVAR (Bool, gl_lights_checkside, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);

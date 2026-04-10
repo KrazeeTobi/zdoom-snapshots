@@ -21,7 +21,7 @@
 **    derived from this software without specific prior written permission.
 ** 4. When not used as part of GZDoom or a GZDoom derivative, this code will be
 **    covered by the terms of the GNU Lesser General Public License as published
-**    by the Free Software Foundation; either version 2 of the License, or (at
+**    by the Free Software Foundation; either version 2.1 of the License, or (at
 **    your option) any later version.
 **
 ** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
@@ -141,16 +141,16 @@ void GLSprite::Draw(int pass)
 		{
 			if (actor && gl_light_sprites && !(actor->renderflags & RF_FULLBRIGHT))
 			{
-				gl_SetSpriteLight(actor, lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,trans, ThingColor);
+				gl_SetSpriteLight(actor, lightlevel+(extralight*gl_weaponlight), Colormap.LightColor,trans, ThingColor);
 				res=true;
 			}
 			else if (particle && gl_light_particles)
 			{
-				gl_SetSpriteLight(particle, lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,trans, ThingColor);
+				gl_SetSpriteLight(particle, lightlevel+(extralight*gl_weaponlight), Colormap.LightColor,trans, ThingColor);
 				res=true;
 			}
 		}
-		if (!res) gl_SetColor(lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,trans, ThingColor);
+		if (!res) gl_SetColor(lightlevel+(extralight*gl_weaponlight), Colormap.LightColor,trans, ThingColor);
 	}
 	if (gl_isBlack(Colormap.FadeColor)) foglevel=lightlevel;
 	gl_SetFog(foglevel,  Colormap.FadeColor, RenderStyle);

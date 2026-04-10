@@ -15,6 +15,9 @@ EXTERN_CVAR(Int, gl_texture_filter)
 EXTERN_CVAR(Float, gl_texture_filter_anisotropic)
 EXTERN_CVAR(Int, gl_texture_format)
 
+EXTERN_CVAR(Int, gl_weaponlight)
+EXTERN_CVAR(Bool, gl_atifog)
+
 EXTERN_CVAR (Bool, gl_lights);
 EXTERN_CVAR (Bool, gl_attachedlights);
 EXTERN_CVAR (Bool, gl_lights_checkside);

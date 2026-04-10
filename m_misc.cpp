@@ -542,7 +542,7 @@ void M_ScreenShot (char *filename)
 {
 	FILE *file;
 	char *autoname;
-	bool writepcx = (stricmp (screenshot_type, "pcx") == 0);	// PNG is the default
+	bool writepcx = (currentrenderer==0 && stricmp (screenshot_type, "pcx") == 0);	// PNG is the default
 
 	// find a file name to save it to
 	if (filename == NULL)
@@ -570,7 +570,7 @@ void M_ScreenShot (char *filename)
 				}
 			}
 		}
-		if (!FindFreeName (autoname, autoname + dirlen, currentrenderer==1 ? "bmp" : writepcx ? "pcx" : "png"))
+		if (!FindFreeName (autoname, autoname + dirlen, writepcx ? "pcx" : "png"))
 		{
 			Printf ("M_ScreenShot: Delete some screenshots\n");
 			return;

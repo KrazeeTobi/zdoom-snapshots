@@ -1,5 +1,5 @@
 #include "gl_pch.h"
-
+#include <il/il.h>
 /*
 ** gfxfuncs.cpp
 ** True color graphics manipulation
@@ -21,7 +21,7 @@
 **    derived from this software without specific prior written permission.
 ** 4. When not used as part of GZDoom or a GZDoom derivative, this code will be
 **    covered by the terms of the GNU Lesser General Public License as published
-**    by the Free Software Foundation; either version 2 of the License, or (at
+**    by the Free Software Foundation; either version 2.1 of the License, or (at
 **    your option) any later version.
 **
 ** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
@@ -42,70 +42,24 @@
 
 //===========================================================================
 // 
-//	Saves a screenshot as true color BMP
-//
-//===========================================================================
-void SaveGFX(const char * fn, unsigned char * buffer, int w, int h)
-{
-	int x,y;
-
-	BITMAPFILEHEADER bf;
-	BITMAPINFOHEADER bih;
-
-	memset(&bf,0,sizeof(bf));
-	bf.bfType='MB';
-	bf.bfSize=3*w*h+sizeof(BITMAPINFOHEADER)+sizeof(BITMAPFILEHEADER);
-	bf.bfOffBits=sizeof(BITMAPINFOHEADER)+sizeof(BITMAPFILEHEADER);
-
-	memset(&bih,0,sizeof(bih));
-	bih.biSize=sizeof(bih);
-	bih.biWidth=w;
-	bih.biHeight=h;
-	bih.biPlanes=1;
-	bih.biBitCount=24;
-	bih.biCompression=BI_RGB;
-	bih.biSizeImage=((3*w+3)&-4)*h;
-
-	FILE * f=fopen(fn,"wb");
-	fwrite(&bf,1,sizeof(bf),f);
-	fwrite(&bih,1,sizeof(bih),f);
-
-	for(y=0;y<h;y++)
-	{
-		unsigned char * li=buffer+w*4*y;
-		for(x=0;x<w;x++,li+=4)
-		{
-			if (li[3]!=0)
-			{
-				fwrite(&li[2],1,1,f);
-				fwrite(&li[1],1,1,f);
-				fwrite(&li[0],1,1,f);
-			}
-			else fwrite("\x2f\x2f\0",3,1,f);
-			//else fwrite("\xff\xff\0",3,1,f);
-		}
-		if ((w*3)&3)
-		{
-			int pad=4-((w*3)&3);
-			int nul=0;
-
-			fwrite(&nul,pad,1,f);
-		}
-	}
-	fclose(f);
-}
-
-
-//===========================================================================
-// 
 //	Takes a screenshot
 //
 //===========================================================================
 void gl_ScreenShot (const char* fname)
 {
+	unsigned int imgID;
+
 	byte * scr = (byte *)Malloc(SCREENWIDTH * SCREENHEIGHT * 4);
 	gl.ReadPixels(0,0,SCREENWIDTH,SCREENHEIGHT,GL_RGBA,GL_UNSIGNED_BYTE,scr);
-	SaveGFX(fname, scr, SCREENWIDTH,SCREENHEIGHT); 
+	
+	ilGenImages(1, &imgID);
+	ilBindImage(imgID);
+	ilTexImage(SCREENWIDTH,SCREENHEIGHT, 1, 4, IL_RGBA, IL_UNSIGNED_BYTE, scr);
+	ilConvertImage(IL_RGB, IL_UNSIGNED_BYTE);
+	delete[] scr;
+	ilHint(IL_COMPRESSION_HINT, IL_USE_COMPRESSION);
+	ilSave(IL_PNG, (char *)fname);
+	ilDeleteImages(1, &imgID);
 	free(scr);
 }
 

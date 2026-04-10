@@ -20,7 +20,7 @@
 **    derived from this software without specific prior written permission.
 ** 4. When not used as part of GZDoom or a GZDoom derivative, this code will be
 **    covered by the terms of the GNU Lesser General Public License as published
-**    by the Free Software Foundation; either version 2 of the License, or (at
+**    by the Free Software Foundation; either version 2.1 of the License, or (at
 **    your option) any later version.
 **
 ** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
@@ -172,9 +172,25 @@ void GLFlat::DrawSubsector(gl_subsectordata * glsub)
 	}
 	else for(k = 0; k < glsub->numvertices; k++)
 	{
+		// Quicker way for non-sloped sectors
 		gl_vertices[glsub->firstvertex + k].y = z;
 	}
-	gl.DrawArrays(GL_TRIANGLE_FAN, glsub->firstvertex, glsub->numvertices);
+	if (!gl_atifog)
+	{
+		gl.DrawArrays(GL_TRIANGLE_FAN, glsub->firstvertex, glsub->numvertices);
+	}
+	else
+	{
+		GLVertex * v;
+		gl.Begin(GL_TRIANGLE_FAN);
+		for(k = 0, v=&gl_vertices[glsub->firstvertex]; k < glsub->numvertices; k++)
+		{
+			gl.TexCoord2f(v->u, v->v);
+			gl.Vertex3f(v->x, v->y, v->z);
+			v++;
+		}
+		gl.End();
+	}
 	flatvertices += glsub->numvertices;
 	flatprimitives++;
 }
@@ -243,7 +259,7 @@ void GLFlat::Draw(int pass)
 		gl_SetFog(lightlevel, Colormap.FadeColor, STYLE_Normal);
 		// gltexture==NULL means this is a plane of an FF_FOG volume.
 
-		if (gltexture) gl_SetColor(lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,alpha);
+		if (gltexture) gl_SetColor(lightlevel+(extralight*gl_weaponlight), Colormap.LightColor,alpha);
 		else gl_SetColor(lightlevel, Colormap.LightColor, alpha);
 	}
 

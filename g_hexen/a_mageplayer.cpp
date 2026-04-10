@@ -34,7 +34,7 @@ FState AMagePlayer::States[] =
 
 #define S_MPLAY_DIE1 (S_MPLAY_ATK1+2)
 	S_NORMAL (MAGE, 'H',	6, NULL					    , &States[S_MPLAY_DIE1+1]),
-	S_NORMAL (MAGE, 'I',	6, A_Scream				    , &States[S_MPLAY_DIE1+2]),
+	S_NORMAL (MAGE, 'I',	6, A_PlayerScream		    , &States[S_MPLAY_DIE1+2]),
 	S_NORMAL (MAGE, 'J',	6, NULL					    , &States[S_MPLAY_DIE1+3]),
 	S_NORMAL (MAGE, 'K',	6, NULL					    , &States[S_MPLAY_DIE1+4]),
 	S_NORMAL (MAGE, 'L',	6, A_NoBlocking			    , &States[S_MPLAY_DIE1+5]),
@@ -42,7 +42,7 @@ FState AMagePlayer::States[] =
 	S_NORMAL (MAGE, 'N',   -1, NULL/*A_AddPlayerCorpse*/, NULL),
 
 #define S_MPLAY_XDIE1 (S_MPLAY_DIE1+7)
-	S_NORMAL (MAGE, 'O',	5, A_Scream				    , &States[S_MPLAY_XDIE1+1]),
+	S_NORMAL (MAGE, 'O',	5, A_PlayerScream		    , &States[S_MPLAY_XDIE1+1]),
 	S_NORMAL (MAGE, 'P',	5, NULL					    , &States[S_MPLAY_XDIE1+2]),
 	S_NORMAL (MAGE, 'R',	5, A_NoBlocking			    , &States[S_MPLAY_XDIE1+3]),
 	S_NORMAL (MAGE, 'S',	5, NULL					    , &States[S_MPLAY_XDIE1+4]),

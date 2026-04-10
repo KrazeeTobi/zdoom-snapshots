@@ -1023,7 +1023,8 @@ void P_PlayerThink (player_t *player)
 				player->defaultviewheight-=2*crouchdelta;
 				P_TryMove(player->mo, player->mo->x, player->mo->y, false, false);
 			}
-			player->mo->yscale = Scale(player->mo->height, 63, player->mo->GetDefault()->height);
+			player->mo->yscale = Scale (player->mo->height, player->mo->GetDefault()->yscale, 
+										player->mo->GetDefault()->height);
 		}
 		player->crouchoffset = -40* (FRACUNIT - FixedDiv(player->mo->height, player->mo->GetDefault()->height));
 	}
@@ -1037,7 +1038,7 @@ void P_PlayerThink (player_t *player)
 		if (player->mo->tracer)
 		{
 			player->mo->tracer->height = player->mo->tracer->GetDefault()->height;
-			player->mo->tracer->yscale = 63;
+			player->mo->tracer->yscale = player->mo->tracer->GetDefault()->yscale;
 		}
 	}
 
@@ -1116,7 +1117,7 @@ void P_PlayerThink (player_t *player)
 		player->crouching = 0;
 		player->defaultviewheight=playerviewheight;
 		player->mo->height = player->mo->GetDefault()->height;
-		player->mo->yscale = 63;
+		player->mo->yscale = player->mo->GetDefault()->yscale;
 	
 		P_DeathThink (player);
 		return;
@@ -1322,7 +1323,8 @@ void P_PlayerThink (player_t *player)
 	}
 
 	// Save buttons
-	player->oldbuttons = cmd->ucmd.buttons;
+	player->oldbuttons = (cmd->ucmd.buttons & ~(BT_ATTACK|BT_ALTATTACK)) | 
+						 (player->oldbuttons & (BT_ATTACK|BT_ALTATTACK));
 }
 
 void P_PredictPlayer (player_t *player)

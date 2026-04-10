@@ -1,3 +1,44 @@
+29. Oct 2005
+- Added test code for ATI fog problem.
+
+
+28. Oct 2005
+- Fixed: The crouching code broke a player sprite's y-scaling.
+
+
+27. Oct 2005
+- Fixed: Two-sided walls weren't affected by a weapon's extralight.
+- Fixed: Floor skies with height differences between sectors had holes.
+
+
+25. Oct 2005
+- Fixed: The game crashed when r_opengl.dll was not found. Now it aborts
+  with a fatal error.
+  
+
+23. Oct 2005
+- Added rocket smoke sprites to GZDoom wad and created another actor
+  instead of using LavaSmoke.
+- Fixed: Weapons with WIF_NOAUTOFIRE didn't start to fire when selected
+  manually and pressing the fire button before the weapon was fully raised.
+
+
+22. Oct 2005
+- Fixed: Using masked textures on one-sided walls created rendering holes.
+
+
+21. Oct 2005
+- Added support for the BLOODLESSIMPACT flag on puffs
+- Fixed: Ripper missiles ignored the BLOODLESSIMPACT flag.
+- Fixed: Explosions directly above another object had incorrect damage
+  calculations.
+  
+  
+20. Oct 2005
+- Changed screenshot type for the GL renderer from BMP to PNG.
+  The screenshot_type CVAR still has no effect though.
+
+
 19. Oct 2005
 - Changed the sector lighting to be closer to the way Doom is doing it.
   I kept the old method as an option though.

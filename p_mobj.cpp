@@ -2358,7 +2358,7 @@ void AActor::Tick ()
 	{
 		// add some smoke behind the rocket 
 		visdir=0;
-		AActor * th = Spawn<ALavaSmoke>(x-momx, y-momy, z);
+		AActor * th = Spawn("RocketSmokeTrail", x-momx, y-momy, z);
 		if (th)
 		{
 			th->momz = FRACUNIT;

@@ -1087,7 +1087,7 @@ BOOL PIT_CheckThing (AActor *thing)
 				S_Sound (tmthing, CHAN_BODY, "misc/ripslop", 1, ATTN_IDLE);
 				damage = ((pr_checkthing()&3)+2)*tmthing->damage;
 				P_DamageMobj (thing, tmthing, tmthing->target, damage, tmthing->DamageType);
-				P_TraceBleed (damage, thing, tmthing);
+				if (!(tmthing->flags3 & MF3_BLOODLESSIMPACT)) P_TraceBleed (damage, thing, tmthing);
 				if (thing->flags2 & MF2_PUSHABLE
 					&& !(tmthing->flags2 & MF2_CANNOTPUSH))
 				{ // Push thing
@@ -3096,35 +3096,38 @@ void P_LineAttack (AActor *t1, angle_t angle, fixed_t distance,
 			{
 				puff = P_SpawnPuff (pufftype, hitx, hity, hitz, angle - ANG180, 2, true);
 			}
-			if ((gameinfo.gametype & (GAME_DoomStrife)) && !axeBlood &&
-				!(trace.Actor->flags & MF_NOBLOOD) &&
-				!(trace.Actor->flags2 & (MF2_INVULNERABLE|MF2_DORMANT)))
+			if (!(GetDefaultByType(pufftype)->flags3&MF3_BLOODLESSIMPACT))
 			{
-				P_SpawnBlood (hitx, hity, hitz, angle - ANG180, damage, trace.Actor);
-			}
-
-			if (damage)
-			{
-				if ((gameinfo.gametype&GAME_Raven) || axeBlood)
+				if ((gameinfo.gametype & (GAME_DoomStrife)) && !axeBlood &&
+					!(trace.Actor->flags & MF_NOBLOOD) &&
+					!(trace.Actor->flags2 & (MF2_INVULNERABLE|MF2_DORMANT)))
 				{
-					if (!(trace.Actor->flags&MF_NOBLOOD) &&
-						!(trace.Actor->flags2&(MF2_INVULNERABLE|MF2_DORMANT)))
+					P_SpawnBlood (hitx, hity, hitz, angle - ANG180, damage, trace.Actor);
+				}
+	
+				if (damage)
+				{
+					if ((gameinfo.gametype&GAME_Raven) || axeBlood)
 					{
-						if (axeBlood)
+						if (!(trace.Actor->flags&MF_NOBLOOD) &&
+							!(trace.Actor->flags2&(MF2_INVULNERABLE|MF2_DORMANT)))
 						{
-							P_BloodSplatter2 (hitx, hity, hitz, trace.Actor);
-						}
-						if (pr_lineattack() < 192)
-						{
-							P_BloodSplatter (hitx, hity, hitz, trace.Actor);
+							if (axeBlood)
+							{
+								P_BloodSplatter2 (hitx, hity, hitz, trace.Actor);
+							}
+							if (pr_lineattack() < 192)
+							{
+								P_BloodSplatter (hitx, hity, hitz, trace.Actor);
+							}
 						}
 					}
+					// [RH] Stick blood to walls
+					P_TraceBleed (damage, trace.X, trace.Y, trace.Z,
+						trace.Actor, srcangle, srcpitch);
 				}
-				P_DamageMobj (trace.Actor, puff ? puff : t1, t1, damage, damageType);
-				// [RH] Stick blood to walls
-				P_TraceBleed (damage, trace.X, trace.Y, trace.Z,
-					trace.Actor, srcangle, srcpitch);
 			}
+			if (damage) P_DamageMobj (trace.Actor, puff ? puff : t1, t1, damage, damageType);
 		}
 		if (trace.CrossedWater)
 		{
@@ -3500,7 +3503,7 @@ blocked:
 		else
 		{
 			// Legacy doesn't check 3D-floors so I can't do either due to compatibility issues.
-			P_LineOpening (/*usething,*/ in->d.line, trace.x + FixedMul (trace.dx, in->frac),
+			P_LineOpening (in->d.line, trace.x + FixedMul (trace.dx, in->frac),
 				trace.y + FixedMul (trace.dy, in->frac));
 		}
 		if (openrange <= 0 ||
@@ -3560,7 +3563,7 @@ BOOL PTR_NoWayTraverse (intercept_t *in)
 	// this convoluted mess?
 	if (ld->special) return true;
 	if (ld->flags&(ML_BLOCKING|ML_BLOCKEVERYTHING)) return false;
-	P_LineOpening(usething, ld, trace.x+FixedMul(trace.dx, in->frac),trace.y+FixedMul(trace.dy, in->frac));
+	P_LineOpening(ld, trace.x+FixedMul(trace.dx, in->frac),trace.y+FixedMul(trace.dy, in->frac));
 	return  openrange >0 && 
 			openbottom <= usething->z + gameinfo.StepHeight &&
 			opentop >= usething->z + usething->height;
@@ -3630,7 +3633,7 @@ BOOL PTR_PuzzleItemTraverse (intercept_t *in)
 	{ // Check line
 		if (in->d.line->special != USE_PUZZLE_ITEM_SPECIAL)
 		{
-			P_LineOpening (PuzzleItemUser, in->d.line, trace.x + FixedMul (trace.dx, in->frac),
+			P_LineOpening (in->d.line, trace.x + FixedMul (trace.dx, in->frac),
 				trace.y + FixedMul (trace.dy, in->frac));
 			if (openrange <= 0)
 			{
@@ -3781,7 +3784,7 @@ BOOL PIT_RadiusAttack (AActor *thing)
 
 			if (bombspot->z > thing->z)
 			{
-				dz = float (thing->z + thing->height - bombspot->z);
+				dz = -float (thing->z + thing->height - bombspot->z);
 			}
 			else
 			{

@@ -21,7 +21,7 @@
 **    derived from this software without specific prior written permission.
 ** 4. When not used as part of GZDoom or a GZDoom derivative, this code will be
 **    covered by the terms of the GNU Lesser General Public License as published
-**    by the Free Software Foundation; either version 2 of the License, or (at
+**    by the Free Software Foundation; either version 2.1 of the License, or (at
 **    your option) any later version.
 **
 ** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
@@ -541,7 +541,7 @@ void GLHorizonPortal::DrawContents()
 	}
 	else lightlevel=origin->lightlevel;
 
-	gl_SetColor(lightlevel+(extralight<<LIGHTSEGSHIFT), color, 1.0f);
+	gl_SetColor(lightlevel+(extralight*gl_weaponlight), color, 1.0f);
 	gl_SetFog(lightlevel, origin->colormap.FadeColor, STYLE_Normal);
 	gl.AlphaFunc(GL_GEQUAL,0.5f);
 	gl.BlendFunc(GL_ONE,GL_ZERO);

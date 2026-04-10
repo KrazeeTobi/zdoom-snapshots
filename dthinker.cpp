@@ -197,25 +197,8 @@ void DThinker::DestroyAllThinkers ()
 	{
 		if (i != STAT_TRAVELLING)
 		{
-			Node *node;
-
-			// Calling DestroyThinkersInList here
-			// can create huge delays if there are a large number of things!
-			node = Thinkers[i].Head;
-			while (node->Succ != NULL)
-			{
-				Node *next = node->Succ;
-				static_cast<DThinker *> (node)->Destroy ();
-				node = next;
-			}
-
-			node = FreshThinkers[i].Head;
-			while (node->Succ != NULL)
-			{
-				Node *next = node->Succ;
-				static_cast<DThinker *> (node)->Destroy ();
-				node = next;
-			}
+			DestroyThinkersInList (Thinkers[i].Head);
+			DestroyThinkersInList (FreshThinkers[i].Head);
 		}
 	}
 	DObject::EndFrame ();
@@ -231,32 +214,13 @@ void DThinker::DestroyMostThinkers ()
 	DObject::BeginFrame ();
 	for (i = 0; i <= MAX_STATNUM; i++)
 	{
-		if (i != STAT_TRAVELLING && i!=STAT_PLAYER)
+		if (i != STAT_TRAVELLING)
 		{
-			Node *node;
-
-			// Calling DestroyThinkersInList here
-			// can create huge delays if there are a large number of things!
-			node = Thinkers[i].Head;
-			while (node->Succ != NULL)
-			{
-				Node *next = node->Succ;
-				static_cast<DThinker *> (node)->Destroy ();
-				node = next;
-			}
-
-			node = FreshThinkers[i].Head;
-			while (node->Succ != NULL)
-			{
-				Node *next = node->Succ;
-				static_cast<DThinker *> (node)->Destroy ();
-				node = next;
-			}
+			DestroyMostThinkersInList (Thinkers[i], i);
+			DestroyMostThinkersInList (FreshThinkers[i], i);
 		}
 	}
 	DObject::EndFrame ();
-	DestroyMostThinkersInList(Thinkers[STAT_PLAYER], STAT_PLAYER);
-	DestroyMostThinkersInList(FreshThinkers[STAT_PLAYER], STAT_PLAYER);
 }
 
 void DThinker::DestroyThinkersInList (Node *node)
@@ -264,9 +228,7 @@ void DThinker::DestroyThinkersInList (Node *node)
 	while (node->Succ != NULL)
 	{
 		Node *next = node->Succ;
-		DObject::BeginFrame ();
 		static_cast<DThinker *> (node)->Destroy ();
-		DObject::EndFrame ();
 		node = next;
 	}
 }

@@ -483,6 +483,7 @@ void P_CheckWeaponFire (player_t *player)
 			return;
 		}
 	}
+	else player->oldbuttons &= ~BT_ATTACK;
 
 	if (player->cmd.ucmd.buttons & BT_ALTATTACK)
 	{
@@ -493,6 +494,7 @@ void P_CheckWeaponFire (player_t *player)
 			return;
 		}
 	}
+	else player->oldbuttons &= ~BT_ALTATTACK;
 }
 
 //---------------------------------------------------------------------------

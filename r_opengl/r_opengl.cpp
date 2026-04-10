@@ -294,6 +294,8 @@ static void APIENTRY LoadExtensions()
 	// This loads any function pointers and flags that require a vaild render context to
 	// initialize properly
 
+	gl->vendorstring=(char*)glGetString(GL_VENDOR);
+
 	// First try the regular function
 	gl->BlendEquation = (PFNGLBLENDEQUATIONPROC)wglGetProcAddress("glBlendEquation");
 	// If that fails try the EXT version
