@@ -37,7 +37,7 @@
 // Lots of different representations for the version number
 enum { GAMEVERSION = 255 };
 #define STRVERSION "306"
-#define DOTVERSIONSTR "2.0.98x (0.9.16)"
+#define DOTVERSIONSTR "2.0.98x (0.9.17)"
 #define GAMEVER (3*256+1)
 
 // SAVEVER is the version of the information stored in level snapshots.
@@ -47,7 +47,7 @@ enum { GAMEVERSION = 255 };
 #define SAVESIG "ZDOOMSAVE307"
 
 // MINSAVEVER is the minimum level snapshot version that can be loaded.
-#define MINSAVEVER 300	
+#define MINSAVEVER 307	
 
 // The maximum length of one save game description for the menus.
 #define SAVESTRINGSIZE		24

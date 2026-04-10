@@ -210,6 +210,7 @@ static void SetTextureNoErr (short *texture, DWORD *color, char *name8, bool *va
 	char name[9];
 	strncpy (name, name8, 8);
 	name[8] = 0;
+	*validcolor = false;
 	if ((*texture = TexMan.CheckForTexture (name, FTexture::TEX_Wall,
 		FTextureManager::TEXMAN_Overridable|FTextureManager::TEXMAN_TryAny)
 		) == -1)
@@ -223,6 +224,7 @@ static void SetTextureNoErr (short *texture, DWORD *color, char *name8, bool *va
 			*color = strtoul (name, &stop, 16);
 			*texture = 0;
 			*validcolor = (*stop == 0) && (stop == name2 + 6);
+			return;
 		}
 		else	// Support for Legacy's color format!
 		{
@@ -245,6 +247,7 @@ static void SetTextureNoErr (short *texture, DWORD *color, char *name8, bool *va
 				*color=MAKERGB(red, green, blue);
 				*texture = 0;
 				*validcolor = true;
+				return;
 			}
 		}
 		*texture = 0;
@@ -1867,6 +1870,8 @@ void P_LoadSideDefs2 (int lump)
 			// upper "texture" is light color
 			// lower "texture" is fog color
 			{
+				if (sidetemp[i].a.tag==14)
+					__asm nop
 				DWORD color, fog;
 				bool colorgood, foggood;
 
@@ -1884,13 +1889,15 @@ void P_LoadSideDefs2 (int lump)
 					{
 						if (sectors[s].tag == sidetemp[i].a.tag)
 						{
-							if (!colorgood) color = sectors[s].ColorMap->Color;
-							if (!foggood) fog = sectors[s].ColorMap->Fade;
+							PalEntry s_fog = fog;
+							PalEntry s_color = color;
+							if (!colorgood) s_color = sectors[s].ColorMap->Color;
+							if (!foggood) s_fog = sectors[s].ColorMap->Fade;
 							if (colormap == NULL ||
-								colormap->Color != color ||
-								colormap->Fade != fog)
+								colormap->Color != s_color ||
+								colormap->Fade != s_fog)
 							{
-								colormap = GetSpecialLights (color, fog, 0);
+								colormap = GetSpecialLights (s_color, s_fog, 0);
 							}
 							sectors[s].ColorMap = colormap;
 						}

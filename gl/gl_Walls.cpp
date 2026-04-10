@@ -494,7 +494,7 @@ void GLWall::RenderOneSidedWall(int pass)
 		if (gltexture) 
 		{
 			gltexture->Bind(Colormap.LightColor.a);
-			if (gltexture->tex->bMasked) gl.AlphaFunc(GL_GEQUAL, 0);
+			if (gltexture->tex->bMasked && flag!=RENDERWALL_FFBLOCK) gl.AlphaFunc(GL_GEQUAL, 0);
 		}
 		else 
 		{
@@ -504,7 +504,7 @@ void GLWall::RenderOneSidedWall(int pass)
 		if (!renderglowing) DoRenderWall(true,NULL);
 		else DoRenderGlowingPoly();
 		if (!gltexture) gl.Enable(GL_TEXTURE_2D);
-		else if (gltexture->tex->bMasked) gl.AlphaFunc(GL_GEQUAL, 0.5f);
+		else if (gltexture->tex->bMasked && flag!=RENDERWALL_FFBLOCK) gl.AlphaFunc(GL_GEQUAL, 0.5f);
 		break;
 
 
@@ -765,7 +765,7 @@ void GLWall::PutWall(bool translucent)
 //==========================================================================
 void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 {
-	GLWall copyWall;
+	GLWall copyWall1,copyWall2;
 	fixed_t lightbottomleft;
 	fixed_t lightbottomright;
 	float maplightbottomleft;
@@ -779,7 +779,7 @@ void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 	}
 
 #ifdef _DEBUG
-	if (seg->linedef-lines==2782)
+	if (seg->linedef-lines==15)
 		__asm nop
 #endif
 
@@ -844,20 +844,20 @@ void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 				else
 				{
 					// split the wall in 2 at the intersection and recursively split both halves
-					copyWall=*this;
+					copyWall1=copyWall2=*this;
 
-					glseg.x2 = copyWall.glseg.x1 = glseg.x1 + coeff * (glseg.x2-glseg.x1);
-					glseg.z2 = copyWall.glseg.z1 = glseg.z1 + coeff * (glseg.z2-glseg.z1);
-					ytop[1] = copyWall.ytop[0] = ytop[0] + coeff * (ytop[1]-ytop[0]);
-					ybottom[1] = copyWall.ybottom[0] = ybottom[0] + coeff * (ybottom[1]-ybottom[0]);
-					fracright = copyWall.fracleft = fracleft + coeff * (fracright-fracleft);
-					uprgt.u = copyWall.uplft.u = uplft.u + coeff * (uprgt.u-uplft.u);
-					uprgt.v = copyWall.uplft.v = uplft.v + coeff * (uprgt.v-uplft.v);
-					lorgt.u = copyWall.lolft.u = lolft.u + coeff * (lorgt.u-lolft.u);
-					lorgt.v = copyWall.uplft.v = lolft.v + coeff * (lorgt.v-lolft.v);
+					copyWall1.glseg.x2 = copyWall2.glseg.x1 = glseg.x1 + coeff * (glseg.x2-glseg.x1);
+					copyWall1.glseg.z2 = copyWall2.glseg.z1 = glseg.z1 + coeff * (glseg.z2-glseg.z1);
+					copyWall1.ytop[1] = copyWall2.ytop[0] = ytop[0] + coeff * (ytop[1]-ytop[0]);
+					copyWall1.ybottom[1] = copyWall2.ybottom[0] = ybottom[0] + coeff * (ybottom[1]-ybottom[0]);
+					copyWall1.fracright = copyWall2.fracleft = fracleft + coeff * (fracright-fracleft);
+					copyWall1.uprgt.u = copyWall2.uplft.u = uplft.u + coeff * (uprgt.u-uplft.u);
+					copyWall1.uprgt.v = copyWall2.uplft.v = uplft.v + coeff * (uprgt.v-uplft.v);
+					copyWall1.lorgt.u = copyWall2.lolft.u = lolft.u + coeff * (lorgt.u-lolft.u);
+					copyWall1.lorgt.v = copyWall2.uplft.v = lolft.v + coeff * (lorgt.v-lolft.v);
 
-					SplitWall(frontsector, translucent);
-					copyWall.SplitWall(frontsector, translucent);
+					copyWall1.SplitWall(frontsector, translucent);
+					copyWall2.SplitWall(frontsector, translucent);
 					return;
 				}
 			}
@@ -885,37 +885,37 @@ void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 				else
 				{
 					// split the wall in 2 at the intersection and recursively split both halves
-					copyWall=*this;
+					copyWall1=copyWall2=*this;
 
-					glseg.x2 = copyWall.glseg.x1 = glseg.x1 + coeff * (glseg.x2-glseg.x1);
-					glseg.z2 = copyWall.glseg.z1 = glseg.z1 + coeff * (glseg.z2-glseg.z1);
-					ytop[1] = copyWall.ytop[0] = ytop[0] + coeff * (ytop[1]-ytop[0]);
-					ybottom[1] = copyWall.ybottom[0] = ybottom[0] + coeff * (ybottom[1]-ybottom[0]);
-					fracright = copyWall.fracleft = fracleft + coeff * (fracright-fracleft);
-					uprgt.u = copyWall.uplft.u = uplft.u + coeff * (uprgt.u-uplft.u);
-					uprgt.v = copyWall.uplft.v = uplft.v + coeff * (uprgt.v-uplft.v);
-					lorgt.u = copyWall.lolft.u = lolft.u + coeff * (lorgt.u-lolft.u);
-					lorgt.v = copyWall.uplft.v = lolft.v + coeff * (lorgt.v-lolft.v);
+					copyWall1.glseg.x2 = copyWall2.glseg.x1 = glseg.x1 + coeff * (glseg.x2-glseg.x1);
+					copyWall1.glseg.z2 = copyWall2.glseg.z1 = glseg.z1 + coeff * (glseg.z2-glseg.z1);
+					copyWall1.ytop[1] = copyWall2.ytop[0] = ytop[0] + coeff * (ytop[1]-ytop[0]);
+					copyWall1.ybottom[1] = copyWall2.ybottom[0] = ybottom[0] + coeff * (ybottom[1]-ybottom[0]);
+					copyWall1.fracright = copyWall2.fracleft = fracleft + coeff * (fracright-fracleft);
+					copyWall1.uprgt.u = copyWall2.uplft.u = uplft.u + coeff * (uprgt.u-uplft.u);
+					copyWall1.uprgt.v = copyWall2.uplft.v = uplft.v + coeff * (uprgt.v-uplft.v);
+					copyWall1.lorgt.u = copyWall2.lolft.u = lolft.u + coeff * (lorgt.u-lolft.u);
+					copyWall1.lorgt.v = copyWall2.uplft.v = lolft.v + coeff * (lorgt.v-lolft.v);
 
-					SplitWall(frontsector, translucent);
-					copyWall.SplitWall(frontsector, translucent);
+					copyWall1.SplitWall(frontsector, translucent);
+					copyWall2.SplitWall(frontsector, translucent);
 					return;
 				}
 			}
 
 			if (maplightbottomleft<ytop[0] && maplightbottomright<ytop[1])
 			{
-				copyWall=*this;
-				copyWall.lightlevel=*lightlist[i].p_lightlevel;
-				copyWall.Colormap.LightColor=(*lightlist[i].p_extra_colormap)->Color;
+				copyWall1=*this;
+				copyWall1.lightlevel=*lightlist[i].p_lightlevel;
+				copyWall1.Colormap.LightColor=(*lightlist[i].p_extra_colormap)->Color;
 
-				ytop[0]=copyWall.ybottom[0]=maplightbottomleft;
-				ytop[1]=copyWall.ybottom[1]=maplightbottomright;
-				uplft.v=copyWall.lolft.v=copyWall.uplft.v+ 
-					(maplightbottomleft-copyWall.ytop[0])*(copyWall.lolft.v-copyWall.uplft.v)/(ybottom[0]-copyWall.ytop[0]);
-				uprgt.v=copyWall.lorgt.v=copyWall.uprgt.v+ 
-					(maplightbottomright-copyWall.ytop[1])*(copyWall.lorgt.v-copyWall.uprgt.v)/(ybottom[1]-copyWall.ytop[1]);
-				copyWall.PutWall(translucent);
+				ytop[0]=copyWall1.ybottom[0]=maplightbottomleft;
+				ytop[1]=copyWall1.ybottom[1]=maplightbottomright;
+				uplft.v=copyWall1.lolft.v=copyWall1.uplft.v+ 
+					(maplightbottomleft-copyWall1.ytop[0])*(copyWall1.lolft.v-copyWall1.uplft.v)/(ybottom[0]-copyWall1.ytop[0]);
+				uprgt.v=copyWall1.lorgt.v=copyWall1.uprgt.v+ 
+					(maplightbottomright-copyWall1.ytop[1])*(copyWall1.lorgt.v-copyWall1.uprgt.v)/(ybottom[1]-copyWall1.ytop[1]);
+				copyWall1.PutWall(translucent);
 			}
 			if (ytop[0]==ybottom[0]) return;
 		}

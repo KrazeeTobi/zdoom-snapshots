@@ -1351,6 +1351,7 @@ void R_DrawPSprite (pspdef_t* psp, int pspnum, AActor *owner, fixed_t sx, fixed_
 	sprframe = &SpriteFrames[sprdef->spriteframes + psp->state->GetFrame()];
 
 	picnum = sprframe->Texture[0];
+	if (picnum==0) return;
 	flip = sprframe->Flip & 1;
 	tex = TexMan(picnum);
 

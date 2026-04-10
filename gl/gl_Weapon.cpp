@@ -140,6 +140,7 @@ void gl_DrawPlayerSprites(sector_t * viewsector)
 	{
 		lightlevel=255;
 		cm.GetFixedColormap();
+		fullbright=true;
 	}
 	else
 	{
