@@ -188,6 +188,7 @@ void gl_RenderMissingLines();
 void gl_SetActorLights(AActor *);
 void gl_DeleteAllAttachedLights();
 void gl_RecreateAllAttachedLights();
+void gl_ParseDefs();
 
 
 void I_RestartRenderer();

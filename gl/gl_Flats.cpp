@@ -175,22 +175,7 @@ void GLFlat::DrawSubsector(gl_subsectordata * glsub)
 		// Quicker way for non-sloped sectors
 		gl_vertices[glsub->firstvertex + k].y = z;
 	}
-	if (!gl_atifog)
-	{
-		gl.DrawArrays(GL_TRIANGLE_FAN, glsub->firstvertex, glsub->numvertices);
-	}
-	else
-	{
-		GLVertex * v;
-		gl.Begin(GL_TRIANGLE_FAN);
-		for(k = 0, v=&gl_vertices[glsub->firstvertex]; k < glsub->numvertices; k++)
-		{
-			gl.TexCoord2f(v->u, v->v);
-			gl.Vertex3f(v->x, v->y, v->z);
-			v++;
-		}
-		gl.End();
-	}
+	gl.DrawArrays(GL_TRIANGLE_FAN, glsub->firstvertex, glsub->numvertices);
 	flatvertices += glsub->numvertices;
 	flatprimitives++;
 }

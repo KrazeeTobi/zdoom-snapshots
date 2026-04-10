@@ -636,7 +636,6 @@ public:
 		TEX_FontChar,
 		TEX_Override,	// For patches between TX_START/TX_END
 		TEX_Null,
-		TEX_Hires,
 	};
 
 	struct Span

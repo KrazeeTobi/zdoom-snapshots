@@ -885,6 +885,8 @@ FGLTexture::FGLTexture(FTexture * tx)
 	areacount = 0;
 	areas = NULL;
 
+	bSkybox=false;
+
 	Width = tex->GetWidth();
 	Height = tex->GetHeight();
 	LeftOffset = tex->LeftOffset;

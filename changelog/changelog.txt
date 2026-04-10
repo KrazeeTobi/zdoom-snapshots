@@ -1,5 +1,7 @@
-29. Oct 2005
-- Added test code for ATI fog problem.
+31. Oct 2005
+- Allowed GLDEFS as a generic name for DOOMDEFS/HTICDEFS etc.
+- Added support for Quake2/Unreal style skyboxes
+- Fixed a few texture type problems
 
 
 28. Oct 2005

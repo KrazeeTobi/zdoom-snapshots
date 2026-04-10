@@ -6,6 +6,7 @@
 **
 **---------------------------------------------------------------------------
 ** Copyright 2003 Tim Stump
+** Copyright 2005 Christoph Oelckers
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -33,17 +34,109 @@
 **---------------------------------------------------------------------------
 **
 */
+#include "doomtype.h"
+#include "sc_man.h"
 #include "gl/gl_portal.h"
 #include "gl/gl_texture.h"
 #include "gl/gl_functions.h"
 #include "gl/gl_intern.h"
 
 
+//-----------------------------------------------------------------------------
+//
+//
+//
+//-----------------------------------------------------------------------------
+
+class FSkyBox : public FTexture
+{
+public:
+
+	FTexture * faces[6];
+	// This is not a real texture but will be added to the texture manager.
+
+	FSkyBox() 
+	{ 
+		faces[0]=faces[1]=faces[2]=faces[3]=faces[4]=faces[5]=NULL; 
+		UseType=TEX_Override;
+	}
+	~FSkyBox()
+	{
+	}
+
+	// If something attempts to use this as a tecture just pass the information of the first face.
+	virtual const BYTE *GetColumn (unsigned int column, const Span **spans_out)
+	{
+		if (faces[0]) return faces[0]->GetColumn(column, spans_out);
+		return NULL;
+	}
+	virtual const BYTE *GetPixels ()
+	{
+		if (faces[0]) return faces[0]->GetPixels();
+		return NULL;
+	}
+	virtual void CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_height, int x, int y, int cm, int translation)
+	{
+		if (faces[0]) faces[0]->CopyTrueColorPixels(buffer, buf_width, buf_height, x, y, cm, translation);
+	}
+
+	virtual void GetDimensions ()
+	{
+		if (faces[0]) 
+		{
+			Width=faces[0]->GetWidth();
+			Height=faces[0]->GetHeight();
+			CalcBitSize();
+		}
+	}
+
+	virtual void Unload () 
+	{
+		for(int i=0;i<6;i++) if (faces[i]) faces[i]->Unload();
+	}
+};
+
+//-----------------------------------------------------------------------------
+//
+//
+//
+//-----------------------------------------------------------------------------
+
+void gl_ParseSkybox()
+{
+	int facecount=0;
+
+	SC_MustGetString();
+
+	FSkyBox * sb = new FSkyBox;
+	strupr(sc_String);
+	strncpy(sb->Name, sc_String, 8);
+	sb->Name[8]=0;
+	SC_MustGetStringName("{");
+	while (!SC_CheckString("}"))
+	{
+		SC_MustGetString();
+		if (facecount<6) 
+		{
+			sb->faces[facecount] = TexMan[TexMan.GetTexture(sc_String, FTexture::TEX_Wall, FTextureManager::TEXMAN_TryAny|FTextureManager::TEXMAN_Overridable)];
+		}
+		facecount++;
+	}
+	if (facecount != 3 && facecount != 6)
+	{
+		SC_ScriptError("%s: Skybox definition requires either 3 or 6 faces", sb->Name);
+	}
+	TexMan.AddTexture(sb);
+	FGLTexture * gltex = FGLTexture::ValidateTexture(sb);
+	gltex->bSkybox=true;
+}
+
+//-----------------------------------------------------------------------------
 //
 // Shamelessly lifted from Doomsday (written by Jaakko Keränen)
 // also shamelessly lifted from ZDoomGL! ;)
 //
-
+//-----------------------------------------------------------------------------
 
 CVAR (Int, gl_sky_detail, 16, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 EXTERN_CVAR (Bool, r_stretchsky)
@@ -128,6 +221,12 @@ static float R,G,B;
 #define SKYHEMI_JUST_CAP	0x4	// Just draw the top or bottom cap.
 
 
+//-----------------------------------------------------------------------------
+//
+//
+//
+//-----------------------------------------------------------------------------
+
 static void SkyVertex(int r, int c)
 {
 	angle_t topAngle= (angle_t)(c / (float)columns * ANGLE_MAX);
@@ -172,8 +271,13 @@ static void SkyVertex(int r, int c)
 }
 
 
+//-----------------------------------------------------------------------------
+//
 // Hemi is Upper or Lower. Zero is not acceptable.
 // The current texture is used. SKYHEMI_NO_TOPCAP can be used.
+//
+//-----------------------------------------------------------------------------
+
 static void RenderSkyHemisphere(int hemi)
 {
 	int r, c;
@@ -268,6 +372,7 @@ static void RenderSkyHemisphere(int hemi)
 //
 //
 //-----------------------------------------------------------------------------
+
 static void RenderDome(int texno, FGLTexture * tex, float x_offset, float y_offset, int CM_Index)
 {
 	int texh;
@@ -348,6 +453,16 @@ static void RenderDome(int texno, FGLTexture * tex, float x_offset, float y_offs
 		R=pe.r/255.0f;
 		G=pe.g/255.0f;
 		B=pe.b/255.0f;
+
+		if (fixedcolormap)
+		{
+			float rr,gg,bb;
+
+			gl_GetLightColor(255, 255,255,255, &rr, &gg, &bb);
+			R*=rr;
+			G*=gg;
+			B*=bb;
+		}
 	}
 
 	RenderSkyHemisphere(SKYHEMI_LOWER);
@@ -358,6 +473,168 @@ static void RenderDome(int texno, FGLTexture * tex, float x_offset, float y_offs
 	}
 }
 
+
+//-----------------------------------------------------------------------------
+//
+//
+//
+//-----------------------------------------------------------------------------
+
+static void RenderBox(int texno, FGLTexture * gltex, float x_offset, int CM_Index)
+{
+	FSkyBox * sb = static_cast<FSkyBox*>(gltex->tex);
+	int faces;
+	FGLTexture * tex;
+
+	gl.Rotatef(180.0f-x_offset, 0.f, 1.f, 0.f);
+	gl.Color3f(R, G ,B);
+
+	if (sb->faces[5]) 
+	{
+		faces=4;
+
+		// north
+		tex = FGLTexture::ValidateTexture(sb->faces[0]);
+		tex->BindPatch(CM_Index);
+		gl.Begin(GL_TRIANGLE_FAN);
+		gl.TexCoord2f(0, 0);
+		gl.Vertex3f(-128.f, 128.f, -128.f);
+		gl.TexCoord2f(1, 0);
+		gl.Vertex3f(128.f, 128.f, -128.f);
+		gl.TexCoord2f(1, 1);
+		gl.Vertex3f(128.f, -128.f, -128.f);
+		gl.TexCoord2f(0, 1);
+		gl.Vertex3f(-128.f, -128.f, -128.f);
+		gl.End();
+
+		// east
+		tex = FGLTexture::ValidateTexture(sb->faces[1]);
+		tex->BindPatch(CM_Index);
+		gl.Begin(GL_TRIANGLE_FAN);
+		gl.TexCoord2f(0, 0);
+		gl.Vertex3f(128.f, 128.f, -128.f);
+		gl.TexCoord2f(1, 0);
+		gl.Vertex3f(128.f, 128.f, 128.f);
+		gl.TexCoord2f(1, 1);
+		gl.Vertex3f(128.f, -128.f, 128.f);
+		gl.TexCoord2f(0, 1);
+		gl.Vertex3f(128.f, -128.f, -128.f);
+		gl.End();
+
+		// south
+		tex = FGLTexture::ValidateTexture(sb->faces[2]);
+		tex->BindPatch(CM_Index);
+		gl.Begin(GL_TRIANGLE_FAN);
+		gl.TexCoord2f(0, 0);
+		gl.Vertex3f(128.f, 128.f, 128.f);
+		gl.TexCoord2f(1, 0);
+		gl.Vertex3f(-128.f, 128.f, 128.f);
+		gl.TexCoord2f(1, 1);
+		gl.Vertex3f(-128.f, -128.f, 128.f);
+		gl.TexCoord2f(0, 1);
+		gl.Vertex3f(128.f, -128.f, 128.f);
+		gl.End();
+
+		// west
+		tex = FGLTexture::ValidateTexture(sb->faces[3]);
+		tex->BindPatch(CM_Index);
+		gl.Begin(GL_TRIANGLE_FAN);
+		gl.TexCoord2f(0, 0);
+		gl.Vertex3f(-128.f, 128.f, 128.f);
+		gl.TexCoord2f(1, 0);
+		gl.Vertex3f(-128.f, 128.f, -128.f);
+		gl.TexCoord2f(1, 1);
+		gl.Vertex3f(-128.f, -128.f, -128.f);
+		gl.TexCoord2f(0, 1);
+		gl.Vertex3f(-128.f, -128.f, 128.f);
+		gl.End();
+	}
+	else 
+	{
+		faces=1;
+		// all 4 sides
+		tex = FGLTexture::ValidateTexture(sb->faces[0]);
+		tex->BindPatch(CM_Index);
+
+		gl.Begin(GL_TRIANGLE_FAN);
+		gl.TexCoord2f(0, 0);
+		gl.Vertex3f(-128.f, 128.f, -128.f);
+		gl.TexCoord2f(.25f, 0);
+		gl.Vertex3f(128.f, 128.f, -128.f);
+		gl.TexCoord2f(.25f, 1);
+		gl.Vertex3f(128.f, -128.f, -128.f);
+		gl.TexCoord2f(0, 1);
+		gl.Vertex3f(-128.f, -128.f, -128.f);
+		gl.End();
+
+		// east
+		gl.Begin(GL_TRIANGLE_FAN);
+		gl.TexCoord2f(.25f, 0);
+		gl.Vertex3f(128.f, 128.f, -128.f);
+		gl.TexCoord2f(.5f, 0);
+		gl.Vertex3f(128.f, 128.f, 128.f);
+		gl.TexCoord2f(.5f, 1);
+		gl.Vertex3f(128.f, -128.f, 128.f);
+		gl.TexCoord2f(.25f, 1);
+		gl.Vertex3f(128.f, -128.f, -128.f);
+		gl.End();
+
+		// south
+		gl.Begin(GL_TRIANGLE_FAN);
+		gl.TexCoord2f(.5f, 0);
+		gl.Vertex3f(128.f, 128.f, 128.f);
+		gl.TexCoord2f(.75f, 0);
+		gl.Vertex3f(-128.f, 128.f, 128.f);
+		gl.TexCoord2f(.75f, 1);
+		gl.Vertex3f(-128.f, -128.f, 128.f);
+		gl.TexCoord2f(.5f, 1);
+		gl.Vertex3f(128.f, -128.f, 128.f);
+		gl.End();
+
+		// west
+		gl.Begin(GL_TRIANGLE_FAN);
+		gl.TexCoord2f(.75f, 0);
+		gl.Vertex3f(-128.f, 128.f, 128.f);
+		gl.TexCoord2f(1, 0);
+		gl.Vertex3f(-128.f, 128.f, -128.f);
+		gl.TexCoord2f(1, 1);
+		gl.Vertex3f(-128.f, -128.f, -128.f);
+		gl.TexCoord2f(.75f, 1);
+		gl.Vertex3f(-128.f, -128.f, 128.f);
+		gl.End();
+	}
+
+	// top
+	tex = FGLTexture::ValidateTexture(sb->faces[faces]);
+	tex->BindPatch(CM_Index);
+	gl.Begin(GL_TRIANGLE_FAN);
+	gl.TexCoord2f(0, 0);
+	gl.Vertex3f(-128.f, 128.f, -128.f);
+	gl.TexCoord2f(1, 0);
+	gl.Vertex3f(128.f, 128.f, -128.f);
+	gl.TexCoord2f(1, 1);
+	gl.Vertex3f(128.f, 128.f, 128.f);
+	gl.TexCoord2f(0, 1);
+	gl.Vertex3f(-128.f, 128.f, 128.f);
+	gl.End();
+
+
+	// bottom
+	tex = FGLTexture::ValidateTexture(sb->faces[faces+1]);
+	tex->BindPatch(CM_Index);
+	gl.Begin(GL_TRIANGLE_FAN);
+	gl.TexCoord2f(0, 0);
+	gl.Vertex3f(-128.f, -128.f, -128.f);
+	gl.TexCoord2f(1, 0);
+	gl.Vertex3f(128.f, -128.f, -128.f);
+	gl.TexCoord2f(1, 1);
+	gl.Vertex3f(128.f, -128.f, 128.f);
+	gl.TexCoord2f(0, 1);
+	gl.Vertex3f(-128.f, -128.f, 128.f);
+	gl.End();
+
+
+}
 
 //-----------------------------------------------------------------------------
 //
@@ -380,75 +657,85 @@ void GLSkyPortal::DrawContents()
 		FadeColor=origin->fadecolor;
 	}
 
-	if (origin->texture[0]==origin->texture[1] && origin->doublesky) origin->doublesky=false;	
-
 	gl.DepthMask(GL_FALSE);
 	gl.Disable(GL_DEPTH_TEST);
 	gl_EnableFog(false);
 	gl.Disable(GL_ALPHA_TEST);
 	gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	
-	gl.PushMatrix();
-	gl_SetupView(viewx, viewy, viewz, viewangle, !!(MirrorFlag&1), true);
-	gl.Translatef(0.f, -1000.f, 0.f);
 
-	if (origin->texture[0])
+	gl.PushMatrix();
+	gl_SetupView(0,0,0/*viewx, viewy, viewz*/, viewangle, !!(MirrorFlag&1), true);
+
+	if (origin->texture[0] && origin->texture[0]->bSkybox)
 	{
 		if (fixedcolormap)
 		{
 			float rr,gg,bb;
 
 			gl_GetLightColor(255, 255,255,255, &rr, &gg, &bb);
-			R*=rr;
-			G*=gg;
-			B*=bb;
+			R=rr;
+			G=gg;
+			B=bb;
 		}
+		else R=G=B=1.f;
 
-		RenderDome(origin->skytexno1, origin->texture[0], origin->x_offset[0], origin->y_offset, CM_Index);
+		RenderBox(origin->skytexno1, origin->texture[0], origin->x_offset[0], CM_Index);
 	}
-	
-	gl.Enable(GL_ALPHA_TEST);
-	gl.AlphaFunc(GL_GEQUAL,0.05f);
-	
-	if (origin->doublesky && origin->texture[1])
+	else
 	{
-		secondlayer=true;
-		RenderDome(0, origin->texture[1], origin->x_offset[1], origin->y_offset, CM_Index);
-		secondlayer=false;
-	}
+		if (origin->texture[0]==origin->texture[1] && origin->doublesky) origin->doublesky=false;	
 
-	if (skyfog>0 && (FadeColor.r ||FadeColor.g || FadeColor.b))
-	{
-		/*else
+		gl.Translatef(0.f, -1000.f, 0.f);
+
+		if (origin->texture[0])
 		{
-			int fogd;
-			
-			// If the level has global fog use this for the fog sheet!
-			// Ok, this is extremely hackish but if you don't want just don't use it!
-			/*
-			if (outsidefogcolor!=0xff) fogd = outsidefogdensity;
-			else if (fogdensity!=0) fogd=level_fogdensity;
-			else fogd=130;//colormap.fadecolor.a<<1;
-			if (fogd<300) 
-			{
-				fd=(float)sqrt(sqrt(fogd/255.0f));
-				fd=min(fd,0.95f);
-			}
-			else fd=1.0f;
+
+			RenderDome(origin->skytexno1, origin->texture[0], origin->x_offset[0], origin->y_offset, CM_Index);
 		}
-		*/
+		
+		gl.Enable(GL_ALPHA_TEST);
+		gl.AlphaFunc(GL_GEQUAL,0.05f);
+		
+		if (origin->doublesky && origin->texture[1])
+		{
+			secondlayer=true;
+			RenderDome(0, origin->texture[1], origin->x_offset[1], origin->y_offset, CM_Index);
+			secondlayer=false;
+		}
 
-		gl.Disable(GL_TEXTURE_2D);
-		foglayer=true;
-		gl.Color4f(FadeColor.r/255.0f,FadeColor.g/255.0f,FadeColor.b/255.0f,skyfog/255.0f);
-		RenderDome(0, NULL, 0, 0, CM_DEFAULT);
-		gl.Enable(GL_TEXTURE_2D);
-		foglayer=false;
+		if (skyfog>0 && (FadeColor.r ||FadeColor.g || FadeColor.b))
+		{
+			/*else
+			{
+				int fogd;
+				
+				// If the level has global fog use this for the fog sheet!
+				// Ok, this is extremely hackish but if you don't want just don't use it!
+				/*
+				if (outsidefogcolor!=0xff) fogd = outsidefogdensity;
+				else if (fogdensity!=0) fogd=level_fogdensity;
+				else fogd=130;//colormap.fadecolor.a<<1;
+				if (fogd<300) 
+				{
+					fd=(float)sqrt(sqrt(fogd/255.0f));
+					fd=min(fd,0.95f);
+				}
+				else fd=1.0f;
+			}
+			*/
+
+			gl.Disable(GL_TEXTURE_2D);
+			foglayer=true;
+			gl.Color4f(FadeColor.r/255.0f,FadeColor.g/255.0f,FadeColor.b/255.0f,skyfog/255.0f);
+			RenderDome(0, NULL, 0, 0, CM_DEFAULT);
+			gl.Enable(GL_TEXTURE_2D);
+			foglayer=false;
+		}
 	}
-
 	gl.PopMatrix();
 	
 	gl.Enable(GL_DEPTH_TEST);
 	gl.DepthMask(GL_TRUE);
+	gl.Enable(GL_ALPHA_TEST);
 }
 

@@ -54,12 +54,14 @@
 #include "stats.h"
 
 #include "gl/gl_lights.h"
+#include "gl/gl_texture.h"
 
 using namespace std;
 
 EXTERN_CVAR (Float, gl_lights_intensity);
 EXTERN_CVAR (Float, gl_lights_size);
 int ScriptDepth;
+void gl_ParseSkybox();
 
 //==========================================================================
 //
@@ -843,6 +845,7 @@ static const char *CoreKeywords[]=
    "clearlights",
    "shader",
    "clearshaders",
+   "skybox",
    NULL
 };
 
@@ -857,7 +860,8 @@ enum
    LIGHT_OBJECT,
    LIGHT_CLEAR,
    TAG_SHADER,
-   TAG_CLEARSHADERS
+   TAG_CLEARSHADERS,
+   TAG_SKYBOX,
 };
 
 
@@ -895,82 +899,6 @@ bool gl_ParseShader()
 	}
 	return false;
 }
-
-//==========================================================================
-//
-//
-//==========================================================================
-void gl_ParseDefs()
-{
-   int workingLump, lastLump, type;
-   char *defsLump;
-
-   switch (gameinfo.gametype)
-   {
-   case GAME_Heretic:
-      defsLump = "HTICDEFS";
-      break;
-   case GAME_Hexen:
-      defsLump = "HEXNDEFS";
-      break;
-   case GAME_Strife:
-      defsLump = "STRFDEFS";
-      break;
-   default:
-      defsLump = "DOOMDEFS";
-      break;
-   }
-
-   lastLump = 0;
-   while ((workingLump = Wads.FindLump(defsLump, &lastLump)) != -1)
-   {
-      SC_OpenLumpNum(workingLump, defsLump);
-      while (SC_GetString())
-      {
-         if ((type = SC_MatchString(CoreKeywords)) == -1)
-         {
-            SC_ScriptError("Error parsing defs.  Unknown tag: %s.\n", sc_String);
-            break;
-         }
-         else
-         {
-            ScriptDepth = 0;
-            switch (type)
-            {
-            case LIGHT_POINT:
-               gl_ParsePointLight();
-               break;
-            case LIGHT_PULSE:
-               gl_ParsePulseLight();
-               break;
-            case LIGHT_FLICKER:
-               gl_ParseFlickerLight();
-               break;
-            case LIGHT_FLICKER2:
-               gl_ParseFlickerLight2();
-               break;
-            case LIGHT_SECTOR:
-               gl_ParseSectorLight();
-               break;
-            case LIGHT_OBJECT:
-               gl_ParseObject();
-               break;
-            case LIGHT_CLEAR:
-               gl_ReleaseLights();
-               break;
-            case TAG_SHADER:
-               gl_ParseShader();
-               break;
-            case TAG_CLEARSHADERS:
-               break;
-            }
-         }
-      }
-      SC_Close();
-   }
-}
-
-
 
 //==========================================================================
 //
@@ -1167,8 +1095,90 @@ void gl_RecreateAllAttachedLights()
 }
 
 
-AT_GAME_SET(GLLights)
+//==========================================================================
+//
+//
+//==========================================================================
+void gl_DoParseDefs(char * defsLump)
 {
-	gl_ParseDefs();
+	int workingLump, lastLump, type;
+
+	lastLump = 0;
+	while ((workingLump = Wads.FindLump(defsLump, &lastLump)) != -1)
+	{
+		SC_OpenLumpNum(workingLump, defsLump);
+		while (SC_GetString())
+		{
+			if ((type = SC_MatchString(CoreKeywords)) == -1)
+			{
+				SC_ScriptError("Error parsing defs.  Unknown tag: %s.\n", sc_String);
+				break;
+			}
+			else
+			{
+				ScriptDepth = 0;
+				switch (type)
+				{
+				case LIGHT_POINT:
+					gl_ParsePointLight();
+					break;
+				case LIGHT_PULSE:
+					gl_ParsePulseLight();
+					break;
+				case LIGHT_FLICKER:
+					gl_ParseFlickerLight();
+					break;
+				case LIGHT_FLICKER2:
+					gl_ParseFlickerLight2();
+					break;
+				case LIGHT_SECTOR:
+					gl_ParseSectorLight();
+					break;
+				case LIGHT_OBJECT:
+					gl_ParseObject();
+					break;
+				case LIGHT_CLEAR:
+					gl_ReleaseLights();
+					break;
+				case TAG_SHADER:
+					gl_ParseShader();
+					break;
+				case TAG_CLEARSHADERS:
+					break;
+				case TAG_SKYBOX:
+					gl_ParseSkybox();
+					break;
+				}
+			}
+		}
+		SC_Close();
+	}
+}
+
+
+void gl_ParseDefs()
+{
+	char *defsLump;
+
+	FGLTexture::LoadHiresTextures();
+
+	switch (gameinfo.gametype)
+	{
+	case GAME_Heretic:
+		defsLump = "HTICDEFS";
+		break;
+	case GAME_Hexen:
+		defsLump = "HEXNDEFS";
+		break;
+	case GAME_Strife:
+		defsLump = "STRFDEFS";
+		break;
+	default:
+		defsLump = "DOOMDEFS";
+		break;
+	}
+	gl_DoParseDefs(defsLump);
+	gl_DoParseDefs("GLDEFS");
 	gl_InitializeActorLights();
 }
+

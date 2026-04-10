@@ -88,6 +88,8 @@ class FGLTexture : protected WorldTextureInfo, protected PatchTextureInfo
 	static TArray<FGLTexture *> * gltextures;
 public:
 	FTexture * tex;
+	bool bSkybox;
+
 private:
 	int index;
 

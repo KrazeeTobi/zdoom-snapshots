@@ -3019,7 +3019,7 @@ void R_InitData ()
 	TexMan.AddFlats ();
 	R_InitBuildTiles ();
 	TexMan.AddExtraTextures ();
-	FGLTexture::LoadHiresTextures();
+	gl_ParseDefs();
 
 	R_InitColormaps ();
 	C_InitConsole (SCREENWIDTH, SCREENHEIGHT, true);

@@ -89,7 +89,7 @@ FHiresTexture::FHiresTexture (const char * name, int w, int h)
 	DummySpans[1].Length = 0;
 
 	ScaleX = ScaleY = 8;
-	UseType = TEX_Hires;
+	UseType = TEX_Override;
 }
 
 FHiresTexture::~FHiresTexture ()
@@ -462,7 +462,7 @@ void FGLTexture::LoadHiresTextures()
 
 				if (lumpnum>=0)
 				{
-					int oldtex = TexMan.CheckForTexture(src, FTexture::TEX_Hires);
+					int oldtex = TexMan.CheckForTexture(src, FTexture::TEX_Override);
 					FTexture * tex = new FHiresTexture(src, width, height);
 
 					if (oldtex>=0) TexMan.ReplaceTexture(oldtex, tex, true);
