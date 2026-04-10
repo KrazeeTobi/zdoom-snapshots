@@ -102,10 +102,11 @@ FState ABossEye::States[] =
 
 IMPLEMENT_ACTOR (ABossEye, Doom, 89, 0)
 	PROP_HeightFixed (32)
-	PROP_Flags (MF_NOBLOCKMAP|MF_NOSECTOR)
+	PROP_Flags (MF_NOBLOCKMAP)//|MF_NOSECTOR)
 
 	PROP_SpawnState (S_BRAINEYE)
 	PROP_SeeState (S_BRAINEYESEE)
+	PROP_RenderStyle(STYLE_None)
 END_DEFAULTS
 
 void ABossEye::Serialize (FArchive &arc)

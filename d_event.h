@@ -82,8 +82,9 @@ typedef enum
 	BT_ATTACK		= 1,	// Press "Fire".
 	BT_USE			= 2,	// Use button, to open doors, activate switches.
     BT_JUMP			= 4,
-    BT_ALTATTACK	= 8,
+	BT_DUCK			= 8,
 	BT_TURN180		= 16,
+	BT_ALTATTACK	= 32,
 } buttoncode_t;
 
 #define IMP_WEAPONSLOT

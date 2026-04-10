@@ -695,7 +695,7 @@ static void DrawFrags(player_t * CPlayer, int x, int y)
 	DrawImageToBox(fragpic, x, y, 31, 17);
 
 	screen->SetFont(HudFont);
-	DrawHudNumber(CR_UNTRANSLATED, CPlayer->fragcount, x + 33, y + 17);
+	DrawHudNumber(CR_GRAY, CPlayer->fragcount, x + 33, y + 17);
 }
 
 

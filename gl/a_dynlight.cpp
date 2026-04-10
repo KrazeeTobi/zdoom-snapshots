@@ -43,6 +43,7 @@
 #include "gl/gl_lights.h"
 #include "gl/gl_data.h"
 #include "gl/gl_basic.h"
+#include "gl/gl_functions.h"
 
 #define ANGLE_TO_FLOAT(ang) ((float)(ang * 180.0f / ANGLE_180))
 
@@ -803,6 +804,13 @@ CCMD(listlights)
 			dl->x>>16, dl->y>>16, dl->z>>16, dl->args[LIGHT_RED], 
 			dl->args[LIGHT_GREEN], dl->args[LIGHT_BLUE], dl->radius>>16);
 		i++;
+
+		if (dl->target)
+		{
+			int spr = gl_GetSpriteFrame(dl->target->sprite, dl->target->frame, 0, 0);
+			Printf(", frame = %s ", TexMan[spr]->Name);
+		}
+
 
 		FLightNode * node;
 

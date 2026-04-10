@@ -280,6 +280,7 @@ public:
 	FGLTexture *gltexture;
 	float trans;
 	AActor * actor;
+	particle_t * particle;
 	model_t * model;
 
 	void SplitSprite(sector_t * frontsector, bool translucent);

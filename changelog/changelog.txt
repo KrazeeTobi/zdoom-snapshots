@@ -1,4 +1,19 @@
+9. Oct 2005
+- Fixed: FraggleScript's ceiling height changer did not stop the sector interpolation.
+- Fixed: Dynamic lights were not properly cleared when deactivated
+- Fixed: The enhanced light amplification handling was broken.
+- Fixed the Inventory code that got broken by an improper bug fix in ZDoom 2.0.97.
+- Added a crouch button in addition to the toggle.
+
+
 7. Oct 2005
+- Fixed: FloorAndCeiling_LowerRaise couldn't activate both movers at the same time.
+- Fixed: The boss brain was effectively deaf because it didn't get linked into
+  the sector's thing list
+- Reactivated HIRESTEX.
+- Fixed: The horizon code treated viewz as float instead of fixed_t.
+- Changed texture deletion to delete each texture separetely. Apparently some
+  ATI drivers don't like deleting lists with invalud textures.
 - More crouching fixes.
 
 

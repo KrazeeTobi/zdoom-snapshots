@@ -72,6 +72,13 @@ inline void gl_SetSpriteLight(AActor * thing, int light, PalEntry pe, float alph
 	gl_SetSpriteLight(thing, light,pe.r,pe.g,pe.b,pe.a,alpha, ThingColor);
 }
 
+struct particle_t;
+void gl_SetSpriteLight( particle_t * thing, int lightlevel, int red, int green, int blue, int desaturation, float alpha, PalEntry ThingColor);
+inline void gl_SetSpriteLight(particle_t * thing, int light, PalEntry pe, float alpha, PalEntry ThingColor = 0xffffff)
+{
+	gl_SetSpriteLight(thing, light,pe.r,pe.g,pe.b,pe.a,alpha, ThingColor);
+}
+
 void gl_InitFog();
 void gl_SetFogParams(int _fogdensity, PalEntry _outsidefogcolor, int _outsidefogdensity, int _skyfog);
 int gl_GetFogDensity(int lightlevel, PalEntry fogcolor);

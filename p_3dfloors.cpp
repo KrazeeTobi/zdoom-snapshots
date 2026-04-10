@@ -525,6 +525,15 @@ void P_Recalculate3DFloors(sector_t * sector)
 }
 
 
+void P_RecalculateAttached3DFloors(sector_t * sec)
+{
+	for(unsigned int i=0; i<sec->e->attached.Size(); i++)
+	{
+		P_Recalculate3DFloors(sec->e->attached[i]);
+	}
+	P_Recalculate3DFloors(sec);
+}
+
 //==========================================================================
 //
 //
@@ -891,6 +900,8 @@ void P_SpawnSpecials2 (void)
 			break;
 
 		case Sector_Set3DFloor:
+			line->args[0]+=256*line->args[4];
+			line->args[4]=0;
 			P_Set3DFloor(line, line->args[1], line->args[2], line->args[3]);
 			break;
 
@@ -923,7 +934,7 @@ void P_SpawnSpecials2 (void)
 		}
 		
 		// Don't count monsters in end-of-level sectors
-		// In 99.9% of all occurences thry are part of a trap
+		// In 99.9% of all occurences they are part of a trap
 		// and not supposed to be killed.
 		if (mo->flags & MF_COUNTKILL)
 		{

@@ -61,7 +61,13 @@ TArray<void *> levelpointers;
 // functions. SF_ means Script Function not, well.. heh, me
 
 /////////// actually running a function /////////////
-// The Doom actors in their original order - this list is still required by FraggleScript
+
+//==========================================================================
+//
+// The Doom actors in their original order
+//
+//==========================================================================
+
 static const char * const ActorNames[]=
 {
 	"DoomPlayer",
@@ -126,7 +132,7 @@ static const char * const ActorNames[]=
 	"RadSuit",
 	"Allmap",
 	"Infrared",
-	"MegaSphere",
+	"Megasphere",
 	"Clip",
 	"ClipBox",
 	"RocketAmmo",
@@ -272,7 +278,6 @@ int T_GetPlayerNum(svalue_t arg)
 	
 	if(playernum < 0 || playernum > MAXPLAYERS)
 	{
-		script_error("player number out of range: %i\n", playernum);
 		return -1;
 	}
 	if(!playeringame[playernum]) // no error, just return -1
@@ -676,7 +681,6 @@ void SF_PlayerTip(void)
 	plnum = intvalue(t_argv[0]);
 	if(plnum < 0 || plnum >= MAXPLAYERS)
 	{
-		script_error("player number out of range: %i", plnum);
 		return;
 	}
 	
@@ -729,7 +733,6 @@ void SF_PlayerMsg(void)
 	// haleyjd: bounds-checking
 	if(plnum < 0 || plnum >= MAXPLAYERS)
 	{
-		script_error("player number out of range: %i\n", plnum);
 		return;
 	}
 	
@@ -760,7 +763,6 @@ void SF_PlayerInGame(void)
 	
 	if(plnum < 0 || plnum >= MAXPLAYERS)
 	{
-		script_error("player number out of range: %i\n", plnum);
 		return;
 	}
 	
@@ -794,7 +796,6 @@ void SF_PlayerName(void)
 	
 	if(plnum < 0 || plnum >= MAXPLAYERS)
 	{
-		script_error("player number out of range: %i\n", plnum);
 		return;
 	}
 	
@@ -828,7 +829,6 @@ void SF_PlayerObj(void)
 	
 	if(plnum < 0 || plnum >= MAXPLAYERS)
 	{
-		script_error("player number out of range: %i\n", plnum);
 		return;
 	}
 	
@@ -1601,8 +1601,8 @@ public:
 		bool res = DMover::crushed != MoveFloor(speed, dest, crush, direction);
 		Destroy();
 		m_Sector->floordata=NULL;
-		m_Sector=NULL;
 		stopinterpolation (INTERP_SectorFloor, m_Sector);
+		m_Sector=NULL;
 		return res;
 	}
 };

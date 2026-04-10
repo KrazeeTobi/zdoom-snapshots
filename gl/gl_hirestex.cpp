@@ -463,7 +463,14 @@ void FGLTexture::LoadHiresTextures()
 
 					if (oldtex>=0) TexMan.ReplaceTexture(oldtex, tex, true);
 					else TexMan.AddTexture(tex);
+
+					FGLTexture * gtex = FGLTexture::ValidateTexture(tex);
+					if (gtex) 
+					{
+						gtex->HiresLump = lumpnum;
+					}
 				}				
+				//else Printf("Unable to define hires texture '%s'\n", tex->Name);
 			}
 		}
 		SC_Close();

@@ -565,11 +565,11 @@ manual_floor:
 						floor->m_NewSpecial = 0;
 						floor->m_Type = DFloor::genFloorChg0;
 						break;
-					case 2:
+					case 3:
 						floor->m_NewSpecial = sec->special & ~SECRET_MASK;
 						floor->m_Type = DFloor::genFloorChgT;
 						break;
-					case 3:
+					case 2:
 						floor->m_Type = DFloor::genFloorChg;
 						break;
 					}
@@ -586,11 +586,11 @@ manual_floor:
 					floor->m_NewSpecial = 0;
 					floor->m_Type = DFloor::genFloorChg0;
 					break;
-				case 2:
+				case 3:
 					floor->m_NewSpecial = sec->special & ~SECRET_MASK;
 					floor->m_Type = DFloor::genFloorChgT;
 					break;
-				case 3:
+				case 2:
 					floor->m_Type = DFloor::genFloorChg;
 					break;
 				}

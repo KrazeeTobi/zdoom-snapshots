@@ -554,7 +554,6 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 
 								alpha=rover->alpha/255.0f;
 								Process(rover->top.model, rover->top.isceiling, !!(rover->flags&FF_FOG));
-									
 							}
 							lastceilingheight=ff_top;
 						}
@@ -578,6 +577,7 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 								Process(rover->bottom.model, rover->bottom.isceiling, !!(rover->flags&FF_FOG));
 							}
 							lastceilingheight=ff_bottom;
+							if (rover->alpha<255) lastceilingheight++;
 						}
 					}
 				}
@@ -639,6 +639,7 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 								Process(rover->top.model, rover->top.isceiling, !!(rover->flags&FF_FOG));
 							}
 							lastfloorheight=ff_top;
+							if (rover->alpha<255) lastfloorheight--;
 						}
 					}
 				}

@@ -96,6 +96,7 @@ void P_Get3DFloorAndCeiling(AActor * thing, sector_t * sector, fixed_t * floorz,
 bool P_CheckFor3DFloorHit(AActor * mo);
 bool P_CheckFor3DCeilingHit(AActor * mo);
 void P_Recalculate3DFloors(sector_t *);
+void P_RecalculateAttached3DFloors(sector_t * sec);
 lightlist_t * P_GetPlaneLight(sector_t * , secplane_t * plane, bool underside);
 bool P_GetMidTexturePosition(const line_s * linedef, int side, fixed_t * ptextop, fixed_t * ptexbot);
 void P_SpawnSpecials2( void );

@@ -367,9 +367,8 @@ inline fixed_t P_AproxDistance3(fixed_t dx, fixed_t dy, fixed_t dz)
 // Sets the light for a sprite - takes dynamic lights into account
 //
 //==========================================================================
-void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int blue, int desaturation, float alpha, PalEntry ThingColor)
-{ 
-	subsector_t * subsec = R_PointInSubsector2(thing->x, thing->y);
+void gl_SetSpriteLight(fixed_t x, fixed_t y, fixed_t z, subsector_t * subsec, int lightlevel, int red, int green, int blue, int desaturation, float alpha, PalEntry ThingColor)
+{
 	FLightNode * node = gl_subsectors[subsec-subsectors].lighthead;
 	float r,g,b;
 	Vector lightColor;
@@ -383,8 +382,8 @@ void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int 
 		light=node->lightsource;
 		if (!(light->flags2&MF2_DORMANT))
 		{
-			vec3_t lvec = { TO_MAP(thing->x - light->x), TO_MAP(thing->y - light->y), 
-							TO_MAP((thing->z + thing->height)/2 - light->z) };
+			vec3_t lvec = { TO_MAP(x - light->x), TO_MAP(y - light->y), 
+							TO_MAP(z - light->z) };
 
 			dist = VectorLength(lvec);
 			radius = F_TO_MAP(light->GetRadius() * gl_lights_size);
@@ -431,6 +430,18 @@ void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int 
 	b = clamp<float>(b+tb, 0, 1.0f);
 
 	gl.Color4f(r * ThingColor.r/255.0f, g * ThingColor.g/255.0f, b * ThingColor.b/255.0f, alpha);
+}
+
+void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int blue, int desaturation, float alpha, PalEntry ThingColor)
+{ 
+	subsector_t * subsec = R_PointInSubsector2(thing->x, thing->y);
+
+	gl_SetSpriteLight(thing->x, thing->y, (thing->z+thing->height)>>1, subsec, lightlevel, red, green, blue, desaturation, alpha, ThingColor);
+}
+
+void gl_SetSpriteLight( particle_t * thing, int lightlevel, int red, int green, int blue, int desaturation, float alpha, PalEntry ThingColor)
+{ 
+	gl_SetSpriteLight(thing->x, thing->y, thing->z, thing->subsector, lightlevel, red, green, blue, desaturation, alpha, ThingColor);
 }
 
 

@@ -701,7 +701,7 @@ void P_MovePlayer (player_t *player)
 		sm = FixedMul (sm, player->mo->Speed);
 
 		// When crouching speed and bobbing have to be reduced
-		if (player->mo->height!=player->mo->GetDefault()->height)
+		if (player->morphTics==0 && player->mo->height!=player->mo->GetDefault()->height)
 		{
 			fm = Scale(fm, player->mo->height, player->mo->GetDefault()->height);
 			sm = Scale(sm, player->mo->height, player->mo->GetDefault()->height);
@@ -975,54 +975,71 @@ void P_PlayerThink (player_t *player)
 	player->xviewshift = 0;		// [RH] Make sure view is in right place
 
 	// Handle crouching
-	if (player->crouching>0)
+	if (!player->morphTics)
 	{
-		fixed_t crouchdelta = FixedDiv(20*FRACUNIT, player->mo->GetDefault()->height/2);
-
-		if (player->crouching > player->mo->height)
+		int crouching = player->crouching;
+	
+		if (crouching==0)
 		{
-			if (player->mo->z+player->mo->height<player->mo->ceilingz)
+			if (player->cmd.ucmd.buttons & BT_DUCK)
 			{
-				player->crouchdir=1;
-				player->mo->height+=FRACUNIT;
-				player->viewheight+=crouchdelta;
-				player->defaultviewheight+=crouchdelta;
-				if (player->mo->height>=player->crouching)
-				{
-					player->crouching=0;
-				}
-				// Check validity of the crouching action
-				if (!P_TryMove(player->mo, player->mo->x, player->mo->y, false, false))
-				{
-					player->mo->height-=FRACUNIT;
-					player->viewheight-=crouchdelta;
-					player->defaultviewheight-=crouchdelta;
-					//player->crouchdir=-1;
-					//player->crouching=0;
-				}
-
+				crouching = player->mo->GetDefault()->height/2;
 			}
 			else
 			{
-				//player->crouchdir=-1;
-				//player->crouching=0;
+				crouching = player->mo->GetDefault()->height;
 			}
 		}
-		else if (player->crouching < player->mo->height)
+		if (crouching>0)
 		{
-			player->crouchdir=-1;
-			player->mo->height-=FRACUNIT;
-			player->viewheight-=crouchdelta;
-			player->defaultviewheight-=crouchdelta;
-			P_TryMove(player->mo, player->mo->x, player->mo->y, false, false);
-			if (player->defaultviewheight<7*FRACUNIT || player->mo->height <= player->crouching)
+			fixed_t crouchdelta = FixedDiv(20*FRACUNIT, player->mo->GetDefault()->height/2);
+	
+			if (crouching > player->mo->height)
 			{
-				player->crouching=0;
+				if (player->mo->z+player->mo->height<player->mo->ceilingz)
+				{
+					player->crouchdir=1;
+					player->mo->height+=2*FRACUNIT;
+					player->viewheight+=2*crouchdelta;
+					player->defaultviewheight+=2*crouchdelta;
+					if (player->mo->height>=player->crouching)
+					{
+						player->crouching=0;
+					}
+					// Check validity of the crouching action
+					if (!P_TryMove(player->mo, player->mo->x, player->mo->y, false, false))
+					{
+						player->mo->height-=2*FRACUNIT;
+						player->viewheight-=2*crouchdelta;
+						player->defaultviewheight-=2*crouchdelta;
+					}
+				}
 			}
+			else if (crouching < player->mo->height && player->defaultviewheight>7*FRACUNIT)
+			{
+				player->crouchdir=-1;
+				player->mo->height-=2*FRACUNIT;
+				player->viewheight-=2*crouchdelta;
+				player->defaultviewheight-=2*crouchdelta;
+				P_TryMove(player->mo, player->mo->x, player->mo->y, false, false);
+			}
+			player->mo->yscale = Scale(player->mo->height, 63, player->mo->GetDefault()->height);
 		}
-		player->mo->yscale = Scale(player->mo->height, 63, player->mo->GetDefault()->height);
+		player->crouchoffset = -40* (FRACUNIT - FixedDiv(player->mo->height, player->mo->GetDefault()->height));
 	}
-	player->crouchoffset = -40* (FRACUNIT - FixedDiv(player->mo->height, player->mo->GetDefault()->height));
+	else
+	{
+		// make sure the unmorphed player gets uncrouched as well!
+		player->crouchoffset = 0;
+		player->crouchdir = 0;
+		player->crouching = 0;
+		player->defaultviewheight=playerviewheight;
+		if (player->mo->tracer)
+		{
+			player->mo->tracer->height = player->mo->tracer->GetDefault()->height;
+			player->mo->tracer->yscale = 63;
+		}
+	}
 
 	// [RH] Zoom the player's FOV
 	if (player->FOV != player->DesiredFOV)
@@ -1094,6 +1111,13 @@ void P_PlayerThink (player_t *player)
 
 	if (player->playerstate == PST_DEAD)
 	{
+		player->crouchoffset = 0;
+		player->crouchdir = 0;
+		player->crouching = 0;
+		player->defaultviewheight=playerviewheight;
+		player->mo->height = player->mo->GetDefault()->height;
+		player->mo->yscale = 63;
+	
 		P_DeathThink (player);
 		return;
 	}
@@ -1551,3 +1575,4 @@ void player_s::Serialize (FArchive &arc)
 		oldbuttons = ~0;
 	}
 }
+

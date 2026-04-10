@@ -41,6 +41,7 @@
 #include "gl/gl_portal.h"
 #include "gl/gl_texture.h"
 
+EXTERN_CVAR(Bool, gl_notexturefill);
 CVAR(Bool,gl_noskyboxes, false, 0)
 extern int skyfog;
 
@@ -178,12 +179,21 @@ void GLWall::SkyTop(seg_t * seg,sector_t * fs,sector_t * bs,vertex_t * v1,vertex
 			if (bs->ceilingplane.ZatPoint(v1) > bs->floorplane.ZatPoint(v1) ||
 				bs->ceilingplane.ZatPoint(v2) > bs->floorplane.ZatPoint(v2) || gl_sectors[bs->sectornum].transdoor)
 					return;
+
+			// one more check for some ugly transparent door hacks
+			if (bs->floorplane.a==0 && bs->floorplane.b==0 && fs->floorplane.a==0 && fs->floorplane.b==0 &&
+				bs->floortexz==fs->floortexz+FRACUNIT)
+			{
+				FTexture * tex = TexMan(seg->sidedef->bottomtexture);
+				if (!tex || tex->UseType==FTexture::TEX_Null) return;
+			}
 		}
 
 		ytop[0]=ytop[1]=10000.0f;
 
 		FTexture * tex = TexMan(seg->sidedef->toptexture);
-		if (tex && tex->UseType!=FTexture::TEX_Null && bs->ceilingpic != skyflatnum)
+		if (/*tex && tex->UseType!=FTexture::TEX_Null &&*/ bs->ceilingpic != skyflatnum)
+
 		{
 			ybottom[0]=yceil[0];
 			ybottom[1]=yceil[1];
@@ -244,7 +254,7 @@ void GLWall::SkyBottom(seg_t * seg,sector_t * fs,sector_t * bs,vertex_t * v1,ver
 		}
 		ybottom[0]=ybottom[1]=-10000.0f;
 
-		if (tex && tex->UseType!=FTexture::TEX_Null)
+		if ((tex && tex->UseType!=FTexture::TEX_Null) || bs->floorpic!=skyflatnum)
 		{
 			ytop[0]=yfloor[0];
 			ytop[1]=yfloor[1];

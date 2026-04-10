@@ -593,10 +593,12 @@ bool AActor::SetStateNF (FState *newstate)
 void AActor::AddInventory (AInventory *item)
 {
 	// If it's still linked into the world, unlink it
+	/* doesn't work!
 	if (!(item->flags & MF_NOSECTOR))
 	{
 		item->BecomeItem ();
 	}
+	*/
 
 	// Check if it's already attached to an actor
 	if (item->Owner != NULL)
@@ -2348,7 +2350,7 @@ void AActor::SetShade (int r, int g, int b)
 // P_MobjThinker
 //
 
-CVAR(Bool, sv_rocketsmoke, true, CVAR_ARCHIVE|CVAR_SERVERINFO)
+CVAR(Bool, sv_rocketsmoke, false, CVAR_ARCHIVE|CVAR_SERVERINFO)
 
 void AActor::Tick ()
 {

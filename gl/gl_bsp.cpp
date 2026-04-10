@@ -54,7 +54,6 @@ Clipper clipper;
 //==========================================================================
 //
 // Check whether the player can look beyond this line
-// showed lines behind closed doors simply because the door had a dropoff.
 //
 //==========================================================================
 

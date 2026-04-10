@@ -1773,10 +1773,12 @@ void FActiveInterpolation::CopyBakToInterp ()
 	case INTERP_SectorFloor:
 		((sector_t*)Address)->floorplane.d = bakipos[0];
 		((sector_t*)Address)->floortexz = bakipos[1];
+		P_RecalculateAttached3DFloors((sector_t*)Address);
 		break;
 	case INTERP_SectorCeiling:
 		((sector_t*)Address)->ceilingplane.d = bakipos[0];
 		((sector_t*)Address)->ceilingtexz = bakipos[1];
+		P_RecalculateAttached3DFloors((sector_t*)Address);
 		break;
 	case INTERP_Vertex:
 		((vertex_t*)Address)->x = bakipos[0];
@@ -1800,18 +1802,19 @@ void FActiveInterpolation::CopyBakToInterp ()
 void FActiveInterpolation::DoAnInterpolation (fixed_t smoothratio)
 {
 	fixed_t *adr1, *adr2, pos;
+	bool recalc=false;
 
 	switch (Type)
 	{
 	case INTERP_SectorFloor:
 		adr1 = &((sector_t*)Address)->floorplane.d;
 		adr2 = &((sector_t*)Address)->floortexz;
-		P_Recalculate3DFloors((sector_t*)Address);			// Must recalculate the 3d floor and light lists
+		recalc=true;
 		break;
 	case INTERP_SectorCeiling:
 		adr1 = &((sector_t*)Address)->ceilingplane.d;
 		adr2 = &((sector_t*)Address)->ceilingtexz;
-		P_Recalculate3DFloors((sector_t*)Address);			// Must recalculate the 3d floor and light lists
+		recalc=true;
 		break;
 	case INTERP_Vertex:
 		adr1 = &((vertex_t*)Address)->x;
@@ -1838,6 +1841,8 @@ void FActiveInterpolation::DoAnInterpolation (fixed_t smoothratio)
 
 	pos = bakipos[1] = *adr2;
 	*adr2 = oldipos[1] + FixedMul (pos - oldipos[1], smoothratio);
+
+	if (recalc) P_RecalculateAttached3DFloors((sector_t*)Address);
 }
 
 unsigned FActiveInterpolation::HashKey (EInterpType type, void *interptr)

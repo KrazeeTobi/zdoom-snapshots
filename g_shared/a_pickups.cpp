@@ -1078,7 +1078,6 @@ bool AInventory::TryPickup (AActor *toucher)
 		toucher->AddInventory (this);
 		bool usegood = DoUse (true);
 		toucher->RemoveInventory (this);
-		BecomePickup ();
 
 		if (usegood || (ItemFlags & IF_ALWAYSPICKUP))
 		{
@@ -1086,6 +1085,7 @@ bool AInventory::TryPickup (AActor *toucher)
 		}
 		else
 		{
+			//BecomePickup ();
 			return false;
 		}
 	}
@@ -1246,7 +1246,7 @@ bool ABasicArmorPickup::Use (bool pickup)
 		armor->SavePercent = SavePercent;
 		armor->Amount = armor->MaxAmount = SaveAmount;
 		armor->Icon = Icon;
-		Owner->AddInventory (armor);
+		armor->AttachToOwner(Owner);
 		return true;
 	}
 	// If you already have more armor than this item gives you, you can't
@@ -1317,7 +1317,7 @@ bool ABasicArmorBonus::Use (bool pickup)
 		armor->Amount = saveAmount;
 		armor->MaxAmount = MaxSaveAmount;
 		armor->Icon = Icon;
-		Owner->AddInventory (armor);
+		armor->AttachToOwner(Owner);
 		return true;
 	}
 	// If you already have more armor than this item can give you, you can't

@@ -135,17 +135,15 @@ void GLSprite::Draw(int pass)
 		bool res=false;
 		if (gl_lights && !gl_fixedcolormap)
 		{
-			if (actor)
+			if (actor && gl_light_sprites && !(actor->renderflags & RF_FULLBRIGHT))
 			{
-				if (gl_light_sprites && !(actor->renderflags & RF_FULLBRIGHT))
-				{
-					gl_SetSpriteLight(actor, lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,trans, ThingColor);
-					res=true;
-				}
+				gl_SetSpriteLight(actor, lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,trans, ThingColor);
+				res=true;
 			}
-			else if (gl_light_particles)
+			else if (particle && gl_light_particles)
 			{
-				// FIXME:
+				gl_SetSpriteLight(particle, lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,trans, ThingColor);
+				res=true;
 			}
 		}
 		if (!res) gl_SetColor(lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,trans, ThingColor);
@@ -547,6 +545,7 @@ void GLSprite::Process(AActor* thing,sector_t * sector)
 	}
 
 	actor=thing;
+	particle=NULL;
 	if (RenderStyle==STYLE_Translucent && trans>=1.0f-FLT_EPSILON) RenderStyle=STYLE_Normal;
 
 	if (thing->Sector->e->lightlist.Size()==0 || gl_fixedcolormap || fullbright) 
@@ -630,6 +629,7 @@ void GLSprite::ProcessParticle (particle_t *particle, sector_t *sector)//, int s
 	y2=y+scalefac;
 	scale=P_AproxDistance(particle->x-viewx, particle->y-viewy);
 	actor=NULL;
+	this->particle=particle;
 	
 	if (trans>=1.0f-FLT_EPSILON) RenderStyle=STYLE_Normal;
 	else RenderStyle=STYLE_Translucent;

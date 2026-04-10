@@ -1448,8 +1448,9 @@ FUNC(LS_FloorAndCeiling_RaiseByValue)
 FUNC(LS_FloorAndCeiling_LowerRaise)
 // FloorAndCeiling_LowerRaise (tag, fspeed, cspeed)
 {
-	return EV_DoCeiling (DCeiling::ceilRaiseToHighest, ln, arg0, SPEED(arg2), 0, 0, 0, 0, 0) ||
-		EV_DoFloor (DFloor::floorLowerToLowest, ln, arg0, SPEED(arg1), 0, 0, 0);
+	bool res = EV_DoCeiling (DCeiling::ceilRaiseToHighest, ln, arg0, SPEED(arg2), 0, 0, 0, 0, 0);
+	res |= EV_DoFloor (DFloor::floorLowerToLowest, ln, arg0, SPEED(arg1), 0, 0, 0);
+	return res;
 }
 
 FUNC(LS_Elevator_MoveToFloor)
@@ -1823,6 +1824,8 @@ FUNC(LS_Scroll_Floor)
 	}
 	if (arg3 > 0)
 	{
+		dx = FixedMul (dx, CARRYFACTOR);
+		dy = FixedMul (dy, CARRYFACTOR);
 		SetScroller (arg0, DScroller::sc_carry, dx, dy);
 	}
 	else

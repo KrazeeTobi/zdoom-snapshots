@@ -1108,6 +1108,7 @@ void gl_SetActorLights(AActor *actor)
 		for(;count<actor->dynamiclights.Size();count++)
 		{
 			actor->dynamiclights[count]->flags2|=MF2_DORMANT;
+			memset(actor->dynamiclights[count]->args, 0, sizeof(actor->args));
 		}
 		// Store the current sprite in the first light to avoid 
 		// redundant reassignments of the light properties.

@@ -1009,6 +1009,16 @@ bool GLWall::SetWallCoordinates(seg_t * seg, int texturetop,
 			lorgt.v=uprgt.v=wti->FixToTexV(-inter_y+texturetop);
 		}
 	}
+	if (gltexture && gltexture->tex->bHasCanvas && clampy)
+	{
+		// Camera textures are upside down so we have to shift the y-coordinate
+		// from [-1..0] to [0..1] when using texture clamping!
+
+		uplft.v+=1.f;
+		uprgt.v+=1.f;
+		lolft.v+=1.f;
+		lorgt.v+=1.f;
+	}
 	return true;
 }
 
@@ -1654,8 +1664,9 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 #ifdef _DEBUG
 	if (seg->linedef-lines==break_renderlinedef && IsDebuggerPresent())
 		__asm int 3;	
-	if (seg->linedef-lines==2815)
-		__asm nop
+	//if (seg->linedef-lines==2815)
+	//if (/*seg->linedef-lines==12599 ||*/ seg->linedef-lines==12577 || seg->linedef-lines==12593)
+		//__asm nop
 #endif
 
 	this->seg=seg;
@@ -1832,7 +1843,6 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 		/* mid texture */
 
 		// in all other cases this might create more problems than it solves.
-		// for all other cases this should be done manually with Line_Fogsheet
 		bool drawfogsheet=((frontsector->ColorMap->Fade&0xffffff)!=0 && 
 							(backsector->ColorMap->Fade&0xffffff)==0 &&
 							!gl_fixedcolormap &&

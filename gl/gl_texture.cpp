@@ -181,7 +181,7 @@ void ModifyPalette(PalEntry * pout, PalEntry * pin, int cm, int count, bool bgra
 	
 	default:
 		// Boom colormaps.
-		if (cm>=CM_FIRSTCOLORMAP)
+		if (cm>=CM_FIRSTCOLORMAP && cm<CM_FIRSTCOLORMAP+numfakecmaps)
 		{
 			if (count<=256)	// This does not work for raw image data because it assumes
 							// the use of the base palette!
@@ -206,7 +206,7 @@ void ModifyPalette(PalEntry * pout, PalEntry * pin, int cm, int count, bool bgra
 				memcpy(pout, pin, count * sizeof(PalEntry));
 			}
 		}
-		else
+		else if (cm<=CM_DESAT31)
 		{
 			// Desaturated light settings.
 			fac=cm-CM_DESAT0;
@@ -219,6 +219,10 @@ void ModifyPalette(PalEntry * pout, PalEntry * pin, int cm, int count, bool bgra
 				pout[i].b = (pin[i].b*(32-fac) + gray*fac)/32;
 				pout[i].a = pin[i].a;
 			}
+		}
+		else if (pin!=pout)
+		{
+			memcpy(pout, pin, count * sizeof(PalEntry));
 		}
 		break;
 	}
@@ -276,7 +280,13 @@ static void CopyPixelData(BYTE * buffer, int texwidth, int texheight, int origin
 		// CM_SHADE is an alpha map with 0==transparent and 1==opaque
 		if (cm==CM_SHADE) 
 		{
-			for(int i=0;i<256;i++) penew[i]=PalEntry(255-i,255,255,255);
+			for(int i=0;i<256;i++) 
+			{
+				if (palette[i].a!=255)
+					penew[i]=PalEntry(255-i,255,255,255);
+				else
+					penew[i]=0xffffffff;	// If the palette contains transparent colors keep them.
+			}
 		}
 		else
 		{
@@ -1126,6 +1136,15 @@ unsigned char * FGLTexture::CreateTexBuffer(int cm, int translation, const byte 
 {
 	unsigned char * buffer;
 
+	if (HiresLump>=0)
+	{
+		buffer = LoadFromLump(HiresLump, &w, &h, cm<CM_FIRSTCOLORMAP? cm : CM_DEFAULT);
+		if (buffer)
+		{
+			return buffer;
+		}
+	}
+
 	// Textures that are already scaled in the texture lump will not get replaced
 	// by hires textures
 	if (gl_texture_usehires && scalex==1.f && scaley==1.f)
@@ -1141,6 +1160,7 @@ unsigned char * FGLTexture::CreateTexBuffer(int cm, int translation, const byte 
 	w=Width;
 	h=Height;
 
+//Printf("Creating buffer for '%.8s', Size=(%d,%d), Original size = (%d,%d)\n", tex->Name, Width, Height, tex->GetWidth(), tex->GetHeight());
 	buffer=new unsigned char[Width*(Height+1)*4];
 	memset(buffer, 0, Width * (Height+1) * 4);
 
@@ -1150,6 +1170,8 @@ unsigned char * FGLTexture::CreateTexBuffer(int cm, int translation, const byte 
 		cm=(int)translationtable;
 		translation=DIRECT_PALETTE;
 	}
+
+	// For hires textures remapping to the base palette is far too expensive so I am skipping it.
 	if (cm<CM_FIRSTCOLORMAP || translation==DIRECT_PALETTE)
 	{
 		tex->CopyTrueColorPixels(buffer, Width, Height, LeftOffset - tex->LeftOffset, TopOffset - tex->TopOffset,
@@ -1278,6 +1300,7 @@ const PatchTextureInfo * FGLTexture::BindPatch(int cm, int translation, const by
 		if (cm >= CM_SHADE)
 		{
 			gl_SetColorMode(CM_DEFAULT);
+			if (cm==CM_LITE) cm=CM_INVERT;
 		}
 		else
 		{

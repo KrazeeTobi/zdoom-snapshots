@@ -3019,6 +3019,7 @@ void R_InitData ()
 	TexMan.AddFlats ();
 	R_InitBuildTiles ();
 	TexMan.AddExtraTextures ();
+	FGLTexture::LoadHiresTextures();
 
 	R_InitColormaps ();
 	C_InitConsole (SCREENWIDTH, SCREENHEIGHT, true);
@@ -3042,6 +3043,7 @@ void R_PrecacheLevel (void)
 	if (demoplayback)
 		return;
 
+//Printf("Start precaching\n");
 	hitlist = new BYTE[TexMan.NumTextures()];
 	spritelist = new BYTE[sprites.Size()];
 	
@@ -3118,6 +3120,8 @@ void R_PrecacheLevel (void)
 				if (currentrenderer != 1) tex->GetPixels ();
 				else if (gl_precache)
 				{
+//Printf("precaching %s\n", tex->Name);
+
 					FGLTexture * gltex = FGLTexture::ValidateTexture(tex);
 					if (gltex) 
 					{
@@ -3128,6 +3132,7 @@ void R_PrecacheLevel (void)
 			}
 			else
 			{
+//Printf("unloading %s\n", tex->Name);
 				tex->Unload ();
 				if (tex->gltex)
 				{
@@ -3136,6 +3141,7 @@ void R_PrecacheLevel (void)
 			}
 		}
 	}
+//Printf("done precaching\n");
 
 	delete[] hitlist;
 }

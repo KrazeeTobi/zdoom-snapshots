@@ -522,7 +522,7 @@ void GLHorizonPortal::DrawContents()
 
 
 
-	z=(float)sp->texheight/MAP_SCALE;
+	z=TO_MAP(sp->texheight);
 
 	gltexture->Bind(origin->colormap.LightColor.a);
 
@@ -570,7 +570,7 @@ void GLHorizonPortal::DrawContents()
 		}
 	}
 
-	float vz=F_TO_MAP(viewz);
+	float vz=TO_MAP(viewz);
 	float tz=(z-vz);///64.0f;
 
 	// fill the gap between the polygon and the true horizon

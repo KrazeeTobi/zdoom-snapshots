@@ -36,6 +36,7 @@
 #include "a_keys.h"
 #include "d_player.h"
 #include "p_spec.h"
+#include "c_dispatch.h"
 
 IMPLEMENT_POINTY_CLASS(DRunningScript)
 	DECLARE_POINTER(prev)
@@ -659,5 +660,22 @@ void T_FixPointers(DObject * notold ,DObject * old)
 		T_FixScript(&levelscript,(AActor*)notold,(AActor*)old);
 		T_FixScript(&global_script,(AActor*)notold,(AActor*)old);
 		T_FixScript(&hub_script,(AActor*)notold,(AActor*)old);
+	}
+}
+
+CCMD(fpuke)
+{
+	int argc = argv.argc();
+
+	if (argc < 2)
+	{
+		Printf (" fpuke <script>\n");
+	}
+	else
+	{
+		t_argc =1;
+		t_argv[0].type=svt_int;
+		t_argv[0].value.i=atoi (argv[1]);
+		SF_StartScript();
 	}
 }

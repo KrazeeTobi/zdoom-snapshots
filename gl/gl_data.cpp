@@ -262,6 +262,7 @@ static void PrepareTransparentDoors(sector_t * sector)
 	gl_sectordata * glsec = &gl_sectors[sector-sectors];
 	bool solidwall=false;
 	int notextures=0;
+	int nobtextures=0;
 	int selfref=0;
 	int i;
 	sector_t * nextsec=NULL;
@@ -307,6 +308,7 @@ static void PrepareTransparentDoors(sector_t * sector)
 					return;
 				}
 				if (sides[sector->lines[i]->sidenum[1-side]].toptexture==0) notextures++;
+				if (sides[sector->lines[i]->sidenum[1-side]].bottomtexture==0) nobtextures++;
 			}
 		}
 		if (selfref+notextures==sector->linecount || sector->ceilingpic==skyflatnum)
@@ -315,10 +317,11 @@ static void PrepareTransparentDoors(sector_t * sector)
 			return;
 		}
 
-		if (solidwall)
+		// This is a crude attempt to fix an incorrect transparent door effect I found in some
+		// WolfenDoom maps but considering the amount of code required to handle it I left it in.
+		// Do this only if the sector only contains one-sided walls or ones with no lower texture.
+		if (solidwall && solidwall+nobtextures+selfref==sector->linecount)
 		{
-			// This is a crude attempt to fix an incorrect transparent door effect I found in some
-			// WolfenDoom maps but considering the amount of code required to handle it I left it in.
 			if (nextsec)
 			{
 				sector->heightsec=nextsec;

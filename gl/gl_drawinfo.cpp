@@ -280,6 +280,8 @@ void GLDrawList::SortWallIntoPlane(SortNode * head,SortNode * sort)
 	GLWall * ws=&walls[drawitems[sort->itemindex].index];
 	GLWall * ws1;
 
+	bool ceiling = fh->z > TO_MAP(viewz);
+
 	if (ws->ytop[0]>fh->z && ws->ybottom[0]<fh->z)
 	{
 		// We have to split this wall!
@@ -296,7 +298,7 @@ void GLDrawList::SortWallIntoPlane(SortNode * head,SortNode * sort)
 		// I make the very big assumption here that translucent walls in sloped sectors
 		// and 3D-floors never coexist in the same level. If that were the case this
 		// code would become extremely more complicated.
-		if (!fh->ceiling)
+		if (!ceiling)
 		{
 			ws->ytop[1] = ws1->ybottom[1] = ws->ytop[0] = ws1->ybottom[0] = fh->z;
 			ws->uprgt.v = ws1->lorgt.v = ws->uplft.v = ws1->lolft.v = newtexv;
@@ -314,7 +316,7 @@ void GLDrawList::SortWallIntoPlane(SortNode * head,SortNode * sort)
 		head->AddToLeft(sort);
 		head->AddToRight(sort2);
 	}
-	else if ((ws->ytop[0]<fh->z && !fh->ceiling) || (ws->ybottom[0]>fh->z && fh->ceiling))	// completely on the left side
+	else if ((ws->ytop[0]<=fh->z && !ceiling) || (ws->ybottom[0]>=fh->z && ceiling))	// completely on the left side
 	{
 		head->AddToLeft(sort);
 	}

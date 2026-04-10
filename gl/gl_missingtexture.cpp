@@ -345,6 +345,7 @@ static bool DoFakeBridge(subsector_t * subsec, fixed_t planez)
 	for(int i=0; i< subsec->numlines; i++)
 	{
 		if (segs[subsec->firstline + i].backsector == NULL) return false;
+		if (segs[subsec->firstline + i].PartnerSeg == NULL) return false;
 	}
 
 	for(int i=0; i< subsec->numlines; i++)
@@ -397,6 +398,7 @@ static bool DoFakeCeilingBridge(subsector_t * subsec, fixed_t planez)
 	for(int i=0; i< subsec->numlines; i++)
 	{
 		if (segs[subsec->firstline + i].backsector == NULL) return false;
+		if (segs[subsec->firstline + i].PartnerSeg == NULL) return false;
 	}
 
 	for(int i=0; i< subsec->numlines; i++)
@@ -627,14 +629,12 @@ static void SetupFloodStencil(wallseg * ws)
 
 	gl.ColorMask(1,1,1,1);						// don't write to the graphics buffer
 	gl.Enable(GL_TEXTURE_2D);
-	gl.DepthFunc(GL_ALWAYS);
 }
 
 static void ClearFloodStencil(wallseg * ws)
 {
 	int recursion = GLPortal::GetRecursion();
 
-	gl.DepthFunc(GL_LESS);
 	gl.StencilOp(GL_KEEP,GL_KEEP,GL_DECR);
 	gl.Disable(GL_TEXTURE_2D);					// Disable textures (important!)
 	gl.ColorMask(0,0,0,0);						// don't write to the graphics buffer
@@ -698,6 +698,8 @@ static void DrawFloodedPlane(wallseg * ws, float planez, sector_t * sec, bool ce
 	float fviewy = TO_MAP(viewy);
 	float fviewz = TO_MAP(viewz);
 
+	gl.Disable(GL_DEPTH_TEST);
+	gl.DepthMask(false);
 	gl.Begin(GL_TRIANGLE_FAN);
 	float prj_fac1 = (planez-fviewz)/(ws->z1-fviewz);
 	float prj_fac2 = (planez-fviewz)/(ws->z2-fviewz);
@@ -727,6 +729,8 @@ static void DrawFloodedPlane(wallseg * ws, float planez, sector_t * sec, bool ce
 	gl.Vertex3f(px4, planez, py4);
 
 	gl.End();
+	gl.Enable(GL_DEPTH_TEST);
+	gl.DepthMask(true);
 
 	gl.MatrixMode(GL_TEXTURE);
 	gl.PopMatrix();
@@ -834,7 +838,7 @@ void DrawUnhandledMissingTextures()
 	gl.BlendFunc(GL_ONE,GL_ZERO);
 
 	validcount++;
-	for(int i=0;i<MissingUpperSegs.Size(); i++)
+	for(int i=MissingUpperSegs.Size()-1; i>=0; i--)
 	{
 		int index = MissingUpperSegs[i].MTI_Index;
 		if (index>=0 && MissingUpperTextures[index].seg==NULL) continue;
@@ -852,7 +856,7 @@ void DrawUnhandledMissingTextures()
 	}
 
 	validcount++;
-	for(int i=0;i<MissingLowerSegs.Size(); i++)
+	for(int i=MissingLowerSegs.Size()-1; i>=0; i--)
 	{
 		int index = MissingLowerSegs[i].MTI_Index;
 		if (index>=0 && MissingLowerTextures[index].seg==NULL) continue;
@@ -892,7 +896,7 @@ ADD_STAT(missingtextures,out)
 
 void AddHackedSubsector(subsector_t * sub)
 {
-	if (firstmissingseg<numsegs)
+	if (firstmissingseg==numsegs)
 	{
 		SubsectorHackInfo sh={&gl_subsectors[sub-subsectors], 0};
 		SubsectorHacks.Push (sh);
@@ -1099,6 +1103,7 @@ void HandleHackedSubsectors()
 		if (glsub->validcount!=validcount && CheckAnchorFloor(glsub))
 		{
 			// Now collect everything that is connected with this subsector.
+			HandledSubsectors.Clear();
 			CollectSubsectorsFloor(glsub, glsub->render_sector);
 
 			for(int j=0;j<HandledSubsectors.Size();j++)
@@ -1110,7 +1115,6 @@ void HandleHackedSubsectors()
 				node->next = glsec->otherplanes[0];
 				glsec->otherplanes[0]=node;
 			}
-			HandledSubsectors.Clear();
 		}
 	}
 
@@ -1122,6 +1126,7 @@ void HandleHackedSubsectors()
 		if (glsub->validcount!=validcount && CheckAnchorCeiling(glsub))
 		{
 			// Now collect everything that is connected with this subsector.
+			HandledSubsectors.Clear();
 			CollectSubsectorsCeiling(glsub, glsub->render_sector);
 
 			for(int j=0;j<HandledSubsectors.Size();j++)
@@ -1133,7 +1138,6 @@ void HandleHackedSubsectors()
 				node->next = glsec->otherplanes[1];
 				glsec->otherplanes[1]=node;
 			}
-			HandledSubsectors.Clear();
 		}
 	}
 
@@ -1282,6 +1286,7 @@ void ProcessSectorStacks()
 		subsector_t * sub = CeilingStacks[i];
 		gl_subsectordata * glsub = &gl_subsectors[sub-subsectors];
 
+		HandledSubsectors.Clear();
 		for(int j=0;j<sub->numlines;j++)
 		{
 			seg_t * seg = &segs[sub->firstline+j];
@@ -1307,7 +1312,6 @@ void ProcessSectorStacks()
 				glsec->otherplanes[1]=node;
 			}
 		}
-		HandledSubsectors.Clear();
 	}
 
 	validcount++;
@@ -1316,6 +1320,7 @@ void ProcessSectorStacks()
 		subsector_t * sub = FloorStacks[i];
 		gl_subsectordata * glsub = &gl_subsectors[sub-subsectors];
 
+		HandledSubsectors.Clear();
 		for(int j=0;j<sub->numlines;j++)
 		{
 			seg_t * seg = &segs[sub->firstline+j];
@@ -1331,6 +1336,7 @@ void ProcessSectorStacks()
 		{				
 			gl_sectordata * glsec = &gl_sectors[glsub->render_sector->sectornum];
 
+			Printf("%d: ss %d, sec %d\n", j, HandledSubsectors[j]-gl_subsectors, HandledSubsectors[j]->render_sector->sectornum);
 			gl_ss_renderflags[HandledSubsectors[j]-gl_subsectors] &= ~SSRF_RENDERFLOOR;
 
 			if (glsub->render_sector->FloorSkyBox->PlaneAlpha!=0)
@@ -1341,7 +1347,6 @@ void ProcessSectorStacks()
 				glsec->otherplanes[0]=node;
 			}
 		}
-		HandledSubsectors.Clear();
 	}
 
 	FloorStacks.Clear();
