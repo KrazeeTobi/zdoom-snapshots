@@ -125,7 +125,7 @@ sector_t * gl_FakeFlat(sector_t * sec, sector_t * dest, bool back)
 		dest->ceilingtexz = s->floortexz;
 		dest->floorplane=sec->floorplane;
 		dest->ceilingplane=s->floorplane;
-		//dest->ceilingplane.FlipVert();
+		dest->ceilingplane.FlipVert();
 
 		if (!back)
 		{
@@ -185,7 +185,7 @@ sector_t * gl_FakeFlat(sector_t * sec, sector_t * dest, bool back)
 		dest->floortexz   = s->ceilingtexz;
 		dest->ceilingplane= sec->ceilingplane;
 		dest->floorplane = s->ceilingplane;
-		//dest->floorplane.FlipVert();
+		dest->floorplane.FlipVert();
 
 		if (!back)
 		{

@@ -102,12 +102,18 @@ struct GLHorizonInfo
 
 class GLWall
 {
+	enum
+	{
+		GLWF_CLAMPX,
+		GLWF_CLAMPY,
+		GLWF_SKYHACK
+	};
+
 public:
 	friend struct GLDrawList;
 	friend class GLPortal;
 
 	GLSeg glseg;
-	float fracleft, fracright;			// fractional offset of left and right end inside the linedef (for decal positioning.
 	vertex_t * vertexes[2];				// required for polygon splitting
 	float ytop[2],ybottom[2];
 	texcoord uplft, uprgt, lolft, lorgt;
@@ -119,10 +125,10 @@ public:
 	
 	fixed_t viewdistance;
 	byte lightlevel;
-	byte flag;
+	byte type;
 	byte RenderStyle;
-	bool clampx;
-	bool clampy;
+	byte flags;
+
 	union
 	{
 		// it's either one of them but never more!
@@ -153,7 +159,10 @@ private:
 	int Intersection(GL_RECT * rc,GLWall * result);
 
 	void FloodPlane(int pass);
-	void SkyTexture(int sky1,ASkyViewpoint * skyboxx, secplane_t * plane, bool ceiling, float reflect);
+
+	void MirrorPlane(secplane_t * plane, bool ceiling);
+	void SkyTexture(int sky1,ASkyViewpoint * skyboxx, bool ceiling);
+
 	void SkyNormal(sector_t * fs,vertex_t * v1,vertex_t * v2);
 	void SkyTop(seg_t * seg,sector_t * fs,sector_t * bs,vertex_t * v1,vertex_t * v2);
 	void SkyBottom(seg_t * seg,sector_t * fs,sector_t * bs,vertex_t * v1,vertex_t * v2);
@@ -223,6 +232,7 @@ public:
 };
 
 struct gl_subsectordata;
+struct FSpriteModelFrame;
 
 class GLFlat
 {
@@ -266,6 +276,7 @@ public:
 	byte foglevel;
 	PalEntry ThingColor;	// thing's own color
 	FColormap Colormap;
+	FSpriteModelFrame * modelframe;
 
 	int translation;
 	fixed_t scale;
@@ -280,7 +291,6 @@ public:
 	float trans;
 	AActor * actor;
 	particle_t * particle;
-	model_t * model;
 
 	void SplitSprite(sector_t * frontsector, bool translucent);
 	void SetLowerParam();

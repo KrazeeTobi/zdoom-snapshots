@@ -65,6 +65,7 @@ CVAR (Float, gl_lights_intensity, 1.0f, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 CVAR (Float, gl_lights_size, 1.0f, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 CVAR (Bool, gl_light_sprites, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 CVAR (Bool, gl_light_particles, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
+CVAR (Float, gl_light_ambient, 20.f, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 
 CVAR(Bool,gl_enhanced_lightamp,true,CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 CVAR(Bool,gl_depthfog,true,CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
@@ -82,6 +83,33 @@ static PalEntry outsidefogcolor;
 static int outsidefogdensity;
 int skyfog;
 
+CUSTOM_CVAR (Int, gl_distfog, 70, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
+{
+	for (int i=0;i<256;i++)
+	{
+
+		if (i<164)
+		{
+			distfogtable[0][i]= (gl_distfog>>1) + (gl_distfog)*(164-i)/164;
+		}
+		else if (i<230)
+		{											    
+			distfogtable[0][i]= (gl_distfog>>1) - (gl_distfog>>1)*(i-164)/(230-164);
+		}
+		else distfogtable[0][i]=0;
+
+		if (i<128)
+		{
+			distfogtable[1][i]= 6.f + (gl_distfog>>1) + (gl_distfog)*(128-i)/96;
+		}
+		else if (i<216)
+		{											    
+			distfogtable[1][i]= (216.f-i) / ((216.f-128.f)) * gl_distfog / 10;
+		}
+		else distfogtable[1][i]=0;
+	}
+}
+
 //==========================================================================
 //
 // Set fog parameters for the level
@@ -90,33 +118,10 @@ int skyfog;
 void gl_SetFogParams(int _fogdensity, PalEntry _outsidefogcolor, int _outsidefogdensity, int _skyfog)
 {
 	fogdensity=_fogdensity;
-	if (_fogdensity==0) _fogdensity=70;
 	outsidefogcolor=_outsidefogcolor;
 	outsidefogdensity=_outsidefogdensity? _outsidefogdensity : _fogdensity;
 	skyfog=_skyfog;
 
-	for (int i=0;i<256;i++)
-	{
-		if (i<164)
-		{
-			distfogtable[0][i]= (_fogdensity>>1) + (_fogdensity)*(164-i)/164;
-		}
-		else if (i<230)
-		{											    
-			distfogtable[0][i]= (_fogdensity>>1) - (_fogdensity>>1)*(i-164)/(230-164);
-		}
-		else distfogtable[0][i]=0;
-
-		if (i<128)
-		{
-			distfogtable[1][i]= 6.f + (_fogdensity>>1) + (_fogdensity)*(128-i)/128;
-		}
-		else if (i<216)
-		{											    
-			distfogtable[1][i]= (216.f-i) / ((216.f-128.f)) * 6.f;
-		}
-		else distfogtable[1][i]=0;
-	}
 	outsidefogdensity>>=1;
 	fogdensity>>=1;
 }
@@ -154,13 +159,21 @@ void gl_GetLightColor(int lightlevel, int red, int green, int blue, float * pred
 		return;
 	}
 
-	if (gl_lightmode&2 && lightlevel<192 && !full) lightlevel -= (192-lightlevel);
+	float light;
 
-	//float light=lighttable[clamp<int>(lightlevel,30,255)];
-	float light=clamp<int>(lightlevel,30,255)/255.0f;
-	r=red*light/255.0f;
-	g=green*light/255.0f;
-	b=blue*light/255.0f;
+	if (gl_lightmode&2 && lightlevel<192 && !full) 
+	{
+		light = (192.f - (192-lightlevel)*1.95f);
+	}
+	else
+	{
+		light=lightlevel;
+	}
+	if (light<gl_light_ambient) light=gl_light_ambient;
+
+	r=red*light/255.0f/255.f;
+	g=green*light/255.0f/255.f;
+	b=blue*light/255.0f/255.f;
 }
 
 //==========================================================================

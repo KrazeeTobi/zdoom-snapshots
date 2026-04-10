@@ -402,7 +402,7 @@ void GLWall::RenderTwoSidedWall(int pass)
 	// The only passes coming through here are the texture passes (GLPASS_UNLIT and GLPASS_TEXTURE)
 	if (pass != GLPASS_TEXTURE)
 	{
-		if (flag!=RENDERWALL_M2SNF) gl_SetFog(lightlevel, Colormap.FadeColor, RenderStyle);
+		if (type!=RENDERWALL_M2SNF) gl_SetFog(lightlevel, Colormap.FadeColor, RenderStyle);
 		else gl_EnableFog(false);
 
 		switch(RenderStyle)
@@ -419,8 +419,8 @@ void GLWall::RenderTwoSidedWall(int pass)
 	if (gltexture) 
 	{
 		gltexture->Bind(Colormap.LightColor.a);
-		if (clampy) gl.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-		if (clampx) gl.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+		if (flags&GLWF_CLAMPY) gl.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+		if (flags&GLWF_CLAMPX) gl.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
 	}
 	else 
 	{
@@ -428,8 +428,15 @@ void GLWall::RenderTwoSidedWall(int pass)
 		gl.Disable(GL_TEXTURE_2D);
 	}
 
+	// This allows mid textures to be drawn on lines that might overlap a sky wall
+	if (flags&GLWF_SKYHACK)
+	{
+		gl.Enable(GL_POLYGON_OFFSET_FILL);
+		gl.PolygonOffset(-1.0f, -128.0f);
+	}
+
 	// prevent some ugly artifacts at the borders of fences etc.
-	if (flag==RENDERWALL_COLOR)
+	if (type==RENDERWALL_COLOR)
 	{
 		// this is always translucent and thus always GLPASS_UNLIT
 		gl_SetColor(lightlevel+(extralight*gl_weaponlight), Colormap.LightColor, (float)fabs(alpha));
@@ -449,6 +456,11 @@ void GLWall::RenderTwoSidedWall(int pass)
 		}
 	}
 
+	if (flags&GLWF_SKYHACK)
+	{
+		gl.Disable(GL_POLYGON_OFFSET_FILL);
+		gl.PolygonOffset(0, 0);
+	}
 
 	// restore default settings
 	if (pass!=GLPASS_TEXTURE) switch(RenderStyle)
@@ -458,14 +470,14 @@ void GLWall::RenderTwoSidedWall(int pass)
 	}
 	if (gltexture)	
 	{
-		if (clampy) gl.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
-		if (clampx) gl.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+		if (flags&GLWF_CLAMPY) gl.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+		if (flags&GLWF_CLAMPX) gl.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
 	}
 	else 
 	{
 		gl.Enable(GL_TEXTURE_2D);
 	}
-	if (pass==GLPASS_UNLIT && flag==RENDERWALL_M2SNF) gl_EnableFog(true);
+	if (pass==GLPASS_UNLIT && type==RENDERWALL_M2SNF) gl_EnableFog(true);
 }
 
 
@@ -495,7 +507,7 @@ void GLWall::RenderOneSidedWall(int pass)
 		if (gltexture) 
 		{
 			gltexture->Bind(Colormap.LightColor.a);
-			if (gltexture->tex->bMasked && flag!=RENDERWALL_FFBLOCK) gl.AlphaFunc(GL_GEQUAL, 0);
+			if (gltexture->tex->bMasked && type!=RENDERWALL_FFBLOCK) gl.AlphaFunc(GL_GEQUAL, 0);
 		}
 		else 
 		{
@@ -505,7 +517,7 @@ void GLWall::RenderOneSidedWall(int pass)
 		if (!renderglowing) DoRenderWall(true,NULL);
 		else DoRenderGlowingPoly();
 		if (!gltexture) gl.Enable(GL_TEXTURE_2D);
-		else if (gltexture->tex->bMasked && flag!=RENDERWALL_FFBLOCK) gl.AlphaFunc(GL_GEQUAL, 0.5f);
+		else if (gltexture->tex->bMasked && type!=RENDERWALL_FFBLOCK) gl.AlphaFunc(GL_GEQUAL, 0.5f);
 		break;
 
 
@@ -520,10 +532,10 @@ void GLWall::RenderOneSidedWall(int pass)
 		if (gltexture) 
 		{
 			gltexture->Bind(Colormap.LightColor.a);
-			if (gltexture->tex->bMasked && flag!=RENDERWALL_FFBLOCK) gl.AlphaFunc(GL_GEQUAL, 0);
+			if (gltexture->tex->bMasked && type!=RENDERWALL_FFBLOCK) gl.AlphaFunc(GL_GEQUAL, 0);
 			if (!renderglowing) DoRenderWall(true,NULL);
 			else DoRenderGlowingPoly(true, false); 
-			if (gltexture->tex->bMasked && flag!=RENDERWALL_FFBLOCK) gl.AlphaFunc(GL_GEQUAL, 0.5f);
+			if (gltexture->tex->bMasked && type!=RENDERWALL_FFBLOCK) gl.AlphaFunc(GL_GEQUAL, 0.5f);
 		}
 		break;
 
@@ -570,7 +582,7 @@ void GLWall::RenderOneSidedWall(int pass)
 //==========================================================================
 void GLWall::Draw(int pass)
 {
-	switch(flag)
+	switch(type)
 	{
 	case RENDERWALL_MIRRORSURFACE:
 		if (pass!=GLPASS_DECALS)
@@ -664,7 +676,7 @@ void GLWall::PutWall(bool translucent)
 	if (gl_fixedcolormap) 
 	{
 		// light planes don't get drawn with fullbright rendering
-		if (!gltexture && passflag[flag]!=2) return;
+		if (!gltexture && passflag[type]!=2) return;
 
 		Colormap.GetFixedColormap();
 	}
@@ -677,7 +689,7 @@ void GLWall::PutWall(bool translucent)
 	}
 	*/
 
-	switch (passflag[flag])
+	switch (passflag[type])
 	{
 	default:
 		if (translucent)
@@ -691,11 +703,11 @@ void GLWall::PutWall(bool translucent)
 			// no light touches this wall
 			list=GLDL_UNLIT;
 		}
-		else if ( !gl_fixedcolormap && passflag[flag]==1)
+		else if ( !gl_fixedcolormap && passflag[type]==1)
 		{
 			list = (!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE) ? GLDL_LITFOG : gltexture->tex->bMasked? GLDL_MASKED : GLDL_LIT;
 		}
-		else if (flag==RENDERWALL_M2S && !gl_fixedcolormap)
+		else if (type==RENDERWALL_M2S && !gl_fixedcolormap)
 		{
 			if (!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE) list = GLDL_LITFOG;
 			else list = GLDL_MASKED;
@@ -706,7 +718,7 @@ void GLWall::PutWall(bool translucent)
 		break;
 
 	case 2:
-		switch (flag)
+		switch (type)
 		{
 		// portals don't go into the draw list.
 		// Instead they are added to the portal manager
@@ -747,7 +759,7 @@ void GLWall::PutWall(bool translucent)
 			if (gl_mirrors) 
 			{
 				// draw a reflective layer over the mirror
-				flag=RENDERWALL_MIRRORSURFACE;
+				type=RENDERWALL_MIRRORSURFACE;
 				viewdistance=P_AproxDistance( ((seg->linedef->v1->x+seg->linedef->v2->x)>>1) - viewx,
 					((seg->linedef->v1->y+seg->linedef->v2->y)>>1) - viewy);
 				gl_drawlist[GLDL_TRANSLUCENTBORDER].AddWall(this);
@@ -853,7 +865,7 @@ void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 					copyWall1.glseg.z2 = copyWall2.glseg.z1 = glseg.z1 + coeff * (glseg.z2-glseg.z1);
 					copyWall1.ytop[1] = copyWall2.ytop[0] = ytop[0] + coeff * (ytop[1]-ytop[0]);
 					copyWall1.ybottom[1] = copyWall2.ybottom[0] = ybottom[0] + coeff * (ybottom[1]-ybottom[0]);
-					copyWall1.fracright = copyWall2.fracleft = fracleft + coeff * (fracright-fracleft);
+					copyWall1.glseg.fracright = copyWall2.glseg.fracleft = glseg.fracleft + coeff * (glseg.fracright-glseg.fracleft);
 					copyWall1.uprgt.u = copyWall2.uplft.u = uplft.u + coeff * (uprgt.u-uplft.u);
 					copyWall1.uprgt.v = copyWall2.uplft.v = uplft.v + coeff * (uprgt.v-uplft.v);
 					copyWall1.lorgt.u = copyWall2.lolft.u = lolft.u + coeff * (lorgt.u-lolft.u);
@@ -894,7 +906,7 @@ void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 					copyWall1.glseg.z2 = copyWall2.glseg.z1 = glseg.z1 + coeff * (glseg.z2-glseg.z1);
 					copyWall1.ytop[1] = copyWall2.ytop[0] = ytop[0] + coeff * (ytop[1]-ytop[0]);
 					copyWall1.ybottom[1] = copyWall2.ybottom[0] = ybottom[0] + coeff * (ybottom[1]-ybottom[0]);
-					copyWall1.fracright = copyWall2.fracleft = fracleft + coeff * (fracright-fracleft);
+					copyWall1.glseg.fracright = copyWall2.glseg.fracleft = glseg.fracleft + coeff * (glseg.fracright-glseg.fracleft);
 					copyWall1.uprgt.u = copyWall2.uplft.u = uplft.u + coeff * (uprgt.u-uplft.u);
 					copyWall1.uprgt.v = copyWall2.uplft.v = uplft.v + coeff * (uprgt.v-uplft.v);
 					copyWall1.lorgt.u = copyWall2.lolft.u = lolft.u + coeff * (lorgt.u-lolft.u);
@@ -914,7 +926,7 @@ void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 				PalEntry lc=Colormap.LightColor;
 
 				lightlevel=*lightlist[i].p_lightlevel;
-				Colormap.LightColor=(*lightlist[i].p_extra_colormap)->Color;
+				Colormap.CopyLightColor(*lightlist[i].p_extra_colormap);
 				PutWall(translucent);
 
 				lightlevel=ll;
@@ -926,7 +938,7 @@ void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 			{
 				copyWall1=*this;
 				copyWall1.lightlevel=*lightlist[i].p_lightlevel;
-				copyWall1.Colormap.LightColor=(*lightlist[i].p_extra_colormap)->Color;
+				copyWall1.Colormap.CopyLightColor(*lightlist[i].p_extra_colormap);
 
 				ytop[0]=copyWall1.ybottom[0]=maplightbottomleft;
 				ytop[1]=copyWall1.ybottom[1]=maplightbottomright;
@@ -945,7 +957,7 @@ void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 	PalEntry lc=Colormap.LightColor;
 
 	lightlevel=*lightlist[lightlist.Size()-1].p_lightlevel;
-	Colormap.LightColor=(*lightlist[lightlist.Size()-1].p_extra_colormap)->Color;
+	Colormap.CopyLightColor(*lightlist[lightlist.Size()-1].p_extra_colormap);
 	PutWall(translucent);
 
 	lightlevel=ll;
@@ -974,11 +986,11 @@ bool GLWall::DoHorizon(seg_t * seg,sector_t * fs, vertex_t * v1,vertex_t * v2)
 
 		if (fs->ceilingpic==skyflatnum)
 		{
-			SkyTexture(fs->sky, fs->CeilingSkyBox, NULL, true, false);
+			SkyTexture(fs->sky, fs->CeilingSkyBox, true);
 		}
 		else
 		{
-			flag=RENDERWALL_HORIZON;
+			type=RENDERWALL_HORIZON;
 			hi.plane.GetFromSector(fs, true);
 			hi.lightlevel=GetCeilingLight(fs);
 			hi.colormap=fs->ColorMap;
@@ -1004,11 +1016,11 @@ bool GLWall::DoHorizon(seg_t * seg,sector_t * fs, vertex_t * v1,vertex_t * v2)
 		ybottom[1]=ybottom[0]=(float)fs->floortexz/MAP_SCALE;
 		if (fs->floorpic==skyflatnum)
 		{
-			SkyTexture(fs->sky, fs->FloorSkyBox, NULL, false, false);
+			SkyTexture(fs->sky, fs->FloorSkyBox, false);
 		}
 		else
 		{
-			flag=RENDERWALL_HORIZON;
+			type=RENDERWALL_HORIZON;
 			hi.plane.GetFromSector(fs, false);
 			hi.lightlevel=GetFloorLight(fs);
 			hi.colormap=fs->ColorMap;
@@ -1095,7 +1107,7 @@ bool GLWall::SetWallCoordinates(seg_t * seg, int texturetop,
 
 		glseg.x1=glseg.x1+inter_x*(glseg.x2-glseg.x1);
 		glseg.z1=glseg.z1+inter_x*(glseg.z2-glseg.z1);
-		fracleft = inter_x;
+		glseg.fracleft = inter_x;
 
 		ybottom[0]=ytop[0]=TO_MAP(inter_y);	
 
@@ -1137,7 +1149,7 @@ bool GLWall::SetWallCoordinates(seg_t * seg, int texturetop,
 
 		glseg.x2=glseg.x1+inter_x*(glseg.x2-glseg.x1);
 		glseg.z2=glseg.z1+inter_x*(glseg.z2-glseg.z1);
-		fracright = inter_x;
+		glseg.fracright = inter_x;
 
 		ybottom[1]=ytop[1]=TO_MAP(inter_y);
 		if (wti)
@@ -1147,11 +1159,11 @@ bool GLWall::SetWallCoordinates(seg_t * seg, int texturetop,
 		}
 	}
 
-	uplft.u = lolft.u = l_ul + texlength * fracleft;
-	uprgt.u = lorgt.u = l_ul + texlength * fracright;
+	uplft.u = lolft.u = l_ul + texlength * glseg.fracleft;
+	uprgt.u = lorgt.u = l_ul + texlength * glseg.fracright;
 
 
-	if (gltexture && gltexture->tex->bHasCanvas && clampy)
+	if (gltexture && gltexture->tex->bHasCanvas && flags&GLWF_CLAMPY)
 	{
 		// Camera textures are upside down so we have to shift the y-coordinate
 		// from [-1..0] to [0..1] when using texture clamping!
@@ -1169,7 +1181,7 @@ bool GLWall::SetWallCoordinates(seg_t * seg, int texturetop,
 // 
 //
 //==========================================================================
-void GLWall::DoTexture(int type,seg_t * seg,int peg,
+void GLWall::DoTexture(int _type,seg_t * seg,int peg,
 					   int ceilingrefheight,int floorrefheight,
 					   int topleft,int topright,
 					   int bottomleft,int bottomright,
@@ -1188,9 +1200,9 @@ void GLWall::DoTexture(int type,seg_t * seg,int peg,
 	int lh=ceilingrefheight-floorrefheight;
 
 
-	flag=type;
-	if (flag==RENDERWALL_M1S && seg->linedef->special==Line_Mirror && !(gl.flags&RFL_NOSTENCIL)) 
-		flag=(gl_mirrors) ? RENDERWALL_MIRROR : RENDERWALL_MIRRORSURFACE;
+	type=_type;
+	if (type==RENDERWALL_M1S && seg->linedef->special==Line_Mirror && !(gl.flags&RFL_NOSTENCIL)) 
+		type=(gl_mirrors) ? RENDERWALL_MIRROR : RENDERWALL_MIRRORSURFACE;
 
 	ceilingrefheight+= 	gltexture->RowOffset(seg->sidedef->rowoffset)+
 						(peg ? (gltexture->TextureHeight()<<FRACBITS)-lh-v_offset:0);
@@ -1348,20 +1360,27 @@ void GLWall::DoMidTexture(seg_t * seg, bool drawfogsheet,
 
 	if (gltexture)
 	{
+		fixed_t texlength = seg->sidedef->TexelLength;
+
+		// move the left edge's texture offset into the range [0..texlength]
+		t_ofs%=texlength;
+		if (t_ofs<0) t_ofs+=texlength;
+
 		// Determine clamping based on the linedef, not the seg - even if segs are rendered!
 		fixed_t textureoffset=gltexture->TextureOffset(t_ofs);
 
-		/*	
-		if (t_ofs<0)
-		{
-		}
-		*/
-
 		int righttex=textureoffset+seg->sidedef->TexelLength;
 		
-		clampx= (textureoffset==0 && righttex<=gltexture->TextureWidth()) || 
-			(righttex==gltexture->TextureWidth() && textureoffset>0);
-		clampy=true;
+		if ((textureoffset==0 && righttex<=gltexture->TextureWidth()) || 
+			(righttex==gltexture->TextureWidth() && textureoffset>0))
+		{
+			flags|=GLWF_CLAMPX;
+		}
+		else
+		{
+			flags&=~GLWF_CLAMPX;
+		}
+		flags|=GLWF_CLAMPY;
 	}
 	SetWallCoordinates(seg, texturetop, topleft, topright, bottomleft, bottomright, t_ofs);
 
@@ -1372,12 +1391,12 @@ void GLWall::DoMidTexture(seg_t * seg, bool drawfogsheet,
 	// 
 	if (drawfogsheet)
 	{
-		flag=RENDERWALL_FOGSHEET;
+		type=RENDERWALL_FOGSHEET;
 		PutWall(true);
 		if (!gltexture) return;
-		flag=RENDERWALL_M2SNF;
+		type=RENDERWALL_M2SNF;
 	}
-	else flag=RENDERWALL_M2S;
+	else type=RENDERWALL_M2S;
 
 	//
 	//
@@ -1489,7 +1508,7 @@ void GLWall::DoMidTexture(seg_t * seg, bool drawfogsheet,
 	}
 	// restore some values that have been altered in this function!
 	glseg=glsave;
-	clampx=clampy=false;
+	flags&=~(GLWF_CLAMPX|GLWF_CLAMPY);
 }
 
 
@@ -1553,7 +1572,7 @@ void GLWall::BuildFFBlock(seg_t * seg, F3DFloor * rover,
 		uprgt.v=wti->FixToTexV(to+rowoffset+*rover->top.texheight-ff_topright);
 		lolft.v=wti->FixToTexV(to+rowoffset+*rover->top.texheight-ff_bottomleft);
 		lorgt.v=wti->FixToTexV(to+rowoffset+*rover->top.texheight-ff_bottomright);
-		flag=RENDERWALL_FFBLOCK;
+		type=RENDERWALL_FFBLOCK;
 	}
 
 	ytop[0]=TO_MAP(ff_topleft);
@@ -1566,7 +1585,7 @@ void GLWall::BuildFFBlock(seg_t * seg, F3DFloor * rover,
 		alpha=rover->alpha/255.0f;
 		RenderStyle=STYLE_Translucent;
 		translucent=true;
-		flag=gltexture? RENDERWALL_M2S:RENDERWALL_COLOR;
+		type=gltexture? RENDERWALL_M2S:RENDERWALL_COLOR;
 	}
 	else 
 	{
@@ -1809,7 +1828,7 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 #ifdef _DEBUG
 	if (seg->linedef-lines==break_renderlinedef && IsDebuggerPresent())
 		__asm int 3;	
-	if (seg->linedef-lines==21)
+	if (seg->linedef-lines==512)
 		__asm nop
 #endif
 
@@ -1839,8 +1858,8 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 		v1=seg->linedef->v2;
 		v2=seg->linedef->v1;
 	}
-	fracleft=0;
-	fracright=1;
+	glseg.fracleft=0;
+	glseg.fracright=1;
 	vertexes[0]=v1;
 	vertexes[1]=v2;
 
@@ -1848,13 +1867,13 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 	{
 		if (abs(v1->x-v2->x) > abs(v1->y-v2->y))
 		{
-			fracleft = float(seg->v1->x - v1->x)/float(v2->x-v1->x);
-			fracright = float(seg->v2->x - v1->x)/float(v2->x-v1->x);
+			glseg.fracleft = float(seg->v1->x - v1->x)/float(v2->x-v1->x);
+			glseg.fracright = float(seg->v2->x - v1->x)/float(v2->x-v1->x);
 		}
 		else
 		{
-			fracleft = float(seg->v1->y - v1->y)/float(v2->y-v1->y);
-			fracright = float(seg->v2->y - v1->y)/float(v2->y-v1->y);
+			glseg.fracleft = float(seg->v1->y - v1->y)/float(v2->y-v1->y);
+			glseg.fracright = float(seg->v2->y - v1->y)/float(v2->y-v1->y);
 		}
 		v1=seg->v1;
 		v2=seg->v2;
@@ -1865,7 +1884,7 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 	glseg.z1= v1->y/(float)MAP_SCALE;
 	glseg.x2=-v2->x/(float)MAP_SCALE;
 	glseg.z2= v2->y/(float)MAP_SCALE;
-	clampx=clampy=false;
+	flags=0;
 
 	lightlevel=frontsector->lightlevel;
 
@@ -1954,8 +1973,8 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 			bch1 = bch2 = backsector->ceilingtexz;
 		}
 
-		// upper sky
 		SkyTop(seg,frontsector,backsector,v1,v2);
+		SkyBottom(seg,frontsector,backsector,v1,v2);
 		
 		// upper texture
 		if (frontsector->ceilingpic!=skyflatnum || backsector->ceilingpic!=skyflatnum)
@@ -2000,6 +2019,7 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 			}
 		}
 
+
 		/* mid texture */
 
 		// in all other cases this might create more problems than it solves.
@@ -2018,9 +2038,6 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 		{
 			DoFFloorBlocks(seg,frontsector,backsector, fch1, fch2, ffh1, ffh2, bch1, bch2, bfh1, bfh2);
 		}
-		
-		/* bottom sky */
-		SkyBottom(seg,frontsector,backsector,v1,v2);
 		
 		if (1)//!((frontsector->floorpic==skyflatnum) && (backsector->floorpic==skyflatnum)))
 		{
@@ -2097,7 +2114,10 @@ void GLWall::ProcessLowerMiniseg(seg_t *seg, sector_t * frontsector, sector_t * 
 		glseg.z1= v1->y/(float)MAP_SCALE;
 		glseg.x2=-v2->x/(float)MAP_SCALE;
 		glseg.z2= v2->y/(float)MAP_SCALE;
-		clampx=clampy=false;
+		glseg.fracleft=0;
+		glseg.fracright=1;
+
+		flags&=~(GLWF_CLAMPX|GLWF_CLAMPY);
 
 		lightlevel=frontsector->lightlevel;
 
@@ -2114,7 +2134,7 @@ void GLWall::ProcessLowerMiniseg(seg_t *seg, sector_t * frontsector, sector_t * 
 
 		if (gltexture) 
 		{
-			flag=RENDERWALL_BOTTOM;
+			type=RENDERWALL_BOTTOM;
 			SetWallCoordinates(seg, bfh, bfh, bfh, ffh, ffh, 0);
 			PutWall(false);
 		}

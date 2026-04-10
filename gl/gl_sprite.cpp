@@ -45,7 +45,7 @@
 #include "gl/gl_texture.h"
 #include "gl/gl_functions.h"
 #include "gl/gl_portal.h"
-#include "gl/models.h"
+#include "gl/gl_models.h"
 
 CVAR(Bool, gl_usecolorblending, true, CVAR_ARCHIVE)
 CVAR(Int, gl_spriteclip, 1, CVAR_ARCHIVE)
@@ -70,13 +70,13 @@ void GLSprite::Draw(int pass)
 	if (pass==GLPASS_DECALS) return;
 
 	if (gltexture) gltexture->BindPatch(Colormap.LightColor.a,translation);
-	else 
+	else if (!modelframe)
 	{
 		gl.Disable(GL_TEXTURE_2D);
 		gl_SetColorMode(CM_DEFAULT);
 	}
 
-	if (RenderStyle != STYLE_Normal && actor && !(actor->momx|actor->momy))
+	if (RenderStyle != STYLE_Normal && actor && !(actor->momx|actor->momy) && !modelframe)
 	{
 		// Draw translucent non-moving sprites with a slightly altered z-offset to avoid z-fighting 
 		// when in the same position as a regular sprite
@@ -155,7 +155,7 @@ void GLSprite::Draw(int pass)
 	if (gl_isBlack(Colormap.FadeColor)) foglevel=lightlevel;
 	gl_SetFog(foglevel,  Colormap.FadeColor, RenderStyle);
 
-	if (!model)
+	if (!modelframe)
 	{
 		gl.Begin(GL_TRIANGLE_STRIP);
 		if (gltexture)
@@ -176,7 +176,7 @@ void GLSprite::Draw(int pass)
 	}
 	else
 	{
-		Mod_RenderModel(this, model, actor->frame&SF_FRAMEMASK);
+		gl_RenderModel(this, Colormap.LightColor.a);
 	}
 
 	// For translucent objects restore the default blending mode here!
@@ -246,7 +246,7 @@ void GLSprite::SplitSprite(sector_t * frontsector, bool translucent)
 		{
 			copySprite=*this;
 			copySprite.lightlevel=*lightlist[i].p_lightlevel;
-			copySprite.Colormap.LightColor=(*lightlist[i].p_extra_colormap)->Color;
+			copySprite.Colormap.CopyLightColor(*lightlist[i].p_extra_colormap);
 
 			if (!gl_isWhite(ThingColor))
 			{
@@ -467,7 +467,8 @@ void GLSprite::Process(AActor* thing,sector_t * sector)
 	y = TO_MAP(thingz-thing->floorclip);
 	z = TO_MAP(thingy);
 	
-	if (!Mod_GetModelForSprite(thing->sprite, thing->frame, &model, &gltexture))
+	modelframe = gl_FindModelFrame(RUNTIME_TYPE(thing), thing->sprite, thing->frame /*, thing->state*/);
+	if (!modelframe)
 	{
 		angle_t ang = R_PointToAngle(thingx, thingy);
 
@@ -547,6 +548,7 @@ void GLSprite::Process(AActor* thing,sector_t * sector)
 
 		scale=P_AproxDistance(thing->x-viewx, thing->y-viewy);
 	}
+	else gltexture=NULL;
 
 	actor=thing;
 	particle=NULL;
@@ -556,7 +558,7 @@ void GLSprite::Process(AActor* thing,sector_t * sector)
 	{
 		PutSprite(RenderStyle!=STYLE_Normal);
 	}
-	else if (model)
+	else if (modelframe)
 	{
 		// FIXME: Get the appropriate light color here!
 		PutSprite(RenderStyle!=STYLE_Normal);
@@ -616,7 +618,7 @@ void GLSprite::ProcessParticle (particle_t *particle, sector_t *sector)//, int s
 
 	SetThingColor(GPalette.BaseColors[particle->color]);
 
-	model=NULL;
+	modelframe=NULL;
 	gltexture=NULL;
 
 	x=-TO_MAP(particle->x);

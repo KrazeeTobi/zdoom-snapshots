@@ -320,6 +320,7 @@ void P_LoadVertexes (int lump)
 	// Allocate memory for buffer.
 	vertexes = new vertex_t[numvertexes];		
 
+
 	data = Wads.OpenLumpNum (lump);
 		
 	// Copy and convert vertex coordinates, internal representation as fixed.

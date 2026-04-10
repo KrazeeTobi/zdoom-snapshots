@@ -58,22 +58,6 @@
 //
 //==========================================================================
 
-class FHiresTexture : public FTexture
-{
-	BYTE *Pixels;
-	Span DummySpans[2];
-
-public:
-	FHiresTexture (const char * name, int w, int h);
-	virtual ~FHiresTexture ();
-
-	// Returns a single column of the texture
-	virtual const BYTE *GetColumn (unsigned int column, const Span **spans_out);
-	virtual const BYTE *GetPixels ();
-	virtual void Unload ();
-};
-
-
 FHiresTexture::FHiresTexture (const char * name, int w, int h)
 : Pixels(0)
 {

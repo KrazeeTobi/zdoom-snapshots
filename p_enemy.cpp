@@ -157,7 +157,11 @@ void P_RecursiveSound (sector_t *sec, AActor *soundtarget, bool splash, int soun
 		 || (other->floorplane.ZatPoint (check->v1->x, check->v1->y) >=
 			 sec->ceilingplane.ZatPoint (check->v1->x, check->v1->y) &&
 			 other->floorplane.ZatPoint (check->v2->x, check->v2->y) >=
-			 sec->ceilingplane.ZatPoint (check->v2->x, check->v2->y)))
+			 sec->ceilingplane.ZatPoint (check->v2->x, check->v2->y))
+		 || (other->floorplane.ZatPoint (check->v1->x, check->v1->y) >=
+			 other->ceilingplane.ZatPoint (check->v1->x, check->v1->y) &&
+			 other->floorplane.ZatPoint (check->v2->x, check->v2->y) >=
+			 other->ceilingplane.ZatPoint (check->v2->x, check->v2->y)))
 		{
 			continue;
 		}

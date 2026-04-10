@@ -4998,6 +4998,9 @@
 				RelativePath="w_wad.h">
 			</File>
 			<File
+				RelativePath=".\w_zip.h">
+			</File>
+			<File
 				RelativePath="weightedlist.h">
 			</File>
 			<File
@@ -5011,7 +5014,34 @@
 			Name="Ressourcendateien"
 			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
 			<File
+				RelativePath=".\win32\boing1.ico">
+			</File>
+			<File
+				RelativePath=".\win32\boing2.ico">
+			</File>
+			<File
+				RelativePath=".\win32\boing3.ico">
+			</File>
+			<File
+				RelativePath=".\win32\boing4.ico">
+			</File>
+			<File
+				RelativePath=".\win32\boing5.ico">
+			</File>
+			<File
+				RelativePath=".\win32\boing6.ico">
+			</File>
+			<File
+				RelativePath=".\win32\boing7.ico">
+			</File>
+			<File
+				RelativePath=".\win32\boing8.ico">
+			</File>
+			<File
 				RelativePath="win32\cursor1.cur">
+			</File>
+			<File
+				RelativePath=".\win32\deadguy.bmp">
 			</File>
 			<File
 				RelativePath="win32\icon1.ico">
@@ -5586,6 +5616,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\gl\gl_models.cpp">
+			</File>
+			<File
 				RelativePath=".\gl\gl_nodes.cpp">
 			</File>
 			<File
@@ -5978,43 +6011,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="gl\models.cpp">
-				<FileConfiguration
-					Name="Optimized Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						UsePrecompiledHeader="3"
-						PrecompiledHeaderThrough="gl_pch.h"
-						PrecompiledHeaderFile=".\Release/CDoom_gl.pch"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="0"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-						BasicRuntimeChecks="3"
-						UsePrecompiledHeader="3"
-						PrecompiledHeaderThrough="gl_pch.h"
-						PrecompiledHeaderFile=".\Debug/CDoom_gl.pch"
-						BrowseInformation="1"/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath=".\gl\win32gliface.cpp">
 				<FileConfiguration
 					Name="Optimized Debug|Win32">
@@ -6068,6 +6064,9 @@
 					RelativePath="gl\gl_lights.h">
 				</File>
 				<File
+					RelativePath=".\gl\gl_models.h">
+				</File>
+				<File
 					RelativePath=".\gl\gl_pch.h">
 				</File>
 				<File
@@ -6086,16 +6085,10 @@
 					RelativePath="gl\gl_texture.h">
 				</File>
 				<File
-					RelativePath=".\gl\gl_translate.h">
-				</File>
-				<File
 					RelativePath=".\gl\gl_values.h">
 				</File>
 				<File
 					RelativePath="gl\gltexture.h">
-				</File>
-				<File
-					RelativePath="gl\models.h">
 				</File>
 				<File
 					RelativePath="gl\tab_anorms.h">

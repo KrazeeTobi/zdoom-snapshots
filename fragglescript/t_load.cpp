@@ -146,6 +146,7 @@ static void ParseInfoCmd(char *line)
 			level.skypic1[8]=level.skypic2[8]=0;
 			sky2texture = sky1texture = TexMan.GetTexture (sc_String, FTexture::TEX_Wall, FTextureManager::TEXMAN_Overridable);
 			R_InitSkyMap ();
+			sky1pos = sky2pos = 0;
 		}
 		else if (SC_Compare("interpic"))
 		{

@@ -252,11 +252,6 @@ int FTextureManager::CreateTexture (int lumpnum, int usetype)
 		{
 			type = t_imgz;
 		}
-		else if (first4bytes == MAKE_ID('P','i','c','Z'))
-		{
-			out = new FPicZTexture (lumpnum);
-			type = t_png;
-		}
 		else if (first4bytes == MAKE_ID(137,'P','N','G'))
 		{
 			DWORD width, height;
@@ -1197,6 +1192,8 @@ void FPatchTexture::MakeTexture ()
 
 	numspans = Width;
 
+	if (numpix>1000000)
+		__asm nop
 	Pixels = new BYTE[numpix];
 	memset (Pixels, 0, numpix);
 

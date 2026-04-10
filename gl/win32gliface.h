@@ -119,12 +119,18 @@ public:
 
 	void InitializeState();
 	void Update();
+
+	void DoSetGamma();
+
 	bool SetGamma(float gamma);
+	bool SetBrightness (float bright);
+	bool SetContrast (float contrast);
 
 protected:
 
 	PalEntry SourcePalette[256];
-	BYTE m_gammaTable[256];
+	//BYTE m_gammaTable[256];
+	float m_Gamma, m_Brightness, m_Contrast;
 	WORD m_origGamma[768];
 	BOOL m_supportsGamma;
 	bool m_Fullscreen;

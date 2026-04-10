@@ -1088,7 +1088,7 @@ bool AActor::FloorBounceMissile (secplane_t &plane)
 		momx = MulScale30 (momx - MulScale15 (plane.a, dot), 536870912);
 		momy = MulScale30 (momy - MulScale15 (plane.b, dot), 536870912);
 		momz = MulScale30 (momz - MulScale15 (plane.c, dot), 536870912);
-		reactiontime = MulScale30 ((reactiontime<<FRACBITS) - MulScale15 (plane.c, dot), 536870912)>>FRACBITS;
+		reactiontime>>=1;
 	}
 	else
 	{
@@ -2753,7 +2753,7 @@ void AActor::Tick ()
 	// won't hurt anything. Don't do this if damage is 0! That way, you can
 	// still have missiles that go straight up and down through actors without
 	// damaging anything.
-	if ((flags & MF_MISSILE) && (momx|momy) == 0 && damage == 0)
+	if ((flags & MF_MISSILE) && (momx|momy) == 0 && damage != 0)
 	{
 		momx = 1;
 	}

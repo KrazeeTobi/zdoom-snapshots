@@ -1528,7 +1528,7 @@ void A_FireMacePL2 (AActor *actor)
 		mo->momx += player->mo->momx;
 		mo->momy += player->mo->momy;
 		mo->momz = 2*FRACUNIT+
-			finetangent[FINEANGLES/4-(player->mo->pitch>>ANGLETOFINESHIFT)];
+			clamp<fixed_t>(finetangent[FINEANGLES/4-(player->mo->pitch>>ANGLETOFINESHIFT)], -5*FRACUNIT, 5*FRACUNIT);
 		if (linetarget)
 		{
 			mo->tracer = linetarget;

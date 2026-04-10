@@ -54,12 +54,30 @@ enum
 	NoSkyDraw = 89
 };
 
+
+//==========================================================================
+//
+//  Calculate mirrorplane
+//
+//==========================================================================
+void GLWall::MirrorPlane(secplane_t * plane, bool ceiling)
+{
+	if (!(gl.flags&RFL_NOSTENCIL))
+	{
+		if (ceiling && viewz >= plane->ZatPoint(viewx, viewy)) return;
+		if (!ceiling && viewz <= plane->ZatPoint(viewx, viewy)) return;
+		type=RENDERWALL_PLANEMIRROR;
+		planemirror=plane;
+		PutWall(0);
+	}
+}
+
 //==========================================================================
 //
 //  Calculate sky texture
 //
 //==========================================================================
-void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, secplane_t * plane, bool ceiling, float reflect)
+void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, bool ceiling)
 {
 	// JUSTHIT is used as an indicator that a skybox is in use.
 	// This is to avoid recursion
@@ -67,7 +85,7 @@ void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, secplane_t * plane, bo
 	{
 		if (!skyboxx->Mate) 
 		{
-			flag=RENDERWALL_SKYBOX;
+			type=RENDERWALL_SKYBOX;
 			skybox=skyboxx;
 		}
 		else 
@@ -75,20 +93,13 @@ void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, secplane_t * plane, bo
 			static GLSectorStackInfo stackinfo;
 			if (ceiling && GLPortal::inlowerstack) return;
 			if (!ceiling && GLPortal::inupperstack) return;
-			flag=RENDERWALL_SECTORSTACK;
+			type=RENDERWALL_SECTORSTACK;
 			stackinfo.deltax = skyboxx->Mate->x - skyboxx->x;
 			stackinfo.deltay = skyboxx->Mate->y - skyboxx->y;
 			stackinfo.deltaz = 0;
 			stackinfo.isupper= ceiling;
 			stack=&stackinfo;
 		}
-	}
-	else if (!(gl.flags&RFL_NOSTENCIL) && !skyboxx && reflect!=0)
-	{
-		if (ceiling && viewz >= plane->ZatPoint(viewx, viewy)) return;
-		if (!ceiling && viewz <= plane->ZatPoint(viewx, viewy)) return;
-		flag=RENDERWALL_PLANEMIRROR;
-		planemirror=plane;
 	}
 	else
 	{
@@ -143,7 +154,7 @@ void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, secplane_t * plane, bo
 		}
 		else skyinfo.fadecolor=0;
 
-		flag=RENDERWALL_SKY;
+		type=RENDERWALL_SKY;
 		sky = &skyinfo;
 	}
 	PutWall(0);
@@ -157,19 +168,23 @@ void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, secplane_t * plane, bo
 //==========================================================================
 void GLWall::SkyNormal(sector_t * fs,vertex_t * v1,vertex_t * v2)
 {
-	if (fs->ceilingpic==skyflatnum || (fs->CeilingSkyBox && fs->CeilingSkyBox->bAlways) || fs->ceiling_reflect)
+	bool ceilingsky = fs->ceilingpic==skyflatnum || (fs->CeilingSkyBox && fs->CeilingSkyBox->bAlways);
+	if (ceilingsky || fs->ceiling_reflect)
 	{
 		ytop[0]=ytop[1]=10000.0f;
 		ybottom[0]=yceil[0];
 		ybottom[1]=yceil[1];
-		SkyTexture(fs->sky,fs->CeilingSkyBox, &fs->ceilingplane, true, fs->ceilingpic==skyflatnum ? 0:fs->ceiling_reflect);
+		if (ceilingsky)	SkyTexture(fs->sky,fs->CeilingSkyBox, true);
+		else MirrorPlane(&fs->ceilingplane, true);
 	}
-	if (fs->floorpic==skyflatnum || (fs->FloorSkyBox && fs->FloorSkyBox->bAlways) || fs->floor_reflect)
+	bool floorsky = fs->floorpic==skyflatnum || (fs->FloorSkyBox && fs->FloorSkyBox->bAlways);
+	if (floorsky || fs->floor_reflect)
 	{
 		ytop[0]=yfloor[0];
 		ytop[1]=yfloor[1];
 		ybottom[0]=ybottom[1]=-10000.0f;
-		SkyTexture(fs->sky,fs->FloorSkyBox, &fs->floorplane, false, fs->ceilingpic==skyflatnum ? 0:fs->floor_reflect);
+		if (floorsky) SkyTexture(fs->sky,fs->FloorSkyBox, false);
+		else MirrorPlane(&fs->floorplane, false);
 	}
 }
 
@@ -213,23 +228,27 @@ void GLWall::SkyTop(seg_t * seg,sector_t * fs,sector_t * bs,vertex_t * v1,vertex
 		{
 			ybottom[0]=TO_MAP(bs->ceilingplane.ZatPoint(v1));
 			ybottom[1]=TO_MAP(bs->ceilingplane.ZatPoint(v2));
+			flags|=GLWF_SKYHACK;	// mid textures on such lines need special treatment!
 		}
 
-		SkyTexture(fs->sky,fs->CeilingSkyBox, NULL, true, 0);
+		SkyTexture(fs->sky,fs->CeilingSkyBox, true);
 	}
-	else if ((fs->CeilingSkyBox && fs->CeilingSkyBox->bAlways && fs->CeilingSkyBox!=bs->CeilingSkyBox) ||
-			 fs->ceiling_reflect)
+	else 
 	{
-		// stacked sectors
-		fixed_t fsc1=fs->ceilingplane.ZatPoint(v1);
-		fixed_t fsc2=fs->ceilingplane.ZatPoint(v2);
+		bool ceilingsky = (fs->CeilingSkyBox && fs->CeilingSkyBox->bAlways && fs->CeilingSkyBox!=bs->CeilingSkyBox); 
+		if (ceilingsky || fs->ceiling_reflect)
+		{
+			// stacked sectors
+			fixed_t fsc1=fs->ceilingplane.ZatPoint(v1);
+			fixed_t fsc2=fs->ceilingplane.ZatPoint(v2);
 
-		ytop[0]=ytop[1]=10000.0f;
-		ybottom[0]=TO_MAP(fsc1);
-		ybottom[1]=TO_MAP(fsc2);
-		SkyTexture(fs->sky,fs->CeilingSkyBox, &fs->ceilingplane, true, fs->ceiling_reflect);
+			ytop[0]=ytop[1]=10000.0f;
+			ybottom[0]=TO_MAP(fsc1);
+			ybottom[1]=TO_MAP(fsc2);
+			if (ceilingsky)	SkyTexture(fs->sky,fs->CeilingSkyBox, true);
+			else MirrorPlane(&fs->ceilingplane, true);
+		}
 	}
-
 }
 
 
@@ -273,21 +292,27 @@ void GLWall::SkyBottom(seg_t * seg,sector_t * fs,sector_t * bs,vertex_t * v1,ver
 		{
 			ytop[0]=TO_MAP(bs->floorplane.ZatPoint(v1));
 			ytop[1]=TO_MAP(bs->floorplane.ZatPoint(v2));
+			flags|=GLWF_SKYHACK;	// mid textures on such lines need special treatment!
 		}
 
-		SkyTexture(fs->sky,fs->FloorSkyBox, NULL, false, 0);
+		SkyTexture(fs->sky,fs->FloorSkyBox, false);
 	}
-	else if ((fs->FloorSkyBox && fs->FloorSkyBox->bAlways && fs->FloorSkyBox!=bs->FloorSkyBox) || fs->floor_reflect)
+	else 
 	{
-		// stacked sectors
-		fixed_t fsc1=fs->floorplane.ZatPoint(v1);
-		fixed_t fsc2=fs->floorplane.ZatPoint(v2);
+		bool floorsky = (fs->FloorSkyBox && fs->FloorSkyBox->bAlways && fs->FloorSkyBox!=bs->FloorSkyBox);
+		if (floorsky || fs->floor_reflect)
+		{
+			// stacked sectors
+			fixed_t fsc1=fs->floorplane.ZatPoint(v1);
+			fixed_t fsc2=fs->floorplane.ZatPoint(v2);
 
-		ybottom[0]=ybottom[1]=-10000.0f;
-		ytop[0]=TO_MAP(fsc1);
-		ytop[1]=TO_MAP(fsc2);
+			ybottom[0]=ybottom[1]=-10000.0f;
+			ytop[0]=TO_MAP(fsc1);
+			ytop[1]=TO_MAP(fsc2);
 
-		SkyTexture(fs->sky,fs->FloorSkyBox, &fs->floorplane, false, fs->floor_reflect);
+			if (floorsky) SkyTexture(fs->sky,fs->FloorSkyBox, false);
+			else MirrorPlane(&fs->floorplane, false);
+		}
 	}
 }
 

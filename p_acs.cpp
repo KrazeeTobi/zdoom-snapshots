@@ -4327,6 +4327,7 @@ int DLevelScript::RunScript ()
 					sky2texture = TexMan.GetTexture (sky2name, FTexture::TEX_Wall, FTextureManager::TEXMAN_Overridable);
 				}
 				R_InitSkyMap ();
+				sky1pos = sky2pos = 0;
 			}
 			break;
 

@@ -12,6 +12,7 @@ EXTERN_CVAR(Bool, gl_attachedlights)
 EXTERN_CVAR(Bool, gl_bulletlight)
 
 class ADynamicLight;
+class FArchive;
 
 typedef enum
 {
@@ -19,6 +20,14 @@ typedef enum
    CYCLE_Sin,
    CYCLE_Cos
 } CycleType;
+
+inline FArchive &operator<< (FArchive &arc, CycleType &type)
+{
+	BYTE val = (BYTE)type;
+	arc << val;
+	type = (CycleType)val;
+	return arc;
+}
 
 
 class FCycler
@@ -30,6 +39,8 @@ public:
    void ShouldCycle(bool sc);
    void SetCycleType(CycleType ct);
    float GetVal();
+   
+   void Serialize(FArchive & arc);
 protected:
    float m_start, m_end, m_current;
    float m_time, m_cycle;
@@ -37,6 +48,11 @@ protected:
    CycleType m_cycleType;
 };
 
+inline FArchive &operator<< (FArchive &arc, FCycler &type)
+{
+	type.Serialize(arc);
+	return arc;
+}
 
 
 enum

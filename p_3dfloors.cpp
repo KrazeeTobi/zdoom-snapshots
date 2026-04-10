@@ -889,9 +889,16 @@ void P_SpawnSpecials2 (void)
 			break;
 
 		case Sector_Set3DFloor:
-			line->args[0]+=256*line->args[4];
-			line->args[4]=0;
-			P_Set3DFloor(line, line->args[1], line->args[2], line->args[3]);
+			if (line->args[1]&8)
+			{
+				line->id = line->args[4];
+			}
+			else
+			{
+				line->args[0]+=256*line->args[4];
+				line->args[4]=0;
+			}
+			P_Set3DFloor(line, line->args[1]&~8, line->args[2], line->args[3]);
 			break;
 
 		default:

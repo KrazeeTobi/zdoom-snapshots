@@ -324,7 +324,15 @@ BOOL SC_GetString (void)
 		ScriptPtr++;
 		while (*ScriptPtr != ASCII_QUOTE)
 		{
-			*text++ = *ScriptPtr++;
+			if (*ScriptPtr=='\\' && ScriptPtr[1]=='"')
+			{
+				*text++ = '"';
+				ScriptPtr+=2;
+			}
+			else
+			{
+				*text++ = *ScriptPtr++;
+			}
 			if (ScriptPtr == ScriptEndPtr
 				|| text == &sc_String[MAX_STRING_SIZE-1])
 			{

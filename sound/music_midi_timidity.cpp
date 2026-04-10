@@ -164,7 +164,7 @@ TimiditySong::~TimiditySong ()
 	}
 }
 
-TimiditySong::TimiditySong (FILE *file, int len)
+TimiditySong::TimiditySong (FILE *file, char * musiccache, int len)
 	: DiskName ("zmid"),
 #ifdef _WIN32
 	  ReadWavePipe (INVALID_HANDLE_VALUE), WriteWavePipe (INVALID_HANDLE_VALUE),
@@ -196,8 +196,15 @@ TimiditySong::TimiditySong (FILE *file, int len)
 		return;
 	}
 
-	BYTE *buf = new BYTE[len];
-	fread (buf, 1, len, file);
+	BYTE *buf;
+	
+	if (file!=NULL) 
+	{
+		buf = new BYTE[len];
+		fread (buf, 1, len, file);
+	}
+	else buf = (BYTE*)musiccache;
+
 
 	// The file type has already been checked before this class instance was
 	// created, so we only need to check one character to determine if this
@@ -210,8 +217,11 @@ TimiditySong::TimiditySong (FILE *file, int len)
 	{
 		success = ProduceMIDI (buf, f);
 	}
-	fclose (f);
-	delete[] buf;
+	if (file!=NULL) 
+	{
+		fclose (f);
+		delete[] buf;
+	}
 
 	if (success)
 	{

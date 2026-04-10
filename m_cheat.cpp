@@ -103,18 +103,21 @@ void cht_DoCheat (player_t *player, int cheat)
 		break;
 
 	case CHT_FLY:
-		player->cheats ^= CF_FLY;
-		if (player->cheats & CF_FLY)
+		if (player->mo != NULL)
 		{
-			player->mo->flags |= MF_NOGRAVITY;
-			player->mo->flags2 |= MF2_FLY;
-			msg = "You feel lighter";
-		}
-		else
-		{
-			player->mo->flags &= ~MF_NOGRAVITY;
-			player->mo->flags2 &= ~MF2_FLY;
-			msg = "Gravity weighs you down";
+			player->cheats ^= CF_FLY;
+			if (player->cheats & CF_FLY)
+			{
+				player->mo->flags |= MF_NOGRAVITY;
+				player->mo->flags2 |= MF2_FLY;
+				msg = "You feel lighter";
+			}
+			else
+			{
+				player->mo->flags &= ~MF_NOGRAVITY;
+				player->mo->flags2 &= ~MF2_FLY;
+				msg = "Gravity weighs you down";
+			}
 		}
 		break;
 
@@ -172,7 +175,8 @@ void cht_DoCheat (player_t *player, int cheat)
 		break;
 
 	case CHT_POWER:
-		player->mo->GiveInventoryType (RUNTIME_CLASS(APowerWeaponLevel2));
+		if (player->mo != NULL)
+			player->mo->GiveInventoryType (RUNTIME_CLASS(APowerWeaponLevel2));
 		break;
 
 	case CHT_IDKFA:
@@ -244,13 +248,16 @@ void cht_DoCheat (player_t *player, int cheat)
 
 	// [GRB]
 	case CHT_RESSURECT:
-		player->playerstate = PST_LIVE;
-		player->health = player->mo->health = player->mo->GetDefault()->health;
-		player->mo->flags = player->mo->GetDefault()->flags;
-		player->mo->height = player->mo->GetDefault()->height;
-		player->mo->SetState(player->mo->SpawnState);
-		player->mo->Translation = TRANSLATION(TRANSLATION_Players,(player-players));
-		player->mo->GiveDefaultInventory();
+		if (player->playerstate==PST_DEAD)
+		{
+			player->playerstate = PST_LIVE;
+			player->health = player->mo->health = player->mo->GetDefault()->health;
+			player->mo->flags = player->mo->GetDefault()->flags;
+			player->mo->height = player->mo->GetDefault()->height;
+			player->mo->SetState(player->mo->SpawnState);
+			player->mo->Translation = TRANSLATION(TRANSLATION_Players,(player-players));
+			player->mo->GiveDefaultInventory();
+		}
 		break;
 
 	case CHT_TAKEWEAPS:

@@ -863,6 +863,7 @@ void DrawUnhandledMissingTextures()
 			if (seg->frontsector->ceilingtexz < viewz) continue;	// out of sight
 			//if (seg->frontsector->ceilingpic==skyflatnum) continue;
 			if (gl_sectors[seg->backsector->sectornum].transdoor) continue;
+			if (seg->backsector->ceilingpic==skyflatnum) continue;
 			if (seg->backsector->CeilingSkyBox && seg->backsector->CeilingSkyBox->bAlways) continue;
 
 			if (!gl_notexturefill) FloodUpperGap(seg);
@@ -882,6 +883,7 @@ void DrawUnhandledMissingTextures()
 			if (!(gl_sectors[seg->backsector->sectornum].renderflags&SSRF_RENDERFLOOR)) continue;
 			if (seg->frontsector->floortexz > viewz) continue;	// out of sight
 			if (gl_sectors[seg->backsector->sectornum].transdoor) continue;
+			if (seg->backsector->floorpic==skyflatnum) continue;
 			if (seg->backsector->FloorSkyBox && seg->backsector->FloorSkyBox->bAlways) continue;
 
 			if (!gl_notexturefill) FloodLowerGap(seg);

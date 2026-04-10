@@ -1,4 +1,69 @@
-20. Nov. 2005
+6. Dec 2005
+- Added more flexible color correction options to the menu.
+- Added first stage of model support: Assignment to sprite frames
+- Fixed: resurrect and powerup cheats crashed when used outside a game.
+
+
+5. Dec 2005
+- Fixed: Any sky change must reset the sky's scroll position.
+
+
+4. Dec 2005
+- Fixed: 4 digit ammo numbers weren't displayed correctly on the HUD.
+- Added support for loading sounds from packed ZIPs.
+
+
+3. Dec 2005
+- Fixed: The code to fill texturing gaps didn't properly check for skies.
+- Added handling for escaped quotation marks to sc_man.cpp
+- Fixed: The PNG decoder always wrote as many pixels as a byte could contain,
+  even if it was the last byte and the width not a multiple of the pixels per byte.
+- Fixed: All of Doom's monster corpses didn't clear MF3_ISMONSTER so the
+  massacre cheat made them disappear.
+- Removed support for my private PicZ texture format. I never released a tool
+  that could create it and I finally got rid of the last WAD that used it.
+  
+
+1. Dec - 3. Dec 2005
+- Added support for ZIPs as replacements for WADs because for model support
+  I need the longer paths. 8 characters simply aren't enough.
+ 
+
+29. Nov 2005
+- Fixed: The rendering code didn't copy the desaturation information for 3D-floors.
+ 
+  
+27. Nov 2005
+- Fixed: sky boxes interfered with mirrored planes and during rendering.
+
+
+26. Nov 2005
+- Added option to assign a 3D-floor definition line a line id.
+
+
+25. Nov 2005
+- Fixed: Sound lookup for FraggleScript must look for d_sound and sound if it
+  wants to play a sound.
+- Fixed: The bouncing code for Strife's grenades could make them explode at the
+  ceiling.
+- Fixed: The HateTarget couldn't die.
+- Made a slight change to the wall rendering code because the code didn't preserve
+  some important values properly.
+
+
+24. Nov 2005
+- Fixed: A_VileChase must clear the MF3_CRASHED flag for resurrected monsters
+- Added check for split doors to sound traversal code.
+- Copied a few 2.0.98 fixes I overlooked.
+
+
+23. Nov 2005
+- Fixed: Shooting Heretic's mace straight up caused weird effects because the
+  vertical speed wasn't clamped to reasonable values.
+- Fixed: Wiping didn't work in the software renderer.
+  
+  
+20. Nov 2005
 - Fixed a ZDoom bug: Cameras were always cleared when loading a savegame.
 - Added support for GL_ARB_OCCLUSION_QUERY to the portal code. This gives a 
   significant speed boost to SSD's MAP03.
@@ -8,7 +73,7 @@
   so with those this has to be used to disable any more modern features.
   
   
-19. Nov. 2005
+19. Nov 2005
 - Added reflective planes. They are defined by the new line special 159:
   Sector_SetPlaneReflection(tag, floor_reflect, ceiling_reflect).
   This does not work for slopes!

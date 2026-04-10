@@ -178,6 +178,11 @@ bool GLPortal::Start(bool usestencil, bool doquery)
 		recursion++;
 
 		gl_StartDrawInfo(drawinfo);
+
+		// The clip plane from the previous portal must be deactivated for this one.
+		clipsave = glIsEnabled(GL_CLIP_PLANE0+renderdepth-1);
+		if (clipsave) gl.Disable(GL_CLIP_PLANE0+renderdepth-1);
+
 	}
 	PortalAll.Stop();
 
@@ -233,6 +238,7 @@ void GLPortal::End(bool usestencil)
 	PortalAll.Start();
 	if (usestencil)
 	{
+		if (clipsave) gl.Enable (GL_CLIP_PLANE0+renderdepth-1);
 		gl_EndDrawInfo();
 
 		// Restore the old view

@@ -1628,6 +1628,24 @@ bool DDrawFB::SetGamma (float gamma)
 	return true;
 }
 
+bool DDrawFB::SetBrightness (float bright)
+{
+	/*
+	Brightness = bright;
+	NeedGammaUpdate = true;
+	*/
+	return true;
+}
+
+bool DDrawFB::SetContrast (float contrast)
+{
+	/*
+	Contrast = contrast;
+	NeedGammaUpdate = true;
+	*/
+	return true;
+}
+
 bool DDrawFB::SetFlash (PalEntry rgb, int amount)
 {
 	Flash = rgb;

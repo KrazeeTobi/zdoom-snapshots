@@ -69,7 +69,7 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 	
 
 	if (actor->renderflags & RF_INVISIBLE) return;
-	if (flag==RENDERWALL_FFBLOCK && gltexture->tex->bMasked) return;	// No decals on 3D floors with transparent textures.
+	if (type==RENDERWALL_FFBLOCK && gltexture->tex->bMasked) return;	// No decals on 3D floors with transparent textures.
 
 	//if (actor->sprite != 0xffff)
 	{
@@ -92,14 +92,14 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 	switch (actor->renderflags & RF_RELMASK)
 	{
 	default:
-		// No valid decal can have this flag. If one is encountered anyway
+		// No valid decal can have this type. If one is encountered anyway
 		// it is in some way invalid.
 		return;
 		//zpos = actor->z;
 		//break;
 
 	case RF_RELUPPER:
-		if (flag!=RENDERWALL_TOP) return;
+		if (type!=RENDERWALL_TOP) return;
 		if (line->flags & ML_DONTPEGTOP)
 		{
 			zpos = actor->z + frontSector->ceilingtexz;
@@ -110,7 +110,7 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 		}
 		break;
 	case RF_RELLOWER:
-		if (flag!=RENDERWALL_BOTTOM) return;
+		if (type!=RENDERWALL_BOTTOM) return;
 		if (line->flags & ML_DONTPEGBOTTOM)
 		{
 			zpos = actor->z + frontSector->ceilingtexz;
@@ -121,7 +121,7 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 		}
 		break;
 	case RF_RELMID:
-		if (flag==RENDERWALL_TOP || flag==RENDERWALL_BOTTOM) return;
+		if (type==RENDERWALL_TOP || type==RENDERWALL_BOTTOM) return;
 		if (line->flags & ML_DONTPEGBOTTOM)
 		{
 			zpos = actor->z + frontSector->floortexz;
@@ -217,8 +217,8 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 	float decaltopo  = (tex->GetTopOffset()*actor->yscale)/63.f;
 
 	
-	float leftedge = fracleft * side->TexelLength;
-	float linelength = fracright * side->TexelLength - leftedge;
+	float leftedge = glseg.fracleft * side->TexelLength;
+	float linelength = glseg.fracright * side->TexelLength - leftedge;
 
 	// texel index of the decal's left edge
 	float decalpixpos = (float)side->TexelLength * actor->floorclip / (1<<20) - (flipx? decalwidth-decallefto : decallefto) - leftedge;

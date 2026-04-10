@@ -282,6 +282,7 @@ void A_VileChase (AActor *self)
 					*/
 					corpsehit->flags = info->flags;
 					corpsehit->flags2 = info->flags2;
+					corpsehit->flags3 &= ~MF3_CRASHED;
 					corpsehit->health = info->health;
 					corpsehit->target = NULL;
 					corpsehit->lastenemy = NULL;

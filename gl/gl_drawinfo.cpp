@@ -286,6 +286,7 @@ void GLDrawList::SortWallIntoPlane(SortNode * head,SortNode * sort)
 
 	bool ceiling = fh->z > TO_MAP(viewz);
 
+
 	if (ws->ytop[0]>fh->z && ws->ybottom[0]<fh->z)
 	{
 		// We have to split this wall!
@@ -297,7 +298,7 @@ void GLDrawList::SortWallIntoPlane(SortNode * head,SortNode * sort)
 
 		ws1=&walls[walls.Size()-1];
 		ws=&walls[drawitems[sort->itemindex].index];	// may have been reallocated!
-		float newtexv=((ws->lolft.v - ws->uplft.v) / (ws->ybottom[0] - ws->ytop[0])) * (fh->z - ws->ytop[0]);
+		float newtexv = ws->uplft.v + ((ws->lolft.v - ws->uplft.v) / (ws->ybottom[0] - ws->ytop[0])) * (fh->z - ws->ytop[0]);
 
 		// I make the very big assumption here that translucent walls in sloped sectors
 		// and 3D-floors never coexist in the same level. If that were the case this
@@ -398,11 +399,11 @@ void GLDrawList::SortWallIntoWall(SortNode * head,SortNode * sort)
 
 	if (fabs(v1)<MIN_EQ && fabs(v2)<MIN_EQ) 
 	{
-		if (ws->flag==RENDERWALL_FOGSHEET && wh->flag!=RENDERWALL_FOGSHEET) 
+		if (ws->type==RENDERWALL_FOGSHEET && wh->type!=RENDERWALL_FOGSHEET) 
 		{
 			head->AddToRight(sort);
 		}
-		else if (ws->flag!=RENDERWALL_FOGSHEET && wh->flag==RENDERWALL_FOGSHEET) 
+		else if (ws->type!=RENDERWALL_FOGSHEET && wh->type==RENDERWALL_FOGSHEET) 
 		{
 			head->AddToLeft(sort);
 		}

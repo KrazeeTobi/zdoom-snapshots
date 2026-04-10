@@ -218,31 +218,6 @@ protected:
 	void MakeTexture ();
 };
 
-// A PicZ image
-class FPicZTexture : public FTexture
-{
-public:
-	FPicZTexture (int lumpnum);
-	~FPicZTexture ();
-
-	const BYTE *GetColumn (unsigned int column, const Span **spans_out);
-	const BYTE *GetPixels ();
-	void Unload ();
-
-	// [OpenGL]
-	void CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_height, int x, int y, int cm, int translation);
-
-protected:
-	int SourceLump;
-	BYTE *Pixels;
-	Span **Spans;
-
-	BYTE *PaletteMap;
-
-	void MakeTexture ();
-};
-
-
 // A texture that returns a wiggly version of another texture.
 class FWarpTexture : public FTexture
 {

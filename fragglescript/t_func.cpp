@@ -55,6 +55,7 @@ SMMU source (including FraggleScript). You may use any code from SMMU in GZDoom,
 #include "d_player.h"
 #include "a_doomglobal.h"
 #include "w_wad.h"
+#include "gi.h"
 
 #include "gl/gl_data.h"
 
@@ -369,12 +370,23 @@ static const TypeInfo * T_GetAmmo(svalue_t t)
 //==========================================================================
 static int T_FindSound(const char * name)
 {
+	char buffer[40];
 	int so=S_FindSound(name);
+
 	if (so>0) return so;
 
 	// Now it gets dirty!
-	char buffer[40];
-	sprintf(buffer, "DS%.35s", name);
+
+	if (gameinfo.gametype & GAME_DoomStrife)
+	{
+		sprintf(buffer, "DS%.35s", name);
+		if (Wads.CheckNumForName(buffer)<0) strcpy(buffer, name);
+	}
+	else
+	{
+		strcpy(buffer, name);
+		if (Wads.CheckNumForName(buffer)<0) sprintf(buffer, "DS%.35s", name);
+	}
 	
 	so=S_AddSound(name, buffer);
 	S_HashSounds();
@@ -1446,7 +1458,7 @@ void SF_PointToAngle(void)
 
 void SF_PointToDist(void)
 {
-	int x, y;
+	float x, y;
 	
 	if(t_argc<4)
     {
@@ -1456,11 +1468,11 @@ void SF_PointToDist(void)
     
     // Doing this in floating point is actually faster with modern computers!
 
-	x = intvalue(t_argv[2]) - intvalue(t_argv[0]);
-	y = intvalue(t_argv[3]) - intvalue(t_argv[1]);
+	x = floatvalue(t_argv[2]) - floatvalue(t_argv[0]);
+	y = floatvalue(t_argv[3]) - floatvalue(t_argv[1]);
     
 	t_return.type = svt_fixed;
-	t_return.value.f = (fixed_t)(sqrtf(x*x+y*y)/65536.f);
+	t_return.value.f = (fixed_t)(sqrtf(x*x+y*y)*65536.f);
 }
 
 

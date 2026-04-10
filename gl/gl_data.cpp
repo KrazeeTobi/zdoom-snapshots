@@ -44,6 +44,7 @@
 #include "gl/gl_lights.h"
 #include "gl/gl_glow.h"
 #include "gl/gl_data.h"
+#include "gl/gl_models.h"
 #include "gl/gl_renderstruct.h"
 #include "gl/gl_functions.h"
 
@@ -138,6 +139,15 @@ static void PrepareSectorData()
 		if (segs[i].linedef && segs[i].PartnerSeg && !segs[i].PartnerSeg->linedef)
 		{
 			segs[i].PartnerSeg = segs[i].PartnerSeg->PartnerSeg = NULL;
+		}
+	}
+
+	for(i=0;i<numsegs;i++)
+	{
+		if (segs[i].PartnerSeg && segs[i].PartnerSeg->PartnerSeg!=&segs[i])
+		{
+			//Printf("Warning: seg %d (sector %d)'s partner seg is incorrect!\n", i, segs[i].frontsector-sectors);
+			segs[i].PartnerSeg=NULL;
 		}
 	}
 
@@ -363,7 +373,6 @@ side_t* getNextSide(sector_t * sec, line_t* line)
 // Initialize the level data for the GL renderer
 //
 //==========================================================================
-void gl_InitModels();
 
 void gl_PreprocessLevel()
 {

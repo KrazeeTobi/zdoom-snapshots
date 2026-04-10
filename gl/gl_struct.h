@@ -80,6 +80,12 @@ struct FColormap
 		FadeColor = from->Fade;
 		return * this;
 	}
+
+	void CopyLightColor(FDynamicColormap * from)
+	{
+		LightColor = from->Color;
+		LightColor.a = gl_boomcolormap? gl_boomcolormap : from->Desaturate>>3;
+	}
 };
 
 struct GLVertex
@@ -93,6 +99,7 @@ typedef struct
 {
 	float x1,x2;
 	float z1,z2;
+	float fracleft, fracright;	// fractional offset of the 2 vertices on the linedef
 } GLSeg;
 
 

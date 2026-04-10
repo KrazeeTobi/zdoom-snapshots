@@ -87,8 +87,6 @@ void gl_DrawTexture(FTexInfo *texInfo)
 			}
 
 			// now get the corrseponding True Color table from the font.
-			// This data is always padded by 768 bytes so the texture manager
-			// can work with it like with a normal 256 color palette.
 			byte * tctstart = index0 + (NUM_TEXT_COLORS * (index1-index0));
 			texInfo->translation = tctstart + 3 * (index1-index0) * translationindex;
 		}

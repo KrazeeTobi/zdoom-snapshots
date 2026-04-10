@@ -44,6 +44,7 @@ public:
 	void BeginPlay ();
 	void Tick ();
 	angle_t AngleIncrements (void);
+	int TakeSpecialDamage (AActor *inflictor, AActor *source, int damage, int damagetype);
 };
 
 FState AHateTarget::States[] =
@@ -87,4 +88,9 @@ void AHateTarget::Tick ()
 angle_t AHateTarget::AngleIncrements (void)
 {
 	return ANGLE_1;
+}
+
+int AHateTarget::TakeSpecialDamage (AActor *inflictor, AActor *source, int damage, int damagetype)
+{
+	return damage;
 }

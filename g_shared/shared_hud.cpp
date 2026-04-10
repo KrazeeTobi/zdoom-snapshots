@@ -44,6 +44,7 @@
 #include "a_keys.h"
 #include "sbar.h"
 #include "sc_man.h"
+#include "templates.h"
 
 EXTERN_CVAR(Bool,am_follow)
 EXTERN_CVAR (Int, con_scaletext)
@@ -506,7 +507,8 @@ static int DrawAmmo(player_t * CPlayer, int x, int y)
 
 	// ok, we got all ammo types. Now draw the list back to front (bottom to top)
 
-	x-=ConFont->StringWidth("000/000");
+	int def_width=ConFont->StringWidth("000/000");
+	x-=def_width;
 	screen->SetFont(ConFont);
 	int yadd=ConFont->GetHeight();
 
@@ -527,11 +529,13 @@ static int DrawAmmo(player_t * CPlayer, int x, int y)
 
 		sprintf(buf,"%3d/%3d", ammo,maxammo);
 
+		int tex_width= clamp<int>(ConFont->StringWidth(buf)-def_width, 0, 1000);
+
 		int fontcolor=( !maxammo ? CR_GRAY :    
 						 ammo < ( (maxammo * hud_ammo_red) / 100) ? CR_RED :   
 						 ammo < ( (maxammo * hud_ammo_yellow) / 100) ? CR_GOLD : CR_GREEN );
 
-		DrawHudText(fontcolor, buf, x, y+yadd, trans);
+		DrawHudText(fontcolor, buf, x-tex_width, y+yadd, trans);
 		DrawImageToBox(TexMan[icon], x-20, y, 16, 8, trans);
 		y-=10;
 	}
@@ -1000,13 +1004,13 @@ AT_GAME_SET(Hud)
 				SC_MustGetString();
 				int tex=0;
 
-				if (!SC_Compare("0") && !SC_Compare("NULL"))
+				if (!SC_Compare("0") && !SC_Compare("NULL") && !SC_Compare(""))
 				{
 					tex = TexMan.AddPatch(sc_String);
 					if (tex<=0) tex = TexMan.AddPatch(sc_String, ns_sprites);
 				}
 				else tex=-1;
-				((AInventory*)GetDefaultByType(ti))->AltIcon = tex;
+				if (ti) ((AInventory*)GetDefaultByType(ti))->AltIcon = tex;
 			}
 		}
 	}

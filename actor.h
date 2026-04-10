@@ -709,6 +709,7 @@ public:
 	byte				boomwaterlevel;	// splash information for non-swimmable water sectors
 	TArray<AActor*>		dynamiclights;
 	void *				lightassociations;
+	bool				hasmodel;
 
 	const char * GetName() const { return GetClass()->Name+1; }
 };

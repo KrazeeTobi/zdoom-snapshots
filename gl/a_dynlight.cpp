@@ -183,6 +183,12 @@ static FRandom randLight;
 //
 //==========================================================================
 
+void FCycler::Serialize(FArchive & arc)
+{
+	arc << m_start << m_end << m_current 
+		<< m_time << m_cycle << m_increment << m_shouldCycle
+		<< m_cycleType;
+}
 
 //==========================================================================
 //
@@ -327,14 +333,23 @@ void ADynamicLight::Serialize(FArchive &arc)
 	Super::Serialize (arc);
 	arc << lightflags << lighttype;
 
+	if (SaveVersion>=309)
+	{
+		arc << m_tickCount << m_currentIntensity;
+		if (lighttype == PulseLight) arc << m_lastUpdate << m_cycler;
+	}
+
 	if (arc.IsLoading() && lighttype == PulseLight)
 	{
-		float pulseTime = ANGLE_TO_FLOAT(this->angle) / TICRATE;
-		m_lastUpdate = gametic;
-		m_cycler.SetParams(args[LIGHT_SECONDARY_INTENSITY], args[LIGHT_INTENSITY], pulseTime);
-		m_cycler.ShouldCycle(true);
-		m_cycler.SetCycleType(CYCLE_Sin);
-		m_currentIntensity = m_cycler.GetVal();
+		if (SaveVersion<=308)
+		{
+			float pulseTime = ANGLE_TO_FLOAT(this->angle) / TICRATE;
+			m_cycler.SetParams(args[LIGHT_SECONDARY_INTENSITY], args[LIGHT_INTENSITY], pulseTime);
+			m_lastUpdate=level.time;
+			m_cycler.ShouldCycle(true);
+			m_cycler.SetCycleType(CYCLE_Sin);
+			m_currentIntensity = m_cycler.GetVal();
+		}
 	}
 	if (arc.IsLoading()) LinkLight();
 
@@ -377,20 +392,6 @@ void ADynamicLight::PostBeginPlay()
 		Activate (NULL);
 	}
 
-	m_currentIntensity = args[LIGHT_INTENSITY];
-	m_tickCount = 0;
-
-	if (lighttype == PulseLight)
-	{
-		float pulseTime = ANGLE_TO_FLOAT(this->angle) / TICRATE;
-		
-		m_lastUpdate = gametic;
-		m_cycler.SetParams(args[LIGHT_SECONDARY_INTENSITY], args[LIGHT_INTENSITY], pulseTime);
-		m_cycler.ShouldCycle(true);
-		m_cycler.SetCycleType(CYCLE_Sin);
-		m_currentIntensity = (byte)m_cycler.GetVal();
-	}
-
 	subsector = R_PointInSubsector2(x,y);
 }
 
@@ -404,6 +405,20 @@ void ADynamicLight::Activate(AActor *activator)
 {
 	//Super::Activate(activator);
 	flags2&=~MF2_DORMANT;	
+
+	m_currentIntensity = args[LIGHT_INTENSITY];
+	m_tickCount = 0;
+
+	if (lighttype == PulseLight)
+	{
+		float pulseTime = ANGLE_TO_FLOAT(this->angle) / TICRATE;
+		
+		m_lastUpdate = level.time;
+		m_cycler.SetParams(args[LIGHT_SECONDARY_INTENSITY], args[LIGHT_INTENSITY], pulseTime);
+		m_cycler.ShouldCycle(true);
+		m_cycler.SetCycleType(CYCLE_Sin);
+		m_currentIntensity = (byte)m_cycler.GetVal();
+	}
 }
 
 
@@ -445,9 +460,9 @@ void ADynamicLight::Tick()
 	{
 	case PulseLight:
 	{
-		float diff = (gametic - m_lastUpdate) / (float)TICRATE;
+		float diff = (level.time - m_lastUpdate) / (float)TICRATE;
 		
-		m_lastUpdate = gametic;
+		m_lastUpdate = level.time;
 		m_cycler.Update(diff);
 		m_currentIntensity = m_cycler.GetVal();
 		break;

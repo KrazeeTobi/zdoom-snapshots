@@ -283,7 +283,7 @@ Win32GLFrameBuffer::Win32GLFrameBuffer(int width, int height, int bits, int refr
 	}
 
 	m_supportsGamma = gl.GetGammaRamp((void *)m_origGamma);
-	CalcGamma(Gamma, m_gammaTable);
+	DoSetGamma();
 
 	InitializeState();
 
@@ -414,20 +414,56 @@ void Win32GLFrameBuffer::Update()
 	gl.SwapBuffers();
 }
 
-bool Win32GLFrameBuffer::SetGamma(float gamma)
+//===========================================================================
+//
+// DoSetGamma
+//
+// (Unfortunately Windows has some safety precautions that block gamma ramps
+//  that are considered too extreme. As a result this doesn't work flawlessly)
+//
+//===========================================================================
+
+void Win32GLFrameBuffer::DoSetGamma()
 {
 	WORD gammaTable[768];
 
-	CalcGamma(gamma, m_gammaTable);
-
 	if (m_supportsGamma)
 	{
+		// This formula is taken from Doomsday
+		float gamma = clamp<float>(Gamma, 0.1f, 4.f);
+		float contrast = clamp<float>(vid_contrast, 0.1f, 3.f);
+		float bright = clamp<float>(vid_brightness, -0.8f, 0.8f);
+
+		double invgamma = 1 / gamma;
+		double norm = pow(255., invgamma - 1);
+
 		for (int i = 0; i < 256; i++)
 		{
-			gammaTable[i] = gammaTable[i + 256] = gammaTable[i + 512] = (WORD)(m_gammaTable[i] * 257);
+			double val = i * contrast - (contrast - 1) * 127;
+			if(gamma != 1) val = pow(val, invgamma) / norm;
+			val += bright * 128;
+
+			gammaTable[i] = gammaTable[i + 256] = gammaTable[i + 512] = (WORD)clamp<double>(val*256, 0, 0xffff);
 		}
 		gl.SetGammaRamp((void*)gammaTable);
 	}
+}
+
+bool Win32GLFrameBuffer::SetGamma(float gamma)
+{
+	DoSetGamma();
+	return true;
+}
+
+bool Win32GLFrameBuffer::SetBrightness(float bright)
+{
+	DoSetGamma();
+	return true;
+}
+
+bool Win32GLFrameBuffer::SetContrast(float contrast)
+{
+	DoSetGamma();
 	return true;
 }
 

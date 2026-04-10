@@ -135,7 +135,7 @@ bool Trace (fixed_t x, fixed_t y, fixed_t z, sector_t *sector,
 	}
 
 	// check for overflows and clip if necessary
-	SQWORD xd= (SQWORD)x + FixedMul (vx, maxDist);
+	SQWORD xd= (SQWORD)x + ( ( SQWORD(vx) * SQWORD(maxDist) )>>16);
 
 	if (xd>32767*FRACUNIT)
 	{
@@ -147,7 +147,7 @@ bool Trace (fixed_t x, fixed_t y, fixed_t z, sector_t *sector,
 	}
 
 
-	SQWORD yd= (SQWORD)y + FixedMul (vy, maxDist);
+	SQWORD yd= (SQWORD)y + ( ( SQWORD(vy) * SQWORD(maxDist) )>>16);
 
 	if (yd>32767*FRACUNIT)
 	{

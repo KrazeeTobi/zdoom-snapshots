@@ -269,6 +269,10 @@ void GLFlat::Draw(int pass)
 		gl.AlphaFunc(GL_GEQUAL,0.5f*(alpha));
 		gl.DepthFunc(GL_LEQUAL);
 	}
+	else if (renderflags & (SSRF_RENDERFLOOR|SSRF_RENDERCEILING) && gltexture->tex->bMasked)
+	{
+		gl.Disable(GL_ALPHA_TEST);
+	}
 
 	if (sub)
 	{
@@ -309,6 +313,10 @@ void GLFlat::Draw(int pass)
 	{
 		gl.DepthFunc(GL_LESS);
 	}
+	else if (renderflags & (SSRF_RENDERFLOOR|SSRF_RENDERCEILING) && gltexture->tex->bMasked)
+	{
+		gl.Enable(GL_ALPHA_TEST);
+	}
 }
 
 //==========================================================================
@@ -321,6 +329,11 @@ inline void GLFlat::PutFlat(bool translucent)
 	if (gl_fixedcolormap) 
 	{
 		Colormap.GetFixedColormap();
+	}
+	if (gl.flags&RFL_NOSTENCIL)
+	{
+		translucent=false;
+		alpha=1.f;
 	}
 	if (translucent)
 	{
@@ -463,7 +476,7 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 				if (!(sector->FloorFlags&SECF_ABSLIGHTING) || light!=&sector->e->lightlist[0])	
 					lightlevel = *light->p_lightlevel;
 
-				Colormap.LightColor = (*light->p_extra_colormap)->Color;
+				Colormap.CopyLightColor(*light->p_extra_colormap);
 			}
 			if (alpha!=0.0f) Process(frontsector, false, false);
 		}
@@ -500,7 +513,7 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 				light = P_GetPlaneLight(sector, &sector->ceilingplane, true);
 
 				if(!(sector->CeilingFlags&SECF_ABSLIGHTING)) lightlevel = *light->p_lightlevel;
-				Colormap.LightColor = (*light->p_extra_colormap)->Color;
+				Colormap.CopyLightColor(*light->p_extra_colormap);
 			}
 			if (alpha!=0.0f) Process(frontsector, true, false);
 		}
@@ -552,9 +565,9 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 								light=P_GetPlaneLight(sector, rover->top.plane,!!(rover->flags&FF_FOG));
 								lightlevel=*light->p_lightlevel;
 								
-								Colormap.LightColor = (rover->flags&FF_FOG)?
-												(*light->p_extra_colormap)->Fade:
-												(*light->p_extra_colormap)->Color;
+								if (rover->flags&FF_FOG) Colormap.LightColor = (*light->p_extra_colormap)->Fade;
+								else Colormap.CopyLightColor(*light->p_extra_colormap);
+
 								Colormap.FadeColor=frontsector->ColorMap->Fade;
 
 								alpha=rover->alpha/255.0f;
@@ -573,9 +586,9 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 								light=P_GetPlaneLight(sector, rover->bottom.plane,!(rover->flags&FF_FOG));
 								lightlevel=*light->p_lightlevel;
 
-								Colormap.LightColor = (rover->flags&FF_FOG)?
-												(*light->p_extra_colormap)->Fade:
-												(*light->p_extra_colormap)->Color;
+								if (rover->flags&FF_FOG) Colormap.LightColor = (*light->p_extra_colormap)->Fade;
+								else Colormap.CopyLightColor(*light->p_extra_colormap);
+
 								Colormap.FadeColor=frontsector->ColorMap->Fade;
 
 								alpha=rover->alpha/255.0f;
@@ -613,9 +626,9 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 									light=P_GetPlaneLight(sector, rover->bottom.plane,!(rover->flags&FF_FOG));
 									lightlevel=*light->p_lightlevel;
 
-									Colormap.LightColor = (rover->flags&FF_FOG)?
-													(*light->p_extra_colormap)->Fade:
-													(*light->p_extra_colormap)->Color;
+									if (rover->flags&FF_FOG) Colormap.LightColor = (*light->p_extra_colormap)->Fade;
+									else Colormap.CopyLightColor(*light->p_extra_colormap);
+
 									Colormap.FadeColor=frontsector->ColorMap->Fade;
 								}
 
@@ -635,9 +648,9 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 								light=P_GetPlaneLight(sector, rover->top.plane,!!(rover->flags&FF_FOG));
 								lightlevel=*light->p_lightlevel;
 
-								Colormap.LightColor = (rover->flags&FF_FOG)?
-												(*light->p_extra_colormap)->Fade:
-												(*light->p_extra_colormap)->Color;
+								if (rover->flags&FF_FOG) Colormap.LightColor = (*light->p_extra_colormap)->Fade;
+								else Colormap.CopyLightColor(*light->p_extra_colormap);
+
 								Colormap.FadeColor=frontsector->ColorMap->Fade;
 
 								alpha=rover->alpha/255.0f;

@@ -123,6 +123,8 @@ public:
 	void GetFlashedPalette (PalEntry pal[256]);
 	void UpdatePalette ();
 	bool SetGamma (float gamma);
+	bool SetBrightness (float bright);
+	bool SetContrast (float contrast);
 	bool SetFlash (PalEntry rgb, int amount);
 	void GetFlash (PalEntry &rgb, int &amount);
 	int GetPageCount ();
@@ -170,6 +172,8 @@ private:
 	int BufferPitch;
 	int TrueHeight;
 	float Gamma;
+	float Brightness;
+	float Contrast;
 
 	bool NeedGammaUpdate;
 	bool NeedPalUpdate;

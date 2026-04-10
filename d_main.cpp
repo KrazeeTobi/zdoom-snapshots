@@ -489,7 +489,7 @@ void D_Display (bool screenshot)
 	if (NoWipe || currentrenderer == 1)
 	{
 		BorderNeedRefresh = screen->GetPageCount ();
-		NoWipe--;
+		if (currentrenderer==0) NoWipe--;
 		wipe = false;
 		wipegamestate = gamestate;
 	}
@@ -1961,11 +1961,11 @@ void D_DoomMain (void)
 
 	// [RH] Make sure zdoom.wad is always loaded,
 	// as it contains magic stuff we need.
-	wad = BaseFileSearch ("gzdoom.wad", NULL);
+	wad = BaseFileSearch ("gzdoom.pk3", NULL);
 	if (wad)
 		D_AddFile (wad);
 	else
-		I_FatalError ("Cannot find zdoom.wad");
+		I_FatalError ("Cannot find gzdoom.pk3");
 
 	I_SetTitleString (IWADTypeNames[IdentifyVersion ()]);
 	GameConfig->DoGameSetup (GameNames[gameinfo.gametype]);

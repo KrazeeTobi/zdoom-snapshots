@@ -405,7 +405,7 @@ static void APIENTRY LoadExtensions()
 
 		gl->flags|=RFL_GLSL;
 	}
-	/*
+
 	if (CheckExtension("GL_ARB_occlusion_query"))
 	{
         gl->GenQueries         = (PFNGLGENQUERIESARBPROC)wglGetProcAddress("glGenQueriesARB");
@@ -426,7 +426,6 @@ static void APIENTRY LoadExtensions()
         gl->EndQuery               = EndOcclusionQuery;
 		gl->flags|=RFL_OCCLUSION_QUERY;
 	}
-	*/
 }
 
 //==========================================================================
@@ -468,11 +467,13 @@ static bool SetupPixelFormat(bool allowsoftware, bool nostencil, int multisample
 	colorDepth = GetDeviceCaps(deskDC, BITSPIXEL);
 	ReleaseDC(GetDesktopWindow(), deskDC);
 
+	/*
 	if (!nostencil && colorDepth < 32)
 	{
 		Printf("R_OPENGL: Desktop not in 32 bit mode!\n");
 		return false;
 	}
+	*/
 
 	if (!nostencil)
 	{

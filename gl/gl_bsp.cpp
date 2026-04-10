@@ -82,7 +82,7 @@ static bool CheckClip(seg_t * seg, sector_t * frontsector, sector_t * backsector
 	if (frontsector->CeilingSkyBox && frontsector->CeilingSkyBox->bAlways) return false;
 	if (frontsector->FloorSkyBox && frontsector->FloorSkyBox->bAlways) return false;
 
-	// on large levels this distinction can save a some of time
+	// on large levels this distinction can save some time
 	// That's a lot of avoided multiplications if there's a lot to see!
 
 	if (frontsector->ceilingplane.a | frontsector->ceilingplane.b)

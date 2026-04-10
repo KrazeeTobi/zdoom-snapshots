@@ -2,6 +2,7 @@
 #include <FLAC++/decoder.h>
 #include "s_sound.h"
 #include "files.h"
+#include "w_wad.h"
 
 class FLACSampleLoader : protected FLAC::Decoder::Stream
 {
@@ -22,7 +23,7 @@ protected:
 
 	void CopyToSample (size_t ofs, FLAC__int32 **buffer, size_t samples);
 
-	FileReader File;
+	FWadLump File;
 	long StartPos, EndPos;
 
 	void *SBuff, *SBuff2;
