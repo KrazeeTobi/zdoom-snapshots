@@ -192,14 +192,33 @@ void DThinker::DestroyAllThinkers ()
 {
 	int i;
 
+	DObject::BeginFrame ();
 	for (i = 0; i <= MAX_STATNUM; i++)
 	{
 		if (i != STAT_TRAVELLING)
 		{
-			DestroyThinkersInList (Thinkers[i].Head);
-			DestroyThinkersInList (FreshThinkers[i].Head);
+			Node *node;
+
+			// Calling DestroyThinkersInList here
+			// can create huge delays if there are a large number of things!
+			node = Thinkers[i].Head;
+			while (node->Succ != NULL)
+			{
+				Node *next = node->Succ;
+				static_cast<DThinker *> (node)->Destroy ();
+				node = next;
+			}
+
+			node = FreshThinkers[i].Head;
+			while (node->Succ != NULL)
+			{
+				Node *next = node->Succ;
+				static_cast<DThinker *> (node)->Destroy ();
+				node = next;
+			}
 		}
 	}
+	DObject::EndFrame ();
 }
 
 // Destroy all thinkers except for player-controlled actors
@@ -209,14 +228,35 @@ void DThinker::DestroyMostThinkers ()
 {
 	int i;
 
+	DObject::BeginFrame ();
 	for (i = 0; i <= MAX_STATNUM; i++)
 	{
-		if (i != STAT_TRAVELLING)
+		if (i != STAT_TRAVELLING && i!=STAT_PLAYER)
 		{
-			DestroyMostThinkersInList (Thinkers[i], i);
-			DestroyMostThinkersInList (FreshThinkers[i], i);
+			Node *node;
+
+			// Calling DestroyThinkersInList here
+			// can create huge delays if there are a large number of things!
+			node = Thinkers[i].Head;
+			while (node->Succ != NULL)
+			{
+				Node *next = node->Succ;
+				static_cast<DThinker *> (node)->Destroy ();
+				node = next;
+			}
+
+			node = FreshThinkers[i].Head;
+			while (node->Succ != NULL)
+			{
+				Node *next = node->Succ;
+				static_cast<DThinker *> (node)->Destroy ();
+				node = next;
+			}
 		}
 	}
+	DObject::EndFrame ();
+	DestroyMostThinkersInList(Thinkers[STAT_PLAYER], STAT_PLAYER);
+	DestroyMostThinkersInList(FreshThinkers[STAT_PLAYER], STAT_PLAYER);
 }
 
 void DThinker::DestroyThinkersInList (Node *node)

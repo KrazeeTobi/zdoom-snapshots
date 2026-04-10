@@ -68,23 +68,23 @@ void GLSprite::Draw(int pass)
 	if (gltexture) gltexture->BindPatch(Colormap.LightColor.a,translation);
 	else 
 	{
-		glDisable(GL_TEXTURE_2D);
-		gl_SetShader(CM_DEFAULT);
+		gl.Disable(GL_TEXTURE_2D);
+		gl_SetColorMode(CM_DEFAULT);
 	}
 
 	if (RenderStyle != STYLE_Normal && actor && !(actor->momx|actor->momy))
 	{
 		// Draw translucent non-moving sprites with a slightly altered z-offset to avoid z-fighting 
 		// when in the same position as a regular sprite
-		glEnable(GL_POLYGON_OFFSET_FILL);
-		glPolygonOffset(-1.0f, -64.0f);
+		gl.Enable(GL_POLYGON_OFFSET_FILL);
+		gl.PolygonOffset(-1.0f, -64.0f);
 	}
 
 	if(RenderStyle==STYLE_Fuzzy)
 	{
 		float fuzzalpha=0.44f;
 		float minalpha=0.1f;
-		glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+		gl.BlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
 
 		// fog + fuzz don't work well without some fiddling with the alpha value!
 		if (!gl_isBlack(Colormap.FadeColor))
@@ -92,7 +92,7 @@ void GLSprite::Draw(int pass)
 			float xcamera=-(float)viewx/MAP_SCALE;
 			float zcamera=(float)viewy/MAP_SCALE;
 
-			float dist=Dist2(xcamera,zcamera, x,z);
+			float dist=Dist2(xcamera,zcamera, x,z)*FOG_COEFF;
 
 			if (!Colormap.FadeColor.a) Colormap.FadeColor.a=clamp<int>(255-lightlevel,60,255);
 
@@ -103,8 +103,8 @@ void GLSprite::Draw(int pass)
 		}
 		
 
-		glAlphaFunc(GL_GEQUAL,minalpha);
-		glColor4f(0.2f,0.2f,0.2f,fuzzalpha);
+		gl.AlphaFunc(GL_GEQUAL,minalpha);
+		gl.Color4f(0.2f,0.2f,0.2f,fuzzalpha);
 	}
 	else
 	{
@@ -114,11 +114,11 @@ void GLSprite::Draw(int pass)
 		case STYLE_Add:
 			if (trans<1.0-FLT_EPSILON || !gl_usecolorblending || !(actor->renderflags & RF_FULLBRIGHT))
 			{
-				glBlendFunc(GL_SRC_ALPHA,GL_ONE);
-				glAlphaFunc(GL_GEQUAL,0.5f*trans);
+				gl.BlendFunc(GL_SRC_ALPHA,GL_ONE);
+				gl.AlphaFunc(GL_GEQUAL,0.5f*trans);
 				break;
 			}
-			glBlendFunc(GL_SRC_COLOR, GL_ONE);
+			gl.BlendFunc(GL_SRC_COLOR, GL_ONE);
 			break;
 
 		case STYLE_Normal:
@@ -126,7 +126,7 @@ void GLSprite::Draw(int pass)
 			break;
 
 		case STYLE_Translucent:
-			glAlphaFunc(GL_GEQUAL,0.5f*trans);
+			gl.AlphaFunc(GL_GEQUAL,0.5f*trans);
 			break;
 		}
 
@@ -155,22 +155,22 @@ void GLSprite::Draw(int pass)
 
 	if (!model)
 	{
-		glBegin(GL_TRIANGLE_STRIP);
+		gl.Begin(GL_TRIANGLE_STRIP);
 		if (gltexture)
 		{
-			glTexCoord2f(ul, vt); glVertex3f(x1, y1, z1);
-			glTexCoord2f(ur, vt); glVertex3f(x2, y1, z2);
-			glTexCoord2f(ul, vb); glVertex3f(x1, y2, z1);
-			glTexCoord2f(ur, vb); glVertex3f(x2, y2, z2);
+			gl.TexCoord2f(ul, vt); gl.Vertex3f(x1, y1, z1);
+			gl.TexCoord2f(ur, vt); gl.Vertex3f(x2, y1, z2);
+			gl.TexCoord2f(ul, vb); gl.Vertex3f(x1, y2, z1);
+			gl.TexCoord2f(ur, vb); gl.Vertex3f(x2, y2, z2);
 		}
 		else	// Particle
 		{
-			glVertex3f(x1, y1, z1);
-			glVertex3f(x2, y1, z2);
-			glVertex3f(x1, y2, z1);
-			glVertex3f(x2, y2, z2);
+			gl.Vertex3f(x1, y1, z1);
+			gl.Vertex3f(x2, y1, z2);
+			gl.Vertex3f(x1, y2, z1);
+			gl.Vertex3f(x2, y2, z2);
 		}
-		glEnd();
+		gl.End();
 	}
 	else
 	{
@@ -182,16 +182,17 @@ void GLSprite::Draw(int pass)
 	{
 		case STYLE_Add:
 		case STYLE_Fuzzy:
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			break;
 	}
 	if (RenderStyle != STYLE_Normal && actor && !(actor->momx|actor->momy))
 	{
-		glDisable(GL_POLYGON_OFFSET_FILL);
-		glPolygonOffset(0, 0);
+		gl.Disable(GL_POLYGON_OFFSET_FILL);
+		gl.PolygonOffset(0, 0);
 	}
 
-	if (!gltexture)	glEnable(GL_TEXTURE_2D);
+	if (!gltexture) gl.Enable(GL_TEXTURE_2D);
+
 }
 
 
@@ -231,10 +232,9 @@ void GLSprite::SplitSprite(sector_t * frontsector, bool translucent)
 	//y=0;
 	for(i=0;i<lightlist.Size();i++)
 	{
-		// ok, this won't work for diagonal splits...
-		// both edges have to be clipped independently
-		if (i<lightlist.Size()-1) lightbottom=lightlist[i+1].plane.ZatPoint(0,0);
-		else lightbottom=frontsector->floorplane.ZatPoint(0,0);
+		// Particles don't go through here so we can safely assume that actor is not NULL
+		if (i<lightlist.Size()-1) lightbottom=lightlist[i+1].plane.ZatPoint(actor->x,actor->y);
+		else lightbottom=frontsector->floorplane.ZatPoint(actor->x,actor->y);
 
 		//maplighttop=TO_MAP(lightlist[i].height);
 		maplightbottom=TO_MAP(lightbottom);
@@ -278,27 +278,7 @@ void GLSprite::SetThingColor(PalEntry pe)
 	int gray;
 	int fac;
 
-	if (Colormap.LightColor.a==CM_INVERT || Colormap.LightColor.a==CM_LITE)
-	{
-		gray=255-((red*77 + green*143 + blue*37)>>8);
-		red=green=blue=clamp<int>(gray,0,255);
-	}
-	else if (Colormap.LightColor.a==CM_GOLDMAP)
-	{
-		gray=(red*77 + green*143 + blue*37)>>8;
-		red=clamp<int>(gray+(gray>>1),0,255);
-		green=clamp<int>(gray,0,255);
-		blue=0;
-	}
-	else if (Colormap.LightColor.a>=CM_DESAT1 && Colormap.LightColor.a<=CM_DESAT31)
-	{
-		fac=Colormap.LightColor.a-CM_DESAT0;
-		gray=(red*77 + green*143 + blue*37)>>8;
-		red  = (red  *(32-fac)+ gray*fac)/32;
-		green= (green*(32-fac)+ gray*fac)/32;
-		blue = (blue *(32-fac)+ gray*fac)/32;
-	}
-	else if (Colormap.LightColor.a>=CM_FIRSTCOLORMAP)
+	if (Colormap.LightColor.a>=CM_FIRSTCOLORMAP)
 	{
 		// Get the most appropriate translated color from the colormap
 		int palindex = ColorMatcher.Pick(red, green, blue);
@@ -307,6 +287,29 @@ void GLSprite::SetThingColor(PalEntry pe)
 		red = GPalette.BaseColors[newindex].r;
 		green = GPalette.BaseColors[newindex].g;
 		blue = GPalette.BaseColors[newindex].b;
+	}
+	else if (!gl_shaderactive)
+	{
+		if (Colormap.LightColor.a==CM_INVERT || Colormap.LightColor.a==CM_LITE)
+		{
+			gray=255-((red*77 + green*143 + blue*37)>>8);
+			red=green=blue=clamp<int>(gray,0,255);
+		}
+		else if (Colormap.LightColor.a==CM_GOLDMAP)
+		{
+			gray=(red*77 + green*143 + blue*37)>>8;
+			red=clamp<int>(gray+(gray>>1),0,255);
+			green=clamp<int>(gray,0,255);
+			blue=0;
+		}
+		else if (Colormap.LightColor.a>=CM_DESAT1 && Colormap.LightColor.a<=CM_DESAT31)
+		{
+			fac=Colormap.LightColor.a-CM_DESAT0;
+			gray=(red*77 + green*143 + blue*37)>>8;
+			red  = (red  *(32-fac)+ gray*fac)/32;
+			green= (green*(32-fac)+ gray*fac)/32;
+			blue = (blue *(32-fac)+ gray*fac)/32;
+		}
 	}
 
 	ThingColor=PalEntry(red, green, blue);
@@ -588,7 +591,22 @@ void GLSprite::ProcessParticle (particle_t *particle, sector_t *sector)//, int s
 	}
 	else
 	{
+		TArray<lightlist_t> & lightlist=sector->e->lightlist;
+		int lightbottom;
+
 		Colormap=sector->ColorMap;
+		for(int i=0;i<lightlist.Size();i++)
+		{
+			if (i<lightlist.Size()-1) lightbottom=lightlist[i+1].plane.ZatPoint(particle->x,particle->y);
+			else lightbottom=frontsector->floorplane.ZatPoint(particle->x,particle->y);
+
+			if (lightbottom < particle->y)
+			{
+				lightlevel=*lightlist[i].p_lightlevel;
+				Colormap.LightColor=(*lightlist[i].p_extra_colormap)->Color;
+				break;
+			}
+		}
 	}
 
 	trans=particle->trans/255.0f;

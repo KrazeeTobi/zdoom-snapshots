@@ -112,8 +112,6 @@ static int FindTranslationIndex(int cm, const unsigned char * translation)
 //
 //===========================================================================
 unsigned int GLTexture::lastbound=0;
-int GLTexture::max_texturesize=0;
-bool GLTexture::supportsNonPower2=false;
 
 
 GLTexture::TexFilter_s GLTexture::TexFilter[]={
@@ -138,8 +136,8 @@ GLTexture::TexFormat_s GLTexture::TexFormat[]={
 //===========================================================================
 int GLTexture::GetTexDimension(int value)
 {
-	if (value > max_texturesize) return max_texturesize;
-	if (supportsNonPower2) return value;
+	if (value > gl.max_texturesize) return gl.max_texturesize;
+	if (gl.flags&RFL_NPOT_TEXTURE) return value;
 
 	int i=1;
 	while (i<value) i+=i;
@@ -163,8 +161,8 @@ void GLTexture::LoadImage(unsigned char * buffer,int w, int h, unsigned int & gl
 	bool use_mipmapping = TexFilter[gl_texture_filter].mipmapping;
 
 	if (alphatexture) texformat=GL_ALPHA8;
-	if (glTexID==0) glGenTextures(1,&glTexID);
-	glBindTexture(GL_TEXTURE_2D, glTexID);
+	if (glTexID==0) gl.GenTextures(1,&glTexID);
+	gl.BindTexture(GL_TEXTURE_2D, glTexID);
 	lastbound=glTexID;
 
 	if (!buffer)
@@ -185,7 +183,7 @@ void GLTexture::LoadImage(unsigned char * buffer,int w, int h, unsigned int & gl
 		rw = GetTexDimension (w);
 		rh = GetTexDimension (h);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, (mipmap && use_mipmapping));
+		gl.TexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, (mipmap && use_mipmapping));
 
 		if (rw == w && rh == h)
 		{
@@ -227,27 +225,27 @@ void GLTexture::LoadImage(unsigned char * buffer,int w, int h, unsigned int & gl
 			}
 		}
 	}
-	glTexImage2D(GL_TEXTURE_2D, 0, texformat, rw, rh, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+	gl.TexImage2D(GL_TEXTURE_2D, 0, texformat, rw, rh, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 
 	if (deletebuffer) free(buffer);
 
 	if (mipmap && use_mipmapping)
 	{
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, TexFilter[gl_texture_filter].minfilter);
+		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, TexFilter[gl_texture_filter].minfilter);
 		if (gl_texture_filter_anisotropic)
 		{
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, gl_texture_filter_anisotropic);
+			gl.TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, gl_texture_filter_anisotropic);
 		}
 	}
 	else
 	{
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, TexFilter[gl_texture_filter].magfilter);
+		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, TexFilter[gl_texture_filter].magfilter);
 	}
 
 	if (wrapparam==GL_CLAMP) wrapparam=GL_CLAMP_TO_EDGE;
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapparam);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapparam);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, TexFilter[gl_texture_filter].magfilter);
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapparam);
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapparam);
+	gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, TexFilter[gl_texture_filter].magfilter);
 }
 
 
@@ -262,7 +260,7 @@ GLTexture::GLTexture(int _width, int _height, bool _mipmap, bool wrap)
 	texwidth=_width;
 	texheight=_height;
 
-	if (wrap || supportsNonPower2)
+	if (wrap || (gl.flags&RFL_NPOT_TEXTURE))
 	{
 		scaleyfac=scalexfac=1.f;
 	}
@@ -287,17 +285,17 @@ void GLTexture::Clean(bool all)
 {
 	if (all)
 	{
-		glDeleteTextures(cm_arraysize,glTexID);
+		gl.DeleteTextures(cm_arraysize,glTexID);
 		memset(glTexID,0,sizeof(unsigned int)*cm_arraysize);
 	}
 	else
 	{
-		glDeleteTextures(cm_arraysize-1,glTexID+1);
+		gl.DeleteTextures(cm_arraysize-1,glTexID+1);
 		memset(glTexID+1,0,sizeof(unsigned int)*(cm_arraysize-1));
 	}
 	for(int i=0;i<glTexID_Translated.Size();i++)
 	{
-		glDeleteTextures(1,&glTexID_Translated[i].glTexID);
+		gl.DeleteTextures(1,&glTexID_Translated[i].glTexID);
 	}
 	glTexID_Translated.Clear();
 }
@@ -370,16 +368,14 @@ unsigned * GLTexture::GetTexID(int cm, int translation, const unsigned char * tr
 //===========================================================================
 unsigned int GLTexture::Bind(int cm,int translation, const unsigned char * translationtbl)
 {
-	int i;
 	unsigned int * pTexID=GetTexID(cm, translation, translationtbl);
 
 	if (*pTexID!=0)
 	{
 		if (lastbound==*pTexID) return *pTexID;
 		lastbound=*pTexID;
-		glBindTexture(GL_TEXTURE_2D, *pTexID);
-		glGetTexParameteriv(GL_TEXTURE_2D,GL_TEXTURE_RESIDENT,&i);
-		if (i==GL_TRUE) return *pTexID;
+		gl.BindTexture(GL_TEXTURE_2D, *pTexID);
+		return *pTexID;
 	}
 	return 0;
 }

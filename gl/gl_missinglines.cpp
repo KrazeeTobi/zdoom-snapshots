@@ -43,7 +43,7 @@
 #include "gl/gl_geometric.h"
 
 static seg_t * compareseg;
-static int firstmissingseg;
+int firstmissingseg;
 
 static int STACK_ARGS segcmp(const void * a, const void * b)
 {
@@ -56,7 +56,6 @@ static int STACK_ARGS segcmp(const void * a, const void * b)
 
 	//return (seg2->v1 - compareseg->v1).LengthSquared() - (seg1->v1 - compareseg->v1).LengthSquared();
 }
-
 
 //==========================================================================
 //

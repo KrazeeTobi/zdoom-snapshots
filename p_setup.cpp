@@ -3214,6 +3214,12 @@ void P_SetupLevel (char *lumpname, int position)
 			// Load normal GL nodes, if present
 		}
 		*/
+
+		// If loading the regular nodes failed try GL nodes before considering a rebuild
+		if (ForceNodeBuild)
+		{
+			 if (gl_LoadGLNodes(lumpnum)) ForceNodeBuild=false;
+		}
 	}
 	if (ForceNodeBuild)
 	{
@@ -3239,6 +3245,8 @@ void P_SetupLevel (char *lumpname, int position)
 		DPrintf ("BSP generation took %.3f sec (%d segs)\n", (endTime - startTime) * 0.001, numsegs);
 	}
 
+	// If the loads being loaded are not GL nodes the GL renderer needs to create a second set of nodes.
+	// The originals have to be kept for use by R_PointInSubsector.
 	gl_CheckNodes(lumpnum);
 
 	clock (times[10]);

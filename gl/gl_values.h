@@ -85,6 +85,7 @@ enum EColorManipulation
 };
 
 #define MAP_COEFF 128.0f
+#define FOG_COEFF (MAP_COEFF/128.f)
 #define MAP_SCALE	(MAP_COEFF*(float)FRACUNIT)
 #define TO_MAP(v) ((float)(v)/(float)MAP_SCALE)
 #define FROM_MAP(f) (fixed_t)(f*MAP_SCALE)

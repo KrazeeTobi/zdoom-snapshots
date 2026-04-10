@@ -52,6 +52,8 @@ static FRandom pr_healradius ("HealRadius");
 // [RH] # of ticks to complete a turn180
 #define TURN180_TICKS	((TICRATE / 4) + 1)
 
+fixed_t playerviewheight = 41 * FRACUNIT;
+
 // Variables for prediction
 CVAR (Bool, cl_noprediction, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 static player_t PredictionPlayerBackup;
@@ -698,6 +700,14 @@ void P_MovePlayer (player_t *player)
 		fm = FixedMul (fm, player->mo->Speed);
 		sm = FixedMul (sm, player->mo->Speed);
 
+		// When crouching speed and bobbing have to be reduced
+		if (player->mo->height!=player->mo->GetDefault()->height)
+		{
+			fm = Scale(fm, player->mo->height, player->mo->GetDefault()->height);
+			sm = Scale(sm, player->mo->height, player->mo->GetDefault()->height);
+			bobfactor = Scale(bobfactor, player->mo->height, player->mo->GetDefault()->height);
+		}
+
 		forwardmove = Scale (fm, movefactor * 35, TICRATE << 8);
 		sidemove = Scale (sm, movefactor * 35, TICRATE << 8);
 
@@ -937,6 +947,7 @@ void P_DeathThink (player_t *player)
 	}
 }
 
+
 //----------------------------------------------------------------------------
 //
 // PROC P_PlayerThink
@@ -962,6 +973,41 @@ void P_PlayerThink (player_t *player)
 	}
 
 	player->xviewshift = 0;		// [RH] Make sure view is in right place
+
+	if (player->crouching>0)
+	{
+		if (player->crouching > player->mo->height)
+		{
+			if (player->mo->z+player->mo->height<player->mo->ceilingz)
+			{
+				player->crouchdir=1;
+				player->mo->height+=FRACUNIT;
+				player->viewheight+=FRACUNIT;
+				player->defaultviewheight+=FRACUNIT;
+				if (player->mo->height>=player->crouching)
+				{
+					player->crouching=0;
+				}
+			}
+			else
+			{
+				player->crouchdir=-1;
+				player->crouching=0;
+			}
+		}
+		else if (player->crouching < player->mo->height)
+		{
+			player->crouchdir=-1;
+			player->mo->height-=FRACUNIT;
+			player->viewheight-=FRACUNIT;
+			player->defaultviewheight-=FRACUNIT;
+			if (player->defaultviewheight<7*FRACUNIT || player->mo->height <= player->crouching)
+			{
+				player->crouching=0;
+			}
+		}
+		player->mo->yscale = Scale(player->mo->height, 63, player->mo->GetDefault()->height);
+	}
 
 	// [RH] Zoom the player's FOV
 	if (player->FOV != player->DesiredFOV)
@@ -1417,6 +1463,15 @@ void player_s::Serialize (FArchive &arc)
 		<< BlendA
 		<< accuracy << stamina
 		<< LogText;
+
+	if (SaveVersion>=304)
+	{
+		arc << crouching << crouchdir;
+	}
+	if (SaveVersion>=305)
+	{
+		arc << defaultviewheight;
+	}
 		
 	for (i = 0; i < MAXPLAYERS; i++)
 		arc << frags[i];

@@ -35,6 +35,7 @@
 */
 #include <string.h>
 #include <stdio.h>
+#include "p_local.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "c_dispatch.h"
@@ -97,6 +98,22 @@ void FS_EmulateCmd(char * string)
 		{
 			SC_MustGetFloat();
 			level.gravity=sc_Float*800;
+			while (SC_GetString())
+			{
+				if (SC_Compare(";")) break;
+			}
+		}
+		else if (SC_Compare("viewheight"))
+		{
+			SC_MustGetFloat();
+			playerviewheight = (fixed_t)(sc_Float*FRACUNIT);
+			for(int i=0;i<MAXPLAYERS;i++)
+			{
+				// No, this is not correct. But this is the way Legacy WADs expect it to be handled!
+				players[i].defaultviewheight /*= players[i].viewheight*/ = playerviewheight;
+				players[i].crouchdir=0;
+				players[i].crouching=0;
+			}
 			while (SC_GetString())
 			{
 				if (SC_Compare(";")) break;

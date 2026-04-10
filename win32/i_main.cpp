@@ -411,13 +411,7 @@ char *DoomSpecificInfo (char *text, char *maxtext)
 			goto done;
 		text += wsprintf (text, " %s", arg);
 	}
-	/*
-	if (currentrenderer == 1)
-	{
-		text += wsprintf (text, "\r\nVendor: %s", glGetString(GL_VENDOR));
-		text += wsprintf (text, "\r\nRenderer: %s", glGetString(GL_RENDERER));
-	}
-	*/
+
 	arg = Wads.GetWadName (FWadCollection::IWAD_FILENUM);
 	if (arg != NULL)
 	{

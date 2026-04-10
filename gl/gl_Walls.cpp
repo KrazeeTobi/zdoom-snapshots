@@ -145,28 +145,28 @@ void GLWall::DoRenderWall(bool textured, float * color2, ADynamicLight * light)
 
 	// the rest of the code is identical for textured rendering and lights
 
-	glBegin(GL_TRIANGLE_FAN);
+	gl.Begin(GL_TRIANGLE_FAN);
 
 	// lower left corner
-	if (textured) glTexCoord2f(tcs[0].u,tcs[0].v);
-	glVertex3f(glseg.x1,ybottom[0],glseg.z1);
+	if (textured) gl.TexCoord2f(tcs[0].u,tcs[0].v);
+	gl.Vertex3f(glseg.x1,ybottom[0],glseg.z1);
 
 	// upper left corner
-	if (textured) glTexCoord2f(tcs[1].u,tcs[1].v);
-	glVertex3f(glseg.x1,ytop[0],glseg.z1);
+	if (textured) gl.TexCoord2f(tcs[1].u,tcs[1].v);
+	gl.Vertex3f(glseg.x1,ytop[0],glseg.z1);
 
 	// color for right side
-	if (color2) glColor4fv(color2);
+	if (color2) gl.Color4fv(color2);
 
 	// upper right corner
-	if (textured) glTexCoord2f(tcs[2].u,tcs[2].v);
-	glVertex3f(glseg.x2,ytop[1],glseg.z2);
+	if (textured) gl.TexCoord2f(tcs[2].u,tcs[2].v);
+	gl.Vertex3f(glseg.x2,ytop[1],glseg.z2);
 	
 	// lower right corner
-	if (textured) glTexCoord2f(tcs[3].u,tcs[3].v); 
-	glVertex3f(glseg.x2,ybottom[1],glseg.z2);
+	if (textured) gl.TexCoord2f(tcs[3].u,tcs[3].v); 
+	gl.Vertex3f(glseg.x2,ybottom[1],glseg.z2);
 
-	glEnd();
+	gl.End();
 
 	vertexcount+=4;
 
@@ -254,28 +254,28 @@ void GLWall::DoRenderGlowingPoly(bool textured, bool dolight, ADynamicLight * li
 
 		}
 
-		glBegin(GL_TRIANGLE_FAN);
+		gl.Begin(GL_TRIANGLE_FAN);
 
 
 		// lower left corner
-		if (dolight) glColor4fv(color_b);
-		if (textured) glTexCoord2f(tcs[1].u,fact*(renderbottom-ytop[0])+tcs[1].v);
-		glVertex3f(glseg.x1,renderbottom,glseg.z1);
+		if (dolight) gl.Color4fv(color_b);
+		if (textured) gl.TexCoord2f(tcs[1].u,fact*(renderbottom-ytop[0])+tcs[1].v);
+		gl.Vertex3f(glseg.x1,renderbottom,glseg.z1);
 
 		// upper left corner
-		if (dolight) glColor4fv(color_top);
-		if (textured) glTexCoord2f(tcs[1].u,fact*(rendertop-ytop[0])+tcs[1].v);
-		glVertex3f(glseg.x1,rendertop,glseg.z1);
+		if (dolight) gl.Color4fv(color_top);
+		if (textured) gl.TexCoord2f(tcs[1].u,fact*(rendertop-ytop[0])+tcs[1].v);
+		gl.Vertex3f(glseg.x1,rendertop,glseg.z1);
 
 		// upper right corner
-		if (textured) glTexCoord2f(tcs[2].u,fact*(rendertop-ytop[1])+tcs[2].v);
-		glVertex3f(glseg.x2,rendertop,glseg.z2);
+		if (textured) gl.TexCoord2f(tcs[2].u,fact*(rendertop-ytop[1])+tcs[2].v);
+		gl.Vertex3f(glseg.x2,rendertop,glseg.z2);
 
 		// lower right corner
-		if (dolight) glColor4fv(color_b);
-		if (textured) glTexCoord2f(tcs[2].u,fact*(renderbottom-ytop[1])+tcs[2].v);
-		glVertex3f(glseg.x2,renderbottom,glseg.z2);
-		glEnd();
+		if (dolight) gl.Color4fv(color_b);
+		if (textured) gl.TexCoord2f(tcs[2].u,fact*(renderbottom-ytop[1])+tcs[2].v);
+		gl.Vertex3f(glseg.x2,renderbottom,glseg.z2);
+		gl.End();
 
 
 		renderbottom=rendertop;
@@ -300,22 +300,22 @@ void GLWall::RenderFogSheet()
 		PalEntry fog=Colormap.FadeColor;
 		fog.a=fogdensity*1.6f;
 		gl_SetFog(lightlevel, fog, STYLE_Normal);
-		glColor3f(0,0,0);
-		glDisable(GL_TEXTURE_2D);
-		glBlendFunc(GL_ONE,GL_ONE);
-		glDepthFunc(GL_LEQUAL);
-		glAlphaFunc(GL_GREATER,0);
+		gl.Color3f(0,0,0);
+		gl.Disable(GL_TEXTURE_2D);
+		gl.BlendFunc(GL_ONE,GL_ONE);
+		gl.DepthFunc(GL_LEQUAL);
+		gl.AlphaFunc(GL_GREATER,0);
 		DoRenderWall(false, NULL);
-		glDepthFunc(GL_LESS);
-		glAlphaFunc(GL_GEQUAL,0.5f);
-		glEnable(GL_TEXTURE_2D);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		gl.DepthFunc(GL_LESS);
+		gl.AlphaFunc(GL_GEQUAL,0.5f);
+		gl.Enable(GL_TEXTURE_2D);
+		gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	#else
 		float xcamera=-(float)viewx/MAP_SCALE;
 		float zcamera=(float)viewy/MAP_SCALE;
 
-		float dist1=Dist2(xcamera,zcamera, glseg.x1,glseg.z1);
-		float dist2=Dist2(xcamera,zcamera, glseg.x2,glseg.z2);
+		float dist1=Dist2(xcamera,zcamera, glseg.x1,glseg.z1)*FOG_COEFF;
+		float dist2=Dist2(xcamera,zcamera, glseg.x2,glseg.z2)*FOG_COEFF;
 
 
 		// these values were determined by trial and error and are scale dependent!
@@ -324,18 +324,18 @@ void GLWall::RenderFogSheet()
 
 		float fc[4]={Colormap.FadeColor.r/255.0f,Colormap.FadeColor.g/255.0f,Colormap.FadeColor.b/255.0f,fogd2};
 
-		glDisable(GL_TEXTURE_2D);
-		glDisable(GL_FOG);
-		glAlphaFunc(GL_GREATER,0);
-		glDepthFunc(GL_LEQUAL);
-		glColor4f(fc[0],fc[1],fc[2], fogd1);
+		gl.Disable(GL_TEXTURE_2D);
+		gl_EnableFog(false);
+		gl.AlphaFunc(GL_GREATER,0);
+		gl.DepthFunc(GL_LEQUAL);
+		gl.Color4f(fc[0],fc[1],fc[2], fogd1);
 
 		DoRenderWall(false,fc);
 
-		glDepthFunc(GL_LESS);
-		glEnable(GL_FOG);
-		glAlphaFunc(GL_GEQUAL,0.5f);
-		glEnable(GL_TEXTURE_2D);
+		gl.DepthFunc(GL_LESS);
+		gl_EnableFog(true);
+		gl.AlphaFunc(GL_GEQUAL,0.5f);
+		gl.Enable(GL_TEXTURE_2D);
 	#endif
 	}
 }
@@ -356,32 +356,31 @@ bool GLWall::RenderMirror()
 	FGLTexture * pat=FGLTexture::ValidateTexture(lump);
 	pat->BindPatch(Colormap.LightColor.a, 0);
 
-	glEnable(GL_TEXTURE_GEN_T);
-	glEnable(GL_TEXTURE_GEN_S);
-	glTexGenf(GL_S,GL_TEXTURE_GEN_MODE,GL_SPHERE_MAP);
-	glTexGenf(GL_T,GL_TEXTURE_GEN_MODE,GL_SPHERE_MAP);
+	gl.Enable(GL_TEXTURE_GEN_T);
+	gl.Enable(GL_TEXTURE_GEN_S);
+	gl.TexGeni(GL_S,GL_TEXTURE_GEN_MODE,GL_SPHERE_MAP);
+	gl.TexGeni(GL_T,GL_TEXTURE_GEN_MODE,GL_SPHERE_MAP);
 
 	if (!r_mirrors) gl_SetColor(lightlevel>>1, Colormap.LightColor ,1.0f);
 	else 
 	{
 		gl_SetColor(lightlevel, Colormap.LightColor ,0.1f);
-//		glBlendFunc(GL_ZERO,GL_ONE_MINUS_SRC_COLOR);
-		glBlendFunc(GL_SRC_ALPHA,GL_ONE);
-		glAlphaFunc(GL_GREATER,0);
-		glDepthFunc(GL_LEQUAL);
+		gl.BlendFunc(GL_SRC_ALPHA,GL_ONE);
+		gl.AlphaFunc(GL_GREATER,0);
+		gl.DepthFunc(GL_LEQUAL);
 	}
 	gl_SetFog(lightlevel, Colormap.LightColor,r_mirrors? STYLE_Add : STYLE_Normal);
 
 	DoRenderWall(false,NULL);
 
-	glDisable(GL_TEXTURE_GEN_T);
-	glDisable(GL_TEXTURE_GEN_S);
+	gl.Disable(GL_TEXTURE_GEN_T);
+	gl.Disable(GL_TEXTURE_GEN_S);
 
 	if (r_mirrors)
 	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glAlphaFunc(GL_GEQUAL,0.5f);
-		glDepthFunc(GL_LESS);
+		gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		gl.AlphaFunc(GL_GEQUAL,0.5f);
+		gl.DepthFunc(GL_LESS);
 	}
 
 	return true;
@@ -399,15 +398,15 @@ void GLWall::RenderTwoSidedWall(int pass)
 	if (pass != GLPASS_TEXTURE)
 	{
 		if (flag!=RENDERWALL_M2SNF) gl_SetFog(lightlevel, Colormap.FadeColor, RenderStyle);
-		else glDisable(GL_FOG);
+		else gl_EnableFog(false);
 
 		switch(RenderStyle)
 		{
 		case STYLE_Add:
-			glBlendFunc(GL_SRC_ALPHA,GL_ONE);
+			gl.BlendFunc(GL_SRC_ALPHA,GL_ONE);
 
 		case STYLE_Translucent:
-			glAlphaFunc(GL_GEQUAL,0.5f*fabs(alpha));
+			gl.AlphaFunc(GL_GEQUAL,0.5f*fabs(alpha));
 			break;
 		}
 	}
@@ -415,13 +414,13 @@ void GLWall::RenderTwoSidedWall(int pass)
 	if (gltexture) 
 	{
 		gltexture->Bind(Colormap.LightColor.a);
-		if (clampy) glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-		if (clampx) glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+		if (clampy) gl.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+		if (clampx) gl.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
 	}
 	else 
 	{
-		gl_SetShader(CM_DEFAULT);
-		glDisable(GL_TEXTURE_2D);
+		gl_SetColorMode(CM_DEFAULT);
+		gl.Disable(GL_TEXTURE_2D);
 	}
 
 	// prevent some ugly artifacts at the borders of fences etc.
@@ -450,19 +449,18 @@ void GLWall::RenderTwoSidedWall(int pass)
 	if (pass!=GLPASS_TEXTURE) switch(RenderStyle)
 	{
 	case STYLE_Add:
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
 	if (gltexture)	
 	{
-		if (clampy) glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
-		if (clampx) glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+		if (clampy) gl.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+		if (clampx) gl.TexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
 	}
 	else 
 	{
-		glEnable(GL_TEXTURE_2D);
+		gl.Enable(GL_TEXTURE_2D);
 	}
-	if (pass==GLPASS_UNLIT && flag==RENDERWALL_M2SNF) glEnable(GL_FOG);
-
+	if (pass==GLPASS_UNLIT && flag==RENDERWALL_M2SNF) gl_EnableFog(true);
 }
 
 
@@ -492,12 +490,12 @@ void GLWall::RenderOneSidedWall(int pass)
 		if (gltexture) gltexture->Bind(Colormap.LightColor.a);
 		else 
 		{
-			glDisable(GL_TEXTURE_2D);
-			gl_SetShader(CM_DEFAULT);
+			gl.Disable(GL_TEXTURE_2D);
+			gl_SetColorMode(CM_DEFAULT);
 		}
 		if (!renderglowing) DoRenderWall(true,NULL);
 		else DoRenderGlowingPoly();
-		if (!gltexture)	glEnable(GL_TEXTURE_2D);
+		if (!gltexture) gl.Enable(GL_TEXTURE_2D);
 		break;
 
 
@@ -569,9 +567,9 @@ void GLWall::Draw(int pass)
 			{
 				if (!r_mirrors)
 				{
-					glDepthFunc(GL_LEQUAL);
+					gl.DepthFunc(GL_LEQUAL);
 					RenderOneSidedWall(GLPASS_UNLIT);
-					glDepthFunc(GL_LESS);
+					gl.DepthFunc(GL_LESS);
 				}
 			}
 			if (seg->sidedef->BoundActors && r_mirrors)
@@ -580,14 +578,14 @@ void GLWall::Draw(int pass)
 
 				// This has to set the decal drawing mode itself because it is not done in 
 				// the decal pass
-				glEnable(GL_POLYGON_OFFSET_FILL);
-				glPolygonOffset(-1.0f, -128.0f);
-				glDepthMask(false);
+				gl.Enable(GL_POLYGON_OFFSET_FILL);
+				gl.PolygonOffset(-1.0f, -128.0f);
+				gl.DepthMask(false);
 				DoDrawDecals(decal, seg);
-				glDepthMask(true);
-				glPolygonOffset(0.0f, 0.0f);
-				glDisable(GL_POLYGON_OFFSET_FILL);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				gl.DepthMask(true);
+				gl.PolygonOffset(0.0f, 0.0f);
+				gl.Disable(GL_POLYGON_OFFSET_FILL);
+				gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			}
 		}
 		break;									
@@ -682,7 +680,7 @@ void GLWall::PutWall(bool translucent)
 		}
 		else if ( !gl_fixedcolormap && passflag[flag]==1)
 		{
-			list = (!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE) ? GLDL_LITFOG : GLDL_LIT;
+			list = (!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE) ? GLDL_LITFOG : gltexture->tex->bMasked? GLDL_MASKED : GLDL_LIT;
 		}
 		else if (flag==RENDERWALL_M2S && !gl_fixedcolormap)
 		{
@@ -959,6 +957,7 @@ bool GLWall::SetWallCoordinates(seg_t * seg, int texturetop,
 		glseg.x1=glseg.x1+inter_x*(glseg.x2-glseg.x1);
 		glseg.z1=glseg.z1+inter_x*(glseg.z2-glseg.z1);
 		glseg.noorigverts=true;
+		fracleft = inter_x;
 
 		ybottom[0]=ytop[0]=TO_MAP(inter_y);	
 
@@ -1001,6 +1000,7 @@ bool GLWall::SetWallCoordinates(seg_t * seg, int texturetop,
 		glseg.x2=glseg.x1+inter_x*(glseg.x2-glseg.x1);
 		glseg.z2=glseg.z1+inter_x*(glseg.z2-glseg.z1);
 		glseg.noorigverts=true;
+		fracright = inter_x;
 
 		ybottom[1]=ytop[1]=TO_MAP(inter_y);
 		if (wti)
@@ -1037,7 +1037,7 @@ void GLWall::DoTexture(int type,seg_t * seg,int peg,
 
 
 	flag=type;
-	if (flag==RENDERWALL_M1S && seg->linedef->special==Line_Mirror && !gl_nostencil) 
+	if (flag==RENDERWALL_M1S && seg->linedef->special==Line_Mirror && !(gl.flags&RFL_NOSTENCIL)) 
 		flag=(r_mirrors) ? RENDERWALL_MIRROR : RENDERWALL_MIRRORSURFACE;
 
 	ceilingrefheight+= 	gltexture->RowOffset(seg->sidedef->rowoffset)+
@@ -1646,16 +1646,25 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 #ifdef _DEBUG
 	if (seg->linedef-lines==break_renderlinedef && IsDebuggerPresent())
 		__asm int 3;	
-	if (seg->linedef-lines==14)
+	if (seg->linedef-lines==2815)
 		__asm nop
 #endif
 
 	this->seg=seg;
 	this->sub=polysub;
 
-	// Need these for aligning the textures!
-	realfront = &sectors[frontsector->sectornum];
-	realback = backsector? &sectors[backsector->sectornum] : NULL;
+	if (polysub && seg->backsector)
+	{
+		// Textures on 2-sided polyobjects are aligned to the actual seg's sectors!
+		realfront = seg->frontsector;
+		realback = seg->backsector;
+	}
+	else
+	{
+		// Need these for aligning the textures!
+		realfront = &sectors[frontsector->sectornum];
+		realback = backsector? &sectors[backsector->sectornum] : NULL;
+	}
 
 	if (seg->sidedef == &sides[seg->linedef->sidenum[0]])
 	{
@@ -1674,6 +1683,8 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 	glseg.z1= v1->y/(float)MAP_SCALE;
 	glseg.x2=-v2->x/(float)MAP_SCALE;
 	glseg.z2= v2->y/(float)MAP_SCALE;
+	fracleft=0;
+	fracright=1;
 	glseg.noorigverts=false;
 	clampx=clampy=false;
 
@@ -1715,7 +1726,7 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 	}
 
 
-	if (seg->linedef->special==Line_Horizon && !gl_nostencil)
+	if (seg->linedef->special==Line_Horizon && !(gl.flags&RFL_NOSTENCIL))
 	{
 		SkyNormal(frontsector,v1,v2);
 		DoHorizon(seg,frontsector, v1,v2);

@@ -1823,8 +1823,6 @@ FUNC(LS_Scroll_Floor)
 	}
 	if (arg3 > 0)
 	{
-		dx = FixedMul (dx, CARRYFACTOR);
-		dy = FixedMul (dy, CARRYFACTOR);
 		SetScroller (arg0, DScroller::sc_carry, dx, dy);
 	}
 	else

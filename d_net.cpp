@@ -2101,7 +2101,7 @@ void Net_DoCommand (int type, byte **stream, int player)
 
 			s = ReadString (stream);
 			typeinfo = TypeInfo::FindType (s);
-			if (type != NULL && typeinfo->ActorInfo != NULL)
+			if (typeinfo != NULL && typeinfo->ActorInfo != NULL)
 			{
 				AActor *source = players[player].mo;
 				if (source != NULL)
@@ -2220,6 +2220,11 @@ void Net_DoCommand (int type, byte **stream, int player)
 				arg[0], arg[1], arg[2], false, false, true);
 		}
 		break;
+
+	case DEM_CROUCH:
+		players[player].crouching = players[player].mo->GetDefault()->height / (players[player].crouchdir<0? 1:2);
+		break;
+
 
 	default:
 		I_Error ("Unknown net command: %d", type);

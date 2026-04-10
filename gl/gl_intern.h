@@ -48,8 +48,6 @@ EXTERN_CVAR (Bool, gl_light_particles);
 EXTERN_CVAR(Bool, gl_depthfog)
 EXTERN_CVAR(Bool,gl_mirror_envmap)
 
-extern bool gl_nostencil;
-
 extern float pitch;
 extern float viewvecX,viewvecY;
 
@@ -58,6 +56,7 @@ extern int iter_dlightf, iter_dlight, draw_dlight, draw_dlightf;
 extern DWORD gl_fixedcolormap;
 extern int palette_brightness;
 extern AActor * viewactor;
+extern bool gl_shaderactive;
 
 typedef enum
 {

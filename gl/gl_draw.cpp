@@ -147,27 +147,27 @@ void gl_DrawTexture(FTexInfo *texInfo)
 	int btm = (SCREENHEIGHT - screen->GetHeight()) / 2;
 	btm = SCREENHEIGHT - btm;
 
-	glEnable(GL_SCISSOR_TEST);
+	gl.Enable(GL_SCISSOR_TEST);
 	int space = (static_cast<Win32GLFrameBuffer*>(screen)->GetTrueHeight()-screen->GetHeight())/2;	// ugh...
-	glScissor(texInfo->clipLeft, btm - texInfo->clipBottom+space, texInfo->clipRight - texInfo->clipLeft, texInfo->clipBottom - texInfo->clipTop);
+	gl.Scissor(texInfo->clipLeft, btm - texInfo->clipBottom+space, texInfo->clipRight - texInfo->clipLeft, texInfo->clipBottom - texInfo->clipTop);
 	
-	glColor4f(r, g, b, texInfo->alpha);
+	gl.Color4f(r, g, b, texInfo->alpha);
 	
-	glDisable(GL_ALPHA_TEST);
-	glBegin(GL_TRIANGLE_STRIP);
-	glTexCoord2f(ox, oy);
-	glVertex2i(x, y);
-	glTexCoord2f(ox, cy);
-	glVertex2i(x, y + h);
-	glTexCoord2f(cx, oy);
-	glVertex2i(x + w, y);
-	glTexCoord2f(cx, cy);
-	glVertex2i(x + w, y + h);
-	glEnd();
-	glEnable(GL_ALPHA_TEST);
+	gl.Disable(GL_ALPHA_TEST);
+	gl.Begin(GL_TRIANGLE_STRIP);
+	gl.TexCoord2f(ox, oy);
+	gl.Vertex2i(x, y);
+	gl.TexCoord2f(ox, cy);
+	gl.Vertex2i(x, y + h);
+	gl.TexCoord2f(cx, oy);
+	gl.Vertex2i(x + w, y);
+	gl.TexCoord2f(cx, cy);
+	gl.Vertex2i(x + w, y + h);
+	gl.End();
+	gl.Enable(GL_ALPHA_TEST);
 	
-	glScissor(0, 0, screen->GetWidth(), screen->GetHeight());
-	glDisable(GL_SCISSOR_TEST);
+	gl.Scissor(0, 0, screen->GetWidth(), screen->GetHeight());
+	gl.Disable(GL_SCISSOR_TEST);
 }
 
 
@@ -199,17 +199,17 @@ void gl_DrawBuffer(byte * sbuffer, int width, int height, int x, int y, int dx, 
 	gltex->CreateTexture(buffer, width, height, false, CM_DEFAULT);
 	delete[] buffer;
 
-	glBegin(GL_TRIANGLE_STRIP);
-	glTexCoord2f(0, 0);
-	glVertex2i(x, y);
-	glTexCoord2f(0, gltex->GetVB());
-	glVertex2i(x, y+dy);
-	glTexCoord2f(gltex->GetUR(), 0);
-	glVertex2i(x+dx, y);
-	glTexCoord2f(gltex->GetUR(), gltex->GetVB());
-	glVertex2i(x+dx, y+dy);
-	glEnd();
-	glFlush();
+	gl.Begin(GL_TRIANGLE_STRIP);
+	gl.TexCoord2f(0, 0);
+	gl.Vertex2i(x, y);
+	gl.TexCoord2f(0, gltex->GetVB());
+	gl.Vertex2i(x, y+dy);
+	gl.TexCoord2f(gltex->GetUR(), 0);
+	gl.Vertex2i(x+dx, y);
+	gl.TexCoord2f(gltex->GetUR(), gltex->GetVB());
+	gl.Vertex2i(x+dx, y+dy);
+	gl.End();
+	gl.Flush();
 	delete gltex;
 }
 
@@ -297,14 +297,14 @@ void gl_DrawSavePic(DCanvas * canvas, const char * Filename, int x, int y, int d
 void gl_DrawLine(int x1, int y1, int x2, int y2, int color)
 {
 	PalEntry p = color&0xff000000? color : GPalette.BaseColors[color];
-	gl_SetShader(CM_DEFAULT);
-	glDisable(GL_TEXTURE_2D);
-	glColor3ub(p.r, p.g, p.b);
-	glBegin(GL_LINES);
-	glVertex2i(x1, y1);
-	glVertex2i(x2, y2);
-	glEnd();
-	glEnable(GL_TEXTURE_2D);
+	gl_SetColorMode(CM_DEFAULT);
+	gl.Disable(GL_TEXTURE_2D);
+	gl.Color3ub(p.r, p.g, p.b);
+	gl.Begin(GL_LINES);
+	gl.Vertex2i(x1, y1);
+	gl.Vertex2i(x2, y2);
+	gl.End();
+	gl.Enable(GL_TEXTURE_2D);
 }
 
 
@@ -317,24 +317,24 @@ void gl_Dim (PalEntry color, float amount, int x1, int y1, int w, int h)
 {
 	float r, g, b;
 	
-	gl_SetShader(CM_DEFAULT);
-	glDisable(GL_TEXTURE_2D);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glAlphaFunc(GL_GREATER,0);
+	gl_SetColorMode(CM_DEFAULT);
+	gl.Disable(GL_TEXTURE_2D);
+	gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	gl.AlphaFunc(GL_GREATER,0);
 	
 	r = color.r/255.0f;
 	g = color.g/255.0f;
 	b = color.b/255.0f;
 	
-	glBegin(GL_TRIANGLE_FAN);
-	glColor4f(r, g, b, amount);
-	glVertex2i(x1, y1);
-	glVertex2i(x1, y1 + h);
-	glVertex2i(x1 + w, y1 + h);
-	glVertex2i(x1 + w, y1);
-	glEnd();
+	gl.Begin(GL_TRIANGLE_FAN);
+	gl.Color4f(r, g, b, amount);
+	gl.Vertex2i(x1, y1);
+	gl.Vertex2i(x1, y1 + h);
+	gl.Vertex2i(x1 + w, y1 + h);
+	gl.Vertex2i(x1 + w, y1);
+	gl.End();
 	
-	glEnable(GL_TEXTURE_2D);
+	gl.Enable(GL_TEXTURE_2D);
 }
 
 //==========================================================================
@@ -357,12 +357,12 @@ void gl_FlatFill (int left, int top, int right, int bottom, FTexture *src)
 	fV1=wti->GetV(top);
 	fU2=wti->GetU(right);
 	fV2=wti->GetV(bottom);
-	glBegin(GL_TRIANGLE_STRIP);
-	glTexCoord2f(fU1, fV1); glVertex2f(left, top);
-	glTexCoord2f(fU1, fV2); glVertex2f(left, bottom);
-	glTexCoord2f(fU2, fV1); glVertex2f(right, top);
-	glTexCoord2f(fU2, fV2); glVertex2f(right, bottom);
-	glEnd();
+	gl.Begin(GL_TRIANGLE_STRIP);
+	gl.TexCoord2f(fU1, fV1); gl.Vertex2f(left, top);
+	gl.TexCoord2f(fU1, fV2); gl.Vertex2f(left, bottom);
+	gl.TexCoord2f(fU2, fV1); gl.Vertex2f(right, top);
+	gl.TexCoord2f(fU2, fV2); gl.Vertex2f(right, bottom);
+	gl.End();
 }
 
 //==========================================================================
@@ -391,13 +391,13 @@ void gl_Clear (int left, int top, int right, int bottom, int color)
 	}
 	*/
 	
-	gl_SetShader(CM_DEFAULT);
-	glEnable(GL_SCISSOR_TEST);
-	glScissor(left, rt - height, width, height);
+	gl_SetColorMode(CM_DEFAULT);
+	gl.Enable(GL_SCISSOR_TEST);
+	gl.Scissor(left, rt - height, width, height);
 	
-	glClearColor(p.r/255.0f, p.g/255.0f, p.b/255.0f, 0.f);
-	glClear(GL_COLOR_BUFFER_BIT);
-	glClearColor(0.f, 0.f, 0.f, 0.f);
+	gl.ClearColor(p.r/255.0f, p.g/255.0f, p.b/255.0f, 0.f);
+	gl.Clear(GL_COLOR_BUFFER_BIT);
+	gl.ClearColor(0.f, 0.f, 0.f, 0.f);
 	
-	glDisable(GL_SCISSOR_TEST);
+	gl.Disable(GL_SCISSOR_TEST);
 }

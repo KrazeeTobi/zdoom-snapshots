@@ -58,7 +58,7 @@ void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, bool ceiling)
 {
 	// JUSTHIT is used as an indicator that a skybox is in use.
 	// This is to avoid recursion
-	if (!gl_noskyboxes && !gl_nostencil && skyboxx && viewactor!=skyboxx && !(skyboxx->flags&MF_JUSTHIT))
+	if (!gl_noskyboxes && !(gl.flags&RFL_NOSTENCIL) && skyboxx && viewactor!=skyboxx && !(skyboxx->flags&MF_JUSTHIT))
 	{
 		if (!skyboxx->Mate) 
 		{
@@ -86,7 +86,7 @@ void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, bool ceiling)
 		static GLSkyInfo skyinfo;
 
 		memset(&skyinfo, 0, sizeof(skyinfo));
-		if ((sky1 & PL_SKYFLAT) && (sky1 & (PL_SKYFLAT-1)) && !gl_nostencil)
+		if ((sky1 & PL_SKYFLAT) && (sky1 & (PL_SKYFLAT-1)) && !(gl.flags&RFL_NOSTENCIL))
 		{
 			const line_t *l = &lines[(sky1&(PL_SKYFLAT-1))-1];
 			const side_t *s = &sides[l->sidenum[0]];
@@ -108,7 +108,7 @@ void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, bool ceiling)
 				skyinfo.doublesky = true;
 			}
 			
-			if ((level.flags&LEVEL_SWAPSKIES || (sky1==PL_SKYFLAT && !gl_nostencil) || (level.flags&LEVEL_DOUBLESKY)) &&
+			if ((level.flags&LEVEL_SWAPSKIES || (sky1==PL_SKYFLAT && !(gl.flags&RFL_NOSTENCIL)) || (level.flags&LEVEL_DOUBLESKY)) &&
 				sky2texture!=sky1texture)	// If both skies are equal use the scroll offset of the first!
 			{
 				skyinfo.texture[0]=FGLTexture::ValidateTexture(sky2texture);

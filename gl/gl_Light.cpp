@@ -148,7 +148,7 @@ void gl_SetColor(int light, int red, int green, int blue, float alpha, PalEntry 
 { 
 	float r,g,b;
 	gl_GetLightColor(light,red,green,blue,&r,&g,&b);
-	glColor4f(r * ThingColor.r/255.0f, g * ThingColor.g/255.0f, b * ThingColor.b/255.0f, alpha);
+	gl.Color4f(r * ThingColor.r/255.0f, g * ThingColor.g/255.0f, b * ThingColor.b/255.0f, alpha);
 }
 
 //==========================================================================
@@ -195,7 +195,7 @@ int gl_GetFogDensity(int lightlevel, PalEntry fogcolor)
 	else 
 	{
 		// case 4
-		density=clamp<int>(255-lightlevel,60,255);
+		density=clamp<int>(255-lightlevel,30,255);
 	}
 	return density;
 }
@@ -208,9 +208,9 @@ void gl_InitFog()
 {
 	cfogcolor=-1;
 	cfogdensity=-1;
-	glDisable(GL_FOG);
-	glHint(GL_FOG_HINT, GL_FASTEST);
-	glFogi(GL_FOG_MODE, GL_EXP);
+	gl_EnableFog(false);
+	gl.Hint(GL_FOG_HINT, GL_FASTEST);
+	gl.Fogi(GL_FOG_MODE, GL_EXP);
 }
 //==========================================================================
 //
@@ -244,7 +244,7 @@ void gl_SetFog(int lightlevel, PalEntry fogcolor, int blendmode)
 	if (fogdensity==0 || !gl_depthfog)
 	{
 		cfogcolor=cfogdensity=-1;
-		glDisable(GL_FOG);
+		gl_EnableFog(false);
 	}
 	else
 	{
@@ -256,15 +256,15 @@ void gl_SetFog(int lightlevel, PalEntry fogcolor, int blendmode)
 			if (fogcolor!=-1)
 			{
 				GLfloat FogColor[4]={fogcolor.r/255.0f,fogcolor.g/255.0f,fogcolor.b/255.0f,0.0f};
-				glFogfv(GL_FOG_COLOR,FogColor);
-				if (cfogcolor==-1) glEnable(GL_FOG);
+				if (cfogcolor==-1) gl_EnableFog(true);
+				gl_FogColor(FogColor);
 			}
-			else glDisable(GL_FOG);
+			else gl_EnableFog(false);
 			cfogcolor=fogcolor;
 		}
 		if (fogdensity!=cfogdensity)
 		{
-			glFogf(GL_FOG_DENSITY,fogdensity/500.0f);
+			gl_FogDensity(fogdensity/500.0f * FOG_COEFF);
 			cfogdensity=fogdensity;
 		}
 	}
@@ -316,11 +316,9 @@ bool gl_SetupLight(Plane & p, ADynamicLight * light, Vector & nearPt, Vector & u
 
 	if (light->IsSubtractive())
 	{
-		if (!glBlendEquation) return false;
-		
 		Vector v;
 		
-		glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+		gl.BlendEquation(GL_FUNC_REVERSE_SUBTRACT);
 		v.Set(r, g, b);
 		r = v.Length() - r;
 		g = v.Length() - g;
@@ -328,7 +326,7 @@ bool gl_SetupLight(Plane & p, ADynamicLight * light, Vector & nearPt, Vector & u
 	}
 	else
 	{
-		if (glBlendEquation) glBlendEquation(GL_FUNC_ADD);
+		gl.BlendEquation(GL_FUNC_ADD);
 	}
 	if (desaturation>0)
 	{
@@ -338,7 +336,7 @@ bool gl_SetupLight(Plane & p, ADynamicLight * light, Vector & nearPt, Vector & u
 		g= (g*(32-desaturation)+ gray*desaturation)/32;
 		b= (b*(32-desaturation)+ gray*desaturation)/32;
 	}
-	glColor3f(r,g,b);
+	gl.Color3f(r,g,b);
 	return true;
 }
 
@@ -432,7 +430,7 @@ void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int 
 	g = clamp<float>(g+tg, 0, 1.0f);
 	b = clamp<float>(b+tb, 0, 1.0f);
 
-	glColor4f(r * ThingColor.r/255.0f, g * ThingColor.g/255.0f, b * ThingColor.b/255.0f, alpha);
+	gl.Color4f(r * ThingColor.r/255.0f, g * ThingColor.g/255.0f, b * ThingColor.b/255.0f, alpha);
 }
 
 

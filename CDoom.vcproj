@@ -5621,9 +5621,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\gl\gl_renderlist.cpp">
-			</File>
-			<File
 				RelativePath="gl\gl_scene.cpp">
 				<FileConfiguration
 					Name="Optimized Debug|Win32">

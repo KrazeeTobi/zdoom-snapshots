@@ -100,7 +100,7 @@ void SaveGFX(const char * fn, unsigned char * buffer, int w, int h)
 void gl_ScreenShot (const char* fname)
 {
 	byte * scr = (byte *)Malloc(SCREENWIDTH * SCREENHEIGHT * 4);
-	glReadPixels(0,0,SCREENWIDTH,SCREENHEIGHT,GL_RGBA,GL_UNSIGNED_BYTE,scr);
+	gl.ReadPixels(0,0,SCREENWIDTH,SCREENHEIGHT,GL_RGBA,GL_UNSIGNED_BYTE,scr);
 	SaveGFX(fname, scr, SCREENWIDTH,SCREENHEIGHT); 
 	free(scr);
 }

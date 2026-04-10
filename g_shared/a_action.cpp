@@ -222,7 +222,7 @@ void A_FreezeDeathChunks (AActor *actor)
 	}
 	if (actor->player)
 	{ // attach the player's view to a chunk of ice
-		AIceChunkHead *head = Spawn<AIceChunkHead> (actor->x, actor->y, actor->z+VIEWHEIGHT);
+		AIceChunkHead *head = Spawn<AIceChunkHead> (actor->x, actor->y, actor->z+playerviewheight/*VIEWHEIGHT*/);
 		head->momz = FixedDiv(head->z-actor->z, actor->height)<<2;
 		head->momx = pr_freeze.Random2 () << (FRACBITS-7);
 		head->momy = pr_freeze.Random2 () << (FRACBITS-7);

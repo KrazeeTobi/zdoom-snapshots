@@ -71,7 +71,7 @@ static bool CheckClip(seg_t * seg, sector_t * frontsector, sector_t * backsector
 	fixed_t fs_ceilingheight2;
 
 	// Mirrors and horizons always block the view
-	if (linedef->special==Line_Mirror || linedef->special==Line_Horizon) return true;
+	//if (linedef->special==Line_Mirror || linedef->special==Line_Horizon) return true;
 
 	// Lines with stacked sectors must never block!
 	if (backsector->CeilingSkyBox && backsector->CeilingSkyBox->bAlways) return false;
@@ -84,7 +84,7 @@ static bool CheckClip(seg_t * seg, sector_t * frontsector, sector_t * backsector
 
 	if (frontsector->ceilingplane.a | frontsector->ceilingplane.b)
 	{
-		fs_ceilingheight1=frontsector->ceilingplane.ZatPoint(linedef->v2);
+		fs_ceilingheight1=frontsector->ceilingplane.ZatPoint(linedef->v1);
 		fs_ceilingheight2=frontsector->ceilingplane.ZatPoint(linedef->v2);
 	}
 	else
@@ -197,7 +197,6 @@ static void AddLine (seg_t *seg,sector_t * sector,subsector_t * polysub)
 		ClipWall.Stop(true);
 		return;
 	}
-
 
 	if (!clipper.SafeCheckRange(startAngle, endAngle)) 
 	{

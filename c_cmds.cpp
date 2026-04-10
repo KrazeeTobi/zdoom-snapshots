@@ -612,3 +612,9 @@ CCMD (warp)
 		Net_WriteWord (atoi (argv[2]));
 	}
 }
+
+
+CCMD(crouch)
+{
+	Net_WriteByte(DEM_CROUCH);
+}

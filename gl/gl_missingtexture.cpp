@@ -45,6 +45,7 @@
 
 // This is for debugging maps.
 CVAR(Bool, gl_notexturefill, false, 0);
+extern int firstmissingseg;
 
 struct MissingTextureInfo
 {
@@ -608,50 +609,49 @@ static void SetupFloodStencil(wallseg * ws)
 	int recursion = GLPortal::GetRecursion();
 
 	// Create stencil 
-	glStencilFunc(GL_EQUAL,recursion,~0);		// create stencil
-	glStencilOp(GL_KEEP,GL_KEEP,GL_INCR);		// increment stencil of valid pixels
-	glColorMask(0,0,0,0);						// don't write to the graphics buffer
-	glDisable(GL_TEXTURE_2D);					// Disable textures (important!)
-	glColor3f(1,1,1);
+	gl.StencilFunc(GL_EQUAL,recursion,~0);		// create stencil
+	gl.StencilOp(GL_KEEP,GL_KEEP,GL_INCR);		// increment stencil of valid pixels
+	gl.ColorMask(0,0,0,0);						// don't write to the graphics buffer
+	gl.Disable(GL_TEXTURE_2D);
+	gl.Color3f(1,1,1);
 
-	glBegin(GL_TRIANGLE_FAN);
-	glVertex3f(ws->x1, ws->z1, ws->y1);
-	glVertex3f(ws->x1, ws->z2, ws->y1);
-	glVertex3f(ws->x2, ws->z2, ws->y2);
-	glVertex3f(ws->x2, ws->z1, ws->y2);
-	glEnd();
+	gl.Begin(GL_TRIANGLE_FAN);
+	gl.Vertex3f(ws->x1, ws->z1, ws->y1);
+	gl.Vertex3f(ws->x1, ws->z2, ws->y1);
+	gl.Vertex3f(ws->x2, ws->z2, ws->y2);
+	gl.Vertex3f(ws->x2, ws->z1, ws->y2);
+	gl.End();
 
-	glStencilFunc(GL_EQUAL,recursion+1,~0);		// draw sky into stencil
-	glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);		// this stage doesn't modify the stencil
+	gl.StencilFunc(GL_EQUAL,recursion+1,~0);		// draw sky into stencil
+	gl.StencilOp(GL_KEEP,GL_KEEP,GL_KEEP);		// this stage doesn't modify the stencil
 
-	glColorMask(1,1,1,1);						// don't write to the graphics buffer
-	glEnable(GL_TEXTURE_2D);
-	glDepthFunc(GL_ALWAYS);
+	gl.ColorMask(1,1,1,1);						// don't write to the graphics buffer
+	gl.Enable(GL_TEXTURE_2D);
+	gl.DepthFunc(GL_ALWAYS);
 }
 
 static void ClearFloodStencil(wallseg * ws)
 {
 	int recursion = GLPortal::GetRecursion();
 
-	glDepthFunc(GL_LESS);
-	glStencilOp(GL_KEEP,GL_KEEP,GL_DECR);
-	glDisable(GL_TEXTURE_2D);					// Disable textures (important!)
-	glColorMask(0,0,0,0);						// don't write to the graphics buffer
-	glDisable(GL_TEXTURE_2D);					// Disable textures (important!)
-	glColor3f(1,1,1);
+	gl.DepthFunc(GL_LESS);
+	gl.StencilOp(GL_KEEP,GL_KEEP,GL_DECR);
+	gl.Disable(GL_TEXTURE_2D);					// Disable textures (important!)
+	gl.ColorMask(0,0,0,0);						// don't write to the graphics buffer
+	gl.Color3f(1,1,1);
 
-	glBegin(GL_TRIANGLE_FAN);
-	glVertex3f(ws->x1, ws->z1, ws->y1);
-	glVertex3f(ws->x1, ws->z2, ws->y1);
-	glVertex3f(ws->x2, ws->z2, ws->y2);
-	glVertex3f(ws->x2, ws->z1, ws->y2);
-	glEnd();
+	gl.Begin(GL_TRIANGLE_FAN);
+	gl.Vertex3f(ws->x1, ws->z1, ws->y1);
+	gl.Vertex3f(ws->x1, ws->z2, ws->y1);
+	gl.Vertex3f(ws->x2, ws->z2, ws->y2);
+	gl.Vertex3f(ws->x2, ws->z1, ws->y2);
+	gl.End();
 
 	// restore old stencil op.
-	glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
-	glStencilFunc(GL_EQUAL,recursion,~0);		// draw sky into stencil
-	glEnable(GL_TEXTURE_2D);
-	glColorMask(1,1,1,1);
+	gl.StencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
+	gl.StencilFunc(GL_EQUAL,recursion,~0);		// draw sky into stencil
+	gl.Enable(GL_TEXTURE_2D);
+	gl.ColorMask(1,1,1,1);
 }
 
 //==========================================================================
@@ -698,7 +698,7 @@ static void DrawFloodedPlane(wallseg * ws, float planez, sector_t * sec, bool ce
 	float fviewy = TO_MAP(viewy);
 	float fviewz = TO_MAP(viewz);
 
-	glBegin(GL_TRIANGLE_FAN);
+	gl.Begin(GL_TRIANGLE_FAN);
 	float prj_fac1 = (planez-fviewz)/(ws->z1-fviewz);
 	float prj_fac2 = (planez-fviewz)/(ws->z2-fviewz);
 
@@ -714,23 +714,23 @@ static void DrawFloodedPlane(wallseg * ws, float planez, sector_t * sec, bool ce
 	float px4 = fviewx + prj_fac1 * (ws->x2-fviewx);
 	float py4 = fviewy + prj_fac1 * (ws->y2-fviewy);
 
-	glTexCoord2f(px1 * -2, py1 * -2);
-	glVertex3f(px1, planez, py1);
+	gl.TexCoord2f(px1 * -2, py1 * -2);
+	gl.Vertex3f(px1, planez, py1);
 
-	glTexCoord2f(px2 * -2, py2 * -2);
-	glVertex3f(px2, planez, py2);
+	gl.TexCoord2f(px2 * -2, py2 * -2);
+	gl.Vertex3f(px2, planez, py2);
 
-	glTexCoord2f(px3 * -2, py3 * -2);
-	glVertex3f(px3, planez, py3);
+	gl.TexCoord2f(px3 * -2, py3 * -2);
+	gl.Vertex3f(px3, planez, py3);
 
-	glTexCoord2f(px4 * -2, py4 * -2);
-	glVertex3f(px4, planez, py4);
+	gl.TexCoord2f(px4 * -2, py4 * -2);
+	gl.Vertex3f(px4, planez, py4);
 
-	glEnd();
+	gl.End();
 
-	glMatrixMode(GL_TEXTURE);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
+	gl.MatrixMode(GL_TEXTURE);
+	gl.PopMatrix();
+	gl.MatrixMode(GL_MODELVIEW);
 }
 
 //==========================================================================
@@ -828,10 +828,10 @@ static void FloodLowerGap(seg_t * seg)
 void DrawUnhandledMissingTextures()
 {
 	// Set the drawing mode
-	glDepthMask(false);							// don't write to Z-buffer!
-	glEnable(GL_FOG);
-	glAlphaFunc(GL_GEQUAL,0.5f);
-	glBlendFunc(GL_ONE,GL_ZERO);
+	gl.DepthMask(false);							// don't write to Z-buffer!
+	gl_EnableFog(true);
+	gl.AlphaFunc(GL_GEQUAL,0.5f);
+	gl.BlendFunc(GL_ONE,GL_ZERO);
 
 	validcount++;
 	for(int i=0;i<MissingUpperSegs.Size(); i++)
@@ -846,6 +846,7 @@ void DrawUnhandledMissingTextures()
 		seg->linedef->validcount=validcount;
 		if (seg->frontsector->ceilingtexz < viewz) continue;	// out of sight
 		if (gl_sectors[seg->backsector->sectornum].transdoor) continue;
+		if (seg->backsector->CeilingSkyBox && seg->backsector->CeilingSkyBox->bAlways) continue;
 
 		if (!gl_notexturefill) FloodUpperGap(seg);
 	}
@@ -861,8 +862,10 @@ void DrawUnhandledMissingTextures()
 		// already done!
 		if (seg->linedef->validcount==validcount) continue;		// already done
 		seg->linedef->validcount=validcount;
+		if (!(gl_sectors[seg->backsector->sectornum].renderflags&SSRF_RENDERFLOOR)) continue;
 		if (seg->frontsector->floortexz > viewz) continue;	// out of sight
 		if (gl_sectors[seg->backsector->sectornum].transdoor) continue;
+		if (seg->backsector->FloorSkyBox && seg->backsector->FloorSkyBox->bAlways) continue;
 
 		if (!gl_notexturefill) FloodLowerGap(seg);
 	}
@@ -871,7 +874,7 @@ void DrawUnhandledMissingTextures()
 	MissingUpperSegs.Clear();
 	MissingLowerSegs.Clear();
 
-	glDepthMask(true);
+	gl.DepthMask(true);
 }
 
 ADD_STAT(missingtextures,out)
@@ -889,8 +892,11 @@ ADD_STAT(missingtextures,out)
 
 void AddHackedSubsector(subsector_t * sub)
 {
-	SubsectorHackInfo sh={&gl_subsectors[sub-subsectors], 0};
-	SubsectorHacks.Push (sh);
+	if (firstmissingseg<numsegs)
+	{
+		SubsectorHackInfo sh={&gl_subsectors[sub-subsectors], 0};
+		SubsectorHacks.Push (sh);
+	}
 }
 
 //==========================================================================

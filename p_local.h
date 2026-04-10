@@ -35,7 +35,8 @@
 
 #define MAXHEALTH		(deh.MaxHealth)		//100
 #define MAXMORPHHEALTH	30
-#define VIEWHEIGHT		(41*FRACUNIT)
+extern fixed_t playerviewheight;
+#define VIEWHEIGHT		player->defaultviewheight//(41*FRACUNIT)
 
 #define BONUSADD		6
 

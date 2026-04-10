@@ -128,6 +128,12 @@ static void PrepareSectorData()
 		{
 			segs[i].PartnerSeg=NULL;
 		}
+
+		// glbsp creates such incorrect references for Strife.
+		if (segs[i].linedef && segs[i].PartnerSeg && !segs[i].PartnerSeg->linedef)
+		{
+			segs[i].PartnerSeg = segs[i].PartnerSeg->PartnerSeg = NULL;
+		}
 	}
 
 	// look up sector number for each subsector
@@ -227,17 +233,21 @@ static void PrepareSectorData()
 	// marks all malformed subsectors so rendering tricks using them can be handled more easily
 	for (i = 0; i < numsubsectors; i++)
 	{
-		seg_t * seg = &segs[subsectors[i].firstline];
-		for(int j=0;j<subsectors[i].numlines;j++)
+		if (subsectors[i].sector == gl_subsectors[i].render_sector)
 		{
-			if (!(gl_subsectors[i].hacked&1) && seg[j].linedef==0 && 
-					seg[j].PartnerSeg!=NULL && gl_subsectors[i].render_sector != 
-					gl_subsectors[seg[j].PartnerSeg->Subsector-subsectors].render_sector)
+			seg_t * seg = &segs[subsectors[i].firstline];
+			for(int j=0;j<subsectors[i].numlines;j++)
 			{
-				gl_subsectors[i].hacked|=1;
-				SpreadHackedFlag(&gl_subsectors[i]);
+				if (!(gl_subsectors[i].hacked&1) && seg[j].linedef==0 && 
+						seg[j].PartnerSeg!=NULL && gl_subsectors[i].render_sector != 
+						gl_subsectors[seg[j].PartnerSeg->Subsector-subsectors].render_sector)
+				{
+					Printf("Found hack: %d,%d %d,%d\n", seg[j].v1->x>>16, seg[j].v1->y>>16, seg[j].v2->x>>16, seg[j].v2->y>>16);
+					gl_subsectors[i].hacked|=1;
+					SpreadHackedFlag(&gl_subsectors[i]);
+				}
+				if (seg[j].PartnerSeg==NULL) gl_subsectors[i].hacked|=2;	// used for quick termination checks
 			}
-			if (seg[j].PartnerSeg==NULL) gl_subsectors[i].hacked|=2;	// used for quick termination checks
 		}
 	}
 }
@@ -427,8 +437,8 @@ void gl_PreprocessLevel()
 	}
 	gl_CollectMissingLines();
 
-	glTexCoordPointer(2,GL_FLOAT,sizeof(GLVertex),&gl_vertices[0].u);
-	glVertexPointer(3,GL_FLOAT,sizeof(GLVertex),&gl_vertices[0].x);
+	// This code can be called when the hardware renderer is inactive!
+	if (currentrenderer!=0) gl.ArrayPointer(&gl_vertices[0], sizeof(GLVertex));
 
 	if (gl_DebugHook) gl_DebugHook();
 }

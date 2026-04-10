@@ -84,8 +84,8 @@ struct FColormap
 
 struct GLVertex
 {
-	float u,v;		// texture coordinates
 	float x,y,z;	// world coordinates
+	float u,v;		// texture coordinates
 	vertex_t * vt;	// real vertex
 };
 

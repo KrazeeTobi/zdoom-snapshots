@@ -61,11 +61,11 @@ void gl_SetPlaneTextureRotation(const GLSectorPlane * secplane, FGLTexture * glt
 	float yscale=(float)1.f/FRACUNIT*(float)secplane->yscale/gltexture->TextureHeight()*64.0f;
 	float angle=-(float)(secplane->angle)*(45.0f/ANG45);
 
-	glMatrixMode(GL_TEXTURE);
-	glPushMatrix();
-	glTranslatef(uoffs/gltexture->TextureWidth(),voffs/gltexture->TextureHeight(),0.0f);
-	glScalef(xscale,yscale,1.0f);
-	glRotatef(angle,0.0f,0.0f,1.0f);
+	gl.MatrixMode(GL_TEXTURE);
+	gl.PushMatrix();
+	gl.Translatef(uoffs/gltexture->TextureWidth(),voffs/gltexture->TextureHeight(),0.0f);
+	gl.Scalef(xscale,yscale,1.0f);
+	gl.Rotatef(angle,0.0f,0.0f,1.0f);
 }
 
 
@@ -132,7 +132,7 @@ void GLFlat::DrawSubsectorLights(gl_subsectordata * glsub)
 		}
 
 		// Render the light
-		glBegin(GL_TRIANGLE_FAN);
+		gl.Begin(GL_TRIANGLE_FAN);
 		for(k = 0; k < glsub->numvertices; k++)
 		{
 			Vector t1;
@@ -140,10 +140,10 @@ void GLFlat::DrawSubsectorLights(gl_subsectordata * glsub)
 
 			t1.Set(vt->x, vt->y, vt->z);
 			Vector nearToVert = t1 - nearPt;
-			glTexCoord2f( (nearToVert.Dot(right) * scale) + 0.5f, (nearToVert.Dot(up) * scale) + 0.5f);
-			glVertex3f(vt->x, vt->y, vt->z);
+			gl.TexCoord2f( (nearToVert.Dot(right) * scale) + 0.5f, (nearToVert.Dot(up) * scale) + 0.5f);
+			gl.Vertex3f(vt->x, vt->y, vt->z);
 		}
-		glEnd();
+		gl.End();
 		node = node->nextLight;
 	}
 }
@@ -170,7 +170,7 @@ void GLFlat::DrawSubsector(gl_subsectordata * glsub)
 	{
 		gl_vertices[glsub->firstvertex + k].y = z;
 	}
-	glDrawArrays(GL_TRIANGLE_FAN, glsub->firstvertex, glsub->numvertices);
+	gl.DrawArrays(GL_TRIANGLE_FAN, glsub->firstvertex, glsub->numvertices);
 	flatvertices += glsub->numvertices;
 	flatprimitives++;
 }
@@ -254,15 +254,15 @@ void GLFlat::Draw(int pass)
 		}
 		else
 		{
-			glDisable(GL_TEXTURE_2D);
-			gl_SetShader(CM_DEFAULT);
+			gl.Disable(GL_TEXTURE_2D);
+			gl_SetColorMode(CM_DEFAULT);
 		}
 	}
 
 	if (alpha<1.0f-FLT_EPSILON) 
 	{
-		glAlphaFunc(GL_GEQUAL,0.5f*(alpha));
-		glDepthFunc(GL_LEQUAL);
+		gl.AlphaFunc(GL_GEQUAL,0.5f*(alpha));
+		gl.DepthFunc(GL_LEQUAL);
 	}
 
 	if (sub)
@@ -298,11 +298,11 @@ void GLFlat::Draw(int pass)
 		}
 	}
 
-	if (needtexture && !gltexture) glEnable(GL_TEXTURE_2D);
-	else glPopMatrix();
+	if (needtexture && !gltexture) gl.Enable(GL_TEXTURE_2D);
+	else gl.PopMatrix();
 	if (alpha<1.0f-FLT_EPSILON) 
 	{
-		glDepthFunc(GL_LESS);
+		gl.DepthFunc(GL_LESS);
 	}
 }
 
@@ -447,7 +447,7 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 			lightlevel = GetFloorLight(frontsector);
 			Colormap=frontsector->ColorMap;
 			alpha=frontsector->FloorSkyBox && frontsector->FloorSkyBox->bAlways ? 
-				frontsector->FloorSkyBox->PlaneAlpha/255.0f : 1.0f;
+				frontsector->FloorSkyBox->PlaneAlpha/65536.0f : 1.0f;
 
 			ceiling=false;
 			renderflags=SSRF_RENDERFLOOR;
@@ -485,7 +485,7 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 			lightlevel = GetCeilingLight(frontsector);
 			Colormap=frontsector->ColorMap;
 			alpha=frontsector->CeilingSkyBox && frontsector->CeilingSkyBox->bAlways ? 
-				frontsector->CeilingSkyBox->PlaneAlpha/255.0f : 1.0f;
+				frontsector->CeilingSkyBox->PlaneAlpha/65536.0f : 1.0f;
 
 			ceiling=true;
 			renderflags=SSRF_RENDERCEILING;

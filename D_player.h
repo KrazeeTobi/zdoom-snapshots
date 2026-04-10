@@ -274,6 +274,10 @@ public:
 	float		BlendA;
 
 	char		*LogText;	// [RH] Log for Strife
+
+	fixed_t defaultviewheight;
+	fixed_t crouching;
+	signed char	crouchdir;
 };
 
 typedef player_s player_t;

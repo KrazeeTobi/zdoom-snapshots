@@ -17,8 +17,7 @@
 #include "gl/gl_texture.h"
 #include "gl/gltexture.h"
 
-
-float   avertexnormals[NUMVERTEXNORMALS][3] = {
+static float   avertexnormals[NUMVERTEXNORMALS][3] = {
 #include "tab_anorms.h"
 };
 
@@ -31,19 +30,6 @@ int * modelskins;
 
 void R_ClearModels()
 {
-	/*
-	for(int i=0;i<modellist.Size();i++)
-	{
-		// No, this doesn't free all the data!
-		delete model[i]->frames;
-		delete modellist[i];
-	}
-	*/
-	if (modelskins) delete [] modelskins;
-	modelskins=NULL;
-	if (spritemodels) delete [] spritemodels;
-	spritemodels=NULL;
-	modellist.Clear();
 }
 
 //===========================================================================
@@ -239,7 +225,7 @@ void Mod_RenderCommands(void *glCommands, unsigned int numVertices,model_vertex_
 		pos += 4;
 
 		// The type of primitive depends on the sign.
-		glBegin(count > 0 ? GL_TRIANGLE_STRIP : GL_TRIANGLE_FAN);
+		gl.Begin(count > 0 ? GL_TRIANGLE_STRIP : GL_TRIANGLE_FAN);
 		if(count < 0) count = -count;
 
 		// Increment the total model triangle counter.
@@ -250,12 +236,12 @@ void Mod_RenderCommands(void *glCommands, unsigned int numVertices,model_vertex_
 			v = (glcommand_vertex_t *) pos;
 			pos += sizeof(glcommand_vertex_t);
 
-			glTexCoord2fv(&v->s);
-			glVertex3fv((float*)&vertices[v->index]);
+			gl.TexCoord2fv(&v->s);
+			gl.Vertex3fv((float*)&vertices[v->index]);
 		}
 
 		// The primitive is complete.
-		glEnd();
+		gl.End();
 	}
 }
 
@@ -276,32 +262,32 @@ void Mod_RenderModel(GLSprite * spr, model_t * mdl, int framenumber)
 
 
 	// Setup transformation.
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
+	gl.MatrixMode(GL_MODELVIEW);
+	gl.PushMatrix();
 
 	// Model space => World space
-	glTranslatef(spr->x, spr->y, spr->z );
+	gl.Translatef(spr->x, spr->y, spr->z );
 		
 	// Model rotation.
-	glRotatef(180.0f+spr->actor->angle*90.0f/ANGLE_90, 0, 1, 0);
+	gl.Rotatef(180.0f+spr->actor->angle*90.0f/ANGLE_90, 0, 1, 0);
 
 	//gl.Rotatef(spr->data.mo.viewaligned ? spr->data.mo.v2[VY] : pitchAngle, 0, 0, 1);
 
 	// Scaling and model space offset.
-	glScalef(	spr->actor->xscale/63.0f,
+	gl.Scalef(	spr->actor->xscale/63.0f,
 				spr->actor->yscale/63.0f,
 				spr->actor->xscale/63.0f);
-	//glTranslatef(smf->offset[VX], smf->offset[VY], smf->offset[VZ]);
+	//gl.Translatef(smf->offset[VX], smf->offset[VY], smf->offset[VZ]);
 
-	glMatrixMode(GL_TEXTURE);
-	glPushMatrix();
+	gl.MatrixMode(GL_TEXTURE);
+	gl.PushMatrix();
 
 	// scale texture coordinates to the next largest power of 2 size
-	if (!GLTexture::supportsNonPower2)
+	if (!(gl.flags&RFL_NPOT_TEXTURE))
 	{
 		float scale_x=   (float)mdl->info.skinWidth / (1<<(quickertoint(ceil(log10((float)mdl->info.skinWidth )/log10(2.0f))))); 
 		float scale_y=   (float)mdl->info.skinHeight/ (1<<(quickertoint(ceil(log10((float)mdl->info.skinHeight)/log10(2.0f))))); 
-		glScalef(scale_x, scale_y, 1.0f);
+		gl.Scalef(scale_x, scale_y, 1.0f);
 	}
 
 
@@ -331,15 +317,15 @@ void Mod_RenderModel(GLSprite * spr, model_t * mdl, int framenumber)
 		activeLod = 0;
 	}
 
-	glDepthFunc(GL_LEQUAL);
+	gl.DepthFunc(GL_LEQUAL);
 
 	Mod_RenderCommands(mdl->lods[activeLod].glCommands, numVerts, frame->vertices/*, modelColors, NULL*/);
 
 	// We're done!
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
-	glDepthFunc(GL_LESS);
+	gl.PopMatrix();
+	gl.MatrixMode(GL_MODELVIEW);
+	gl.PopMatrix();
+	gl.DepthFunc(GL_LESS);
 }
 
 

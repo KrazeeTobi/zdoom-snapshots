@@ -166,7 +166,7 @@ static void infinitePerspective(GLdouble fovy, GLdouble aspect, GLdouble znear)
 	m[11] = -1;
 	m[15] = 0;
 
-	glMultMatrixd(m);
+	gl.MultMatrixd(m);
 
 }
 
@@ -198,7 +198,7 @@ static void gl_AddBlend (float r, float g, float b, float a, float v_blend[4])
 void gl_ResetViewport()
 {
 	int trueheight = static_cast<Win32GLFrameBuffer*>(screen)->GetTrueHeight();	// ugh...
-	glViewport(0, (trueheight-screen->GetHeight())/2, screen->GetWidth(), screen->GetHeight()); 
+	gl.Viewport(0, (trueheight-screen->GetHeight())/2, screen->GetWidth(), screen->GetHeight()); 
 }
 
 //-----------------------------------------------------------------------------
@@ -238,30 +238,30 @@ static void gl_StartDrawScene(GL_IRECT * bounds, float fov, float ratio)
 
 		int vw = realviewwidth;
 		int vh = realviewheight;
-		glViewport(viewwindowx, trueheight-bars-(height+viewwindowy-((height-vh)/2)), vw, height);
-		glScissor(viewwindowx, trueheight-bars-(vh+viewwindowy), vw, vh);
+		gl.Viewport(viewwindowx, trueheight-bars-(height+viewwindowy-((height-vh)/2)), vw, height);
+		gl.Scissor(viewwindowx, trueheight-bars-(vh+viewwindowy), vw, vh);
 	}
 	else
 	{
-		glViewport(bounds->left, bounds->top, bounds->width, bounds->height);
-		glScissor(bounds->left, bounds->top, bounds->width, bounds->height);
+		gl.Viewport(bounds->left, bounds->top, bounds->width, bounds->height);
+		gl.Scissor(bounds->left, bounds->top, bounds->width, bounds->height);
 	}
-	glEnable(GL_SCISSOR_TEST);
+	gl.Enable(GL_SCISSOR_TEST);
 	
 	#ifdef _DEBUG
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f); 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		gl.ClearColor(0.0f, 0.0f, 0.0f, 0.0f); 
+		gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	#else
-		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		gl.Clear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	#endif
 
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_STENCIL_TEST);
-	glStencilFunc(GL_ALWAYS,0,~0);	// default stencil
-	glStencilOp(GL_KEEP,GL_KEEP,GL_REPLACE);
+	gl.Enable(GL_DEPTH_TEST);
+	gl.Enable(GL_STENCIL_TEST);
+	gl.StencilFunc(GL_ALWAYS,0,~0);	// default stencil
+	gl.StencilOp(GL_KEEP,GL_KEEP,GL_REPLACE);
 	
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
+	gl.MatrixMode(GL_PROJECTION);
+	gl.LoadIdentity();
 
 	infinitePerspective(fov/1.6f * FOV_CORRECTION_FACTOR, ratio, (float)gl_nearclip/MAP_COEFF);
 
@@ -276,8 +276,8 @@ static void gl_StartDrawScene(GL_IRECT * bounds, float fov, float ratio)
 	RenderSprite.Reset();
 	SetupSprite.Reset();
 
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_VERTEX_ARRAY);
+	gl.EnableClientState(GL_TEXTURE_COORD_ARRAY);
+	gl.EnableClientState(GL_VERTEX_ARRAY);
 
 	UniqueSkies.Clear();
 	UniqueHorizons.Clear();
@@ -310,23 +310,24 @@ void gl_SetupView(fixed_t viewx, fixed_t viewy, fixed_t viewz, angle_t viewangle
 	xCamera=-(float)viewx/MAP_SCALE;
 	yCamera=(float)viewy/MAP_SCALE;
 	trY=(float)viewz/MAP_SCALE;
+	gl_SetCamera(xCamera, trY, yCamera);
 	
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glRotatef(roll,  0.0f, 0.0f, 1.0f);
-	glRotatef(pitch, 1.0f, 0.0f, 0.0f);
+	gl.MatrixMode(GL_MODELVIEW);
+	gl.LoadIdentity();
+	gl.Rotatef(roll,  0.0f, 0.0f, 1.0f);
+	gl.Rotatef(pitch, 1.0f, 0.0f, 0.0f);
 
 	if (!mirror)
 	{
-		glRotatef(yaw,   0.0f, 1.0f, 0.0f);
-		glTranslatef(-xCamera, -trY, -yCamera);
-		glScalef(1, 1, 1);
+		gl.Rotatef(yaw,   0.0f, 1.0f, 0.0f);
+		gl.Translatef(-xCamera, -trY, -yCamera);
+		gl.Scalef(1, 1, 1);
 	}
 	else
 	{
-		glRotatef(yaw,   0.0f, -1.0f, 0.0f);
-		glTranslatef(xCamera, -trY, -yCamera);
-		glScalef(-1, 1, 1);
+		gl.Rotatef(yaw,   0.0f, -1.0f, 0.0f);
+		gl.Translatef(xCamera, -trY, -yCamera);
+		gl.Scalef(-1, 1, 1);
 	}
 
 	// Clear the flat render info 
@@ -428,9 +429,9 @@ void gl_DrawScene()
 	/*if (!recursion) */GLPortal::RenderFirstSkyPortal();
 
 	// first pass: unlit surfaces
-	glEnable(GL_FOG);
-	glAlphaFunc(GL_GEQUAL,0.5f);
-	glBlendFunc(GL_ONE,GL_ZERO);
+	gl_EnableFog(true);
+	gl.AlphaFunc(GL_GEQUAL,0.5f);
+	gl.BlendFunc(GL_ONE,GL_ZERO);
 	gl_drawlist[GLDL_UNLIT].Sort();
 	gl_drawlist[GLDL_UNLIT].Draw(GLPASS_UNLIT);
 	gl_drawlist[GLDL_LITFOG].Sort();
@@ -441,22 +442,15 @@ void gl_DrawScene()
 
 	// first for masked textures (2-sided walls)
 	// create a blank surface that only fills the nontransparent parts of the texture
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
-	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_REPLACE);
-	glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_PRIMARY_COLOR);
-	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
-
-	glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE); 
-	glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA, GL_TEXTURE0);
-	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA);
+	gl.SetTextureMode(TM_MASK);
 
 	gl_drawlist[GLDL_MASKED].Sort();
 	gl_drawlist[GLDL_MASKED].Draw(GLPASS_UNLIT);	// this really is GLPASS_BASE but it needs the texture.
 
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	gl.SetTextureMode(TM_MODULATE);
 
 	// now for unmasked textures
-	glDisable(GL_TEXTURE_2D);
+	gl.Disable(GL_TEXTURE_2D);
 	gl_drawlist[GLDL_LIT].Sort();
 	gl_drawlist[GLDL_LIT].Draw(GLPASS_BASE);
 
@@ -465,9 +459,9 @@ void gl_DrawScene()
 	{
 		if (gl_SetupLightTexture())
 		{
-			glEnable(GL_TEXTURE_2D);
-			glBlendFunc(GL_ONE, GL_ONE);
-			glDepthFunc(GL_EQUAL);
+			gl.Enable(GL_TEXTURE_2D);
+			gl.BlendFunc(GL_ONE, GL_ONE);
+			gl.DepthFunc(GL_EQUAL);
 
 			gl_drawlist[GLDL_LIT].Draw(GLPASS_LIGHT);
 			gl_drawlist[GLDL_LITFOG].Draw(GLPASS_LIGHT);
@@ -477,11 +471,11 @@ void gl_DrawScene()
 	}
 
 	// fourth pass: modulated texture
-	glEnable(GL_TEXTURE_2D);
-	glColor3f(1.0f, 1.0f, 1.0f);
-	glBlendFunc(GL_DST_COLOR, GL_ZERO);
-	glDisable(GL_FOG);
-	glDepthFunc(GL_LEQUAL);
+	gl.Enable(GL_TEXTURE_2D);
+	gl.Color3f(1.0f, 1.0f, 1.0f);
+	gl.BlendFunc(GL_DST_COLOR, GL_ZERO);
+	gl_EnableFog(false);
+	gl.DepthFunc(GL_LEQUAL);
 	if (gl_texture) 
 	{
 		gl_drawlist[GLDL_LIT].Draw(GLPASS_TEXTURE);
@@ -489,11 +483,11 @@ void gl_DrawScene()
 	}
 
 	// fifth pass: decals
-	glEnable(GL_FOG);
-	glDepthFunc(GL_LESS);
-	glEnable(GL_POLYGON_OFFSET_FILL);
-	glPolygonOffset(-1.0f, -128.0f);
-	glDepthMask(false);
+	gl_EnableFog(true);
+	gl.DepthFunc(GL_LESS);
+	gl.Enable(GL_POLYGON_OFFSET_FILL);
+	gl.PolygonOffset(-1.0f, -128.0f);
+	gl.DepthMask(false);
 
 	gl_drawlist[GLDL_UNLIT].Draw(GLPASS_DECALS);
 	gl_drawlist[GLDL_LITFOG].Draw(GLPASS_DECALS);
@@ -501,35 +495,35 @@ void gl_DrawScene()
 
 	/// Push bleeding floor/ceiling textures back a little in the z-buffer
 	// so they don't interfere with overlapping mid textures.
-	glPolygonOffset(1.0f, 128.0f);
+	gl.PolygonOffset(1.0f, 128.0f);
 
 	// flood all the gaps with the back sector's flat texture
 	DrawUnhandledMissingTextures();
 
-	glPolygonOffset(0.0f, 0.0f);
-	glDisable(GL_POLYGON_OFFSET_FILL);
+	gl.PolygonOffset(0.0f, 0.0f);
+	gl.Disable(GL_POLYGON_OFFSET_FILL);
 
 	RenderAll.Stop();
 	// Handle all portals after rendering the opaque objects but before
 	// doing all translucent stuff
-	glDepthMask(true);
+	gl.DepthMask(true);
 	recursion++;
 	GLPortal::EndFrame();
 	recursion--;
-	glDepthMask(false);
+	gl.DepthMask(false);
 
 	RenderAll.Start();
 
 	// sixth pass: translucent stuff
-	glAlphaFunc(GL_GEQUAL,0.5f);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	gl.AlphaFunc(GL_GEQUAL,0.5f);
+	gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	gl_drawlist[GLDL_TRANSLUCENTBORDER].Draw(GLPASS_UNLIT);
 	gl_drawlist[GLDL_TRANSLUCENT].DrawSorted();
 
-	glDepthMask(true);
+	gl.DepthMask(true);
 
-	glAlphaFunc(GL_GEQUAL,0.5f);
+	gl.AlphaFunc(GL_GEQUAL,0.5f);
 	RenderAll.Stop();
 }
 
@@ -635,16 +629,16 @@ static void gl_DrawBlend(sector_t * viewsector)
 		// black multiplicative blends are ignored
 		if (extra_red || extra_green || extra_blue)
 		{
-			glDisable(GL_ALPHA_TEST);
-			glDisable(GL_TEXTURE_2D);
-			glBlendFunc(GL_DST_COLOR,GL_ZERO);
-			glColor4f(extra_red, extra_green, extra_blue, 1.0f);
-			glBegin(GL_TRIANGLE_STRIP);
-			glVertex2f( 0.0f, 0.0f);
-			glVertex2f( 0.0f, (float)SCREENHEIGHT);
-			glVertex2f( (float)SCREENWIDTH, 0.0f);
-			glVertex2f( (float)SCREENWIDTH, (float)SCREENHEIGHT);
-			glEnd();
+			gl.Disable(GL_ALPHA_TEST);
+			gl.Disable(GL_TEXTURE_2D);
+			gl.BlendFunc(GL_DST_COLOR,GL_ZERO);
+			gl.Color4f(extra_red, extra_green, extra_blue, 1.0f);
+			gl.Begin(GL_TRIANGLE_STRIP);
+			gl.Vertex2f( 0.0f, 0.0f);
+			gl.Vertex2f( 0.0f, (float)SCREENHEIGHT);
+			gl.Vertex2f( (float)SCREENWIDTH, 0.0f);
+			gl.Vertex2f( (float)SCREENWIDTH, (float)SCREENHEIGHT);
+			gl.End();
 		}
 	}
 	else if (blendv.a)
@@ -707,16 +701,16 @@ static void gl_DrawBlend(sector_t * viewsector)
 
 	if (blend[3]>0.0f)
 	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glDisable(GL_ALPHA_TEST);
-		glDisable(GL_TEXTURE_2D);
-		glColor4fv(blend);
-		glBegin(GL_TRIANGLE_STRIP);
-		glVertex2f( 0.0f, 0.0f);
-		glVertex2f( 0.0f, (float)SCREENHEIGHT);
-		glVertex2f( (float)SCREENWIDTH, 0.0f);
-		glVertex2f( (float)SCREENWIDTH, (float)SCREENHEIGHT);
-		glEnd();
+		gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		gl.Disable(GL_ALPHA_TEST);
+		gl.Disable(GL_TEXTURE_2D);
+		gl.Color4fv(blend);
+		gl.Begin(GL_TRIANGLE_STRIP);
+		gl.Vertex2f( 0.0f, 0.0f);
+		gl.Vertex2f( 0.0f, (float)SCREENHEIGHT);
+		gl.Vertex2f( (float)SCREENWIDTH, 0.0f);
+		gl.Vertex2f( (float)SCREENWIDTH, (float)SCREENHEIGHT);
+		gl.End();
 	}
 }
 
@@ -731,13 +725,13 @@ void gl_EndDrawScene()
 {
 	extern void gl_DrawPlayerSprites (sector_t *);
 	
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_VERTEX_ARRAY);
+	gl.DisableClientState(GL_TEXTURE_COORD_ARRAY);
+	gl.DisableClientState(GL_VERTEX_ARRAY);
 
-	glDisable(GL_STENCIL_TEST);
-	glDisable(GL_POLYGON_SMOOTH);
+	gl.Disable(GL_STENCIL_TEST);
+	gl.Disable(GL_POLYGON_SMOOTH);
 
-	glDisable(GL_FOG); 
+	gl_EnableFog(false);
 	gl_Set2DMode();
 
 	gl_ResetViewport();
@@ -745,11 +739,11 @@ void gl_EndDrawScene()
 	gl_DrawBlend(viewsector);
 
 	// Restore standard rendering state
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glColor3f(1.0f,1.0f,1.0f);
-	glEnable(GL_TEXTURE_2D);
-	glEnable(GL_ALPHA_TEST);
-	glDisable(GL_SCISSOR_TEST);
+	gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	gl.Color3f(1.0f,1.0f,1.0f);
+	gl.Enable(GL_TEXTURE_2D);
+	gl.Enable(GL_ALPHA_TEST);
+	gl.Disable(GL_SCISSOR_TEST);
 }
 
 
@@ -830,12 +824,22 @@ void gl_RenderTextureView(FCanvasTexture *Texture, AActor * Viewpoint, int FOV)
 	bounds.left=bounds.top=0;
 	bounds.width=GLTexture::GetTexDimension(width);
 	bounds.height=GLTexture::GetTexDimension(height);
-	glFlush();
-	gl_RenderView(Viewpoint, &bounds, FOV, (float)width/height*1.6/1.333, false);
-	glFlush();
-	gltex->Bind(CM_DEFAULT);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, bounds.width, bounds.height);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GLTexture::TexFilter[gl_texture_filter].magfilter);
+	switch (currentrenderer)
+	{
+	case 1: // OpenGL
+		gl.Flush();
+		gl_RenderView(Viewpoint, &bounds, FOV, (float)width/height*1.6/1.333, false);
+		gl.Flush();
+		gltex->Bind(CM_DEFAULT);
+		gl.CopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, bounds.width, bounds.height);
+		gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GLTexture::TexFilter[gl_texture_filter].magfilter);
+		break;
+
+	case 2:	// D3D
+
+	default:
+		break;
+	}
 }
 
 
@@ -855,12 +859,12 @@ void gl_RenderViewToCanvas(DCanvas * pic, int x, int y, int width, int height)
 	bounds.top=0;
 	bounds.width=width;
 	bounds.height=height;
-	glFlush();
+	gl.Flush();
 	gl_RenderView(players[displayplayer].camera, &bounds, FieldOfView * 360.0f / FINEANGLES, 1.6f, true);
-	glFlush();
+	gl.Flush();
 
 	byte * scr = (byte *)Malloc(width * height * 4);
-	glReadPixels(0,0,width, height,GL_RGBA,GL_UNSIGNED_BYTE,scr);
+	gl.ReadPixels(0,0,width, height,GL_RGBA,GL_UNSIGNED_BYTE,scr);
 
 	pic->Lock();
 	byte * dst = pic->GetBuffer();

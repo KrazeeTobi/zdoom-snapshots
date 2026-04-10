@@ -1,0 +1,7 @@
+LIBRARY R_OPENGL
+
+DESCRIPTION 'GZDoom OpenGL system interface'
+
+EXPORTS
+
+	GetContext

@@ -1,3 +1,61 @@
+5. Oct 2005
+- Fixed: 3D floors could block switches.
+
+
+4. Oct 2005
+- Fixed: Levels with no normal nodes whatsoever ignored accompanying GWA files.
+- Finished the adjustments for crouching.
+
+
+3. Oct 2005
+- Added crouching because Enjay sent me a PM that took at least an hour to type. ;)
+
+
+2. Oct 2005
+- Added support for viewheight command in FraggleScript's runcommand handler
+
+
+30. Sep. 2005
+- Fixed: Did some sanity checks for partner segs because GLBSP can create incorrect
+  references
+  
+  
+28. Sep. 2005
+- Fixed: Decals on walls that don't cover the entire linedef were not drawn.
+- Fixed: The sky cap was drawn in an incorrect color when enhanced nigh vision
+  was on.
+
+
+27. Sep. 2005
+- Moved the OpenGL initialization code into a separate DLL. Hopefully that allows
+  me to implement a Direct3D renderer.
+  
+
+26. Sep. 2005
+- Fixed: 2-sided polyobjects used the wrong sector to align their textures.
+- Fixed: Mirrors on two-sided walls do not block the view. Instead they won't
+  get displayed as mirrors.
+
+
+25. Sep. 2005
+- Fixed: The clipping code could misinterpret certain sloped lines as obstructing
+  the view even though they were not.
+  
+  
+23. Sep. 2005
+- Did some optimizations to the portal clipping code. Unfortunately it didn't speed
+  up such problem maps as SSD or TNT4 as much as I hoped but it's at least a little
+  better now.
+ 
+
+22. Sep. 2005
+- Fixed: Translucent flats in stacked sectors were drawn with the incorrect amount
+  of translucency.
+- Did some performance tests with levels that use sky boxes in an abusive manner.
+  I had to conclude that there is no way to improve performance to a tolerable
+  level.
+  
+
 21. Sep. 2005
 - Improved handling of stacked sectors. MAP04 of Zen Dynamics now displays
   as intended.

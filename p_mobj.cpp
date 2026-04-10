@@ -1706,7 +1706,7 @@ void P_ZMovement (AActor *mo)
 	if (mo->player && mo->player->mo == mo && mo->z < mo->floorz)
 	{
 		mo->player->viewheight -= mo->floorz - mo->z;
-		mo->player->deltaviewheight = (VIEWHEIGHT - mo->player->viewheight)>>3;
+		mo->player->deltaviewheight = (mo->player->defaultviewheight/*VIEWHEIGHT*/ - mo->player->viewheight)>>3;
 	}
 //
 // apply gravity
@@ -3018,7 +3018,7 @@ AActor *AActor::StaticSpawn (const TypeInfo *type, fixed_t ix, fixed_t iy, fixed
 
 	FRandom &rng = bglobal.m_Thinking ? pr_botspawnmobj : pr_spawnmobj;
 
-	if (gameskill == sk_nightmare)
+	if (gameskill == sk_nightmare && actor->flags3 & MF3_ISMONSTER)
 		actor->reactiontime = 0;
 
 	if (actor->flags3 & MF3_ISMONSTER)
@@ -3414,7 +3414,7 @@ void P_SpawnPlayer (mapthing2_t *mthing)
 	p->morphTics = 0;
 	p->extralight = 0;
 	p->fixedcolormap = 0;
-	p->viewheight = VIEWHEIGHT;
+	p->viewheight = p->defaultviewheight = playerviewheight;//VIEWHEIGHT;
 	p->inconsistant = 0;
 	p->attacker = NULL;
 	p->spreecount = 0;

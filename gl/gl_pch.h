@@ -53,6 +53,9 @@
 #include <gl/glu.h>
 #include <gl/glext.h>
 #include <gl/wglext.h>
+#include "r_render/r_render.h"
+
+extern RenderContext gl;
 
 #ifdef LoadMenu
 #undef LoadMenu

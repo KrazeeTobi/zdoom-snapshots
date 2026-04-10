@@ -14,7 +14,4 @@
 
 #pragma warning(disable:4018)
 
-extern PFNGLBLENDEQUATIONPROC glBlendEquation;
-
-
 #endif

@@ -3493,7 +3493,8 @@ blocked:
 		}
 		else
 		{
-			P_LineOpening (usething, in->d.line, trace.x + FixedMul (trace.dx, in->frac),
+			// Legacy doesn't check 3D-floors so I can't do either due to compatibility issues.
+			P_LineOpening (/*usething,*/ in->d.line, trace.x + FixedMul (trace.dx, in->frac),
 				trace.y + FixedMul (trace.dy, in->frac));
 		}
 		if (openrange <= 0 ||

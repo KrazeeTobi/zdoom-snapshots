@@ -280,10 +280,12 @@ int FTextureManager::CreateTexture (int lumpnum, int usetype)
 
 			if (compression != 0 || filter != 0 || interlace != 0)
 			{
+				//goto generic;
 				return -1;
 			}
 			if (colortype != 0 && colortype != 3)
 			{
+				//goto generic;
 				return -1;
 			}
 
@@ -303,73 +305,87 @@ int FTextureManager::CreateTexture (int lumpnum, int usetype)
 			out = new FPNGTexture (lumpnum, BELONG((int)width), BELONG((int)height),
 				bitdepth, colortype, interlace);
 		}
-		else if (usetype==FTexture::TEX_Flat)
+		else 
 		{
-			// allow PNGs as flats but not Doom patches.
-			return -1;
-		}
-		else if ((gameinfo.flags & GI_PAGESARERAW) && data.GetLength() == 64000)
-		{
-			// This is probably a raw page graphic, but do some checking to be sure
-			patch_t *foo;
-			int height;
-			int width;
-
-			foo = (patch_t *)Malloc (data.GetLength());
-			data.Seek (-4, SEEK_CUR);
-			data.Read (foo, data.GetLength());
-
-			height = SHORT(foo->height);
-			width = SHORT(foo->width);
-
-			if (height > 0 && height < 510 && width > 0 && width < 15997)
+			/*
+		generic:
+			out = FGenericTexture::Create (lumpnum);
+			
+			if (out)
 			{
-				// The dimensions seem like they might be valid for a patch, so
-				// check the column directory for extra security. At least one
-				// column must begin exactly at the end of the column directory,
-				// and none of them must point past the end of the patch.
-				bool gapAtStart = true;
-				int x;
-
-				for (x = 0; x < width; ++x)
+				type = t_png;
+			}
+			else
+			*/
+				
+			if (usetype==FTexture::TEX_Flat)
+			{
+				// allow PNGs as flats but not Doom patches.
+				return -1;
+			}
+			else if ((gameinfo.flags & GI_PAGESARERAW) && data.GetLength() == 64000)
+			{
+				// This is probably a raw page graphic, but do some checking to be sure
+				patch_t *foo;
+				int height;
+				int width;
+	
+				foo = (patch_t *)Malloc (data.GetLength());
+				data.Seek (-4, SEEK_CUR);
+				data.Read (foo, data.GetLength());
+	
+				height = SHORT(foo->height);
+				width = SHORT(foo->width);
+	
+				if (height > 0 && height < 510 && width > 0 && width < 15997)
 				{
-					DWORD ofs = LONG(foo->columnofs[x]);
-					if (ofs == (DWORD)width * 4 + 8)
+					// The dimensions seem like they might be valid for a patch, so
+					// check the column directory for extra security. At least one
+					// column must begin exactly at the end of the column directory,
+					// and none of them must point past the end of the patch.
+					bool gapAtStart = true;
+					int x;
+	
+					for (x = 0; x < width; ++x)
 					{
-						gapAtStart = false;
-					}
-					else if (ofs >= 64000-1)	// Need one byte for an empty column
-					{
-						break;
-					}
-					else
-					{
-						// Ensure this column does not extend beyond the end of the patch
-						const BYTE *foo2 = (const BYTE *)foo;
-						while (ofs < 64000)
+						DWORD ofs = LONG(foo->columnofs[x]);
+						if (ofs == (DWORD)width * 4 + 8)
 						{
-							if (foo2[ofs] == 255)
-							{
-								break;
-							}
-							ofs += foo2[ofs+1] + 4;
+							gapAtStart = false;
 						}
-						if (ofs >= 64000)
+						else if (ofs >= 64000-1)	// Need one byte for an empty column
 						{
 							break;
 						}
+						else
+						{
+							// Ensure this column does not extend beyond the end of the patch
+							const BYTE *foo2 = (const BYTE *)foo;
+							while (ofs < 64000)
+							{
+								if (foo2[ofs] == 255)
+								{
+									break;
+								}
+								ofs += foo2[ofs+1] + 4;
+							}
+							if (ofs >= 64000)
+							{
+								break;
+							}
+						}
+					}
+					if (gapAtStart || (x != width))
+					{
+						type = t_raw;
 					}
 				}
-				if (gapAtStart || (x != width))
+				else
 				{
 					type = t_raw;
 				}
+				free (foo);
 			}
-			else
-			{
-				type = t_raw;
-			}
-			free (foo);
 		}
 	}
 	switch (type)

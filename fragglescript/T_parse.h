@@ -70,7 +70,7 @@ char *stringvalue(const svalue_t & v);
 
 // haleyjd: moved from t_script.h - 8-17
 // 01/06/01: doubled number of allowed scripts
-#define MAXSCRIPTS 256
+#define MAXSCRIPTS 257
 
 struct script_s
 {

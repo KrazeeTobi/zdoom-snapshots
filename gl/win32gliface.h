@@ -16,6 +16,26 @@
 
 extern IVideo *Video;
 
+
+extern BOOL AppActive;
+extern int palette_brightness;
+
+EXTERN_CVAR (Float, dimamount)
+EXTERN_CVAR (Color, dimcolor)
+
+EXTERN_CVAR(Int, vid_defwidth);
+EXTERN_CVAR(Int, vid_defheight);
+EXTERN_CVAR(Int, vid_renderer);
+
+EXTERN_CVAR(Bool, gl_vid_allowsoftware);
+EXTERN_CVAR(Int, gl_vid_refreshHz);
+
+extern HINSTANCE g_hInst;
+extern HWND Window;
+extern IVideo *Video;
+
+
+
 class Win32GLVideo : public IVideo
 {
 public:
@@ -25,16 +45,16 @@ public:
 	EDisplayType GetDisplayType () { return DISPLAY_Both; }
 	void SetWindowedScale (float scale);
 	bool FullscreenChanged (bool fs);
-	void GoFullscreen(bool yes);
-	DFrameBuffer *CreateFrameBuffer (int width, int height, bool fs, DFrameBuffer *old);
 	void StartModeIterator (int bits);
 	bool NextMode (int *width, int *height, bool *letterbox);
+	bool GoFullscreen(bool yes);
+	DFrameBuffer *CreateFrameBuffer (int width, int height, bool fs, DFrameBuffer *old);
 
-private:
+protected:
 	struct ModeInfo
 	{
 		ModeInfo (int inX, int inY, int inBits, int inRealY, int inRefresh)
-		 : next (NULL),
+			: next (NULL),
 			width (inX),
 			height (inY),
 			bits (inBits),
@@ -51,6 +71,7 @@ private:
 	bool m_IsFullscreen;
 	int m_trueHeight;
 	int m_DisplayWidth, m_DisplayHeight, m_DisplayBits, m_DisplayHz;
+	HMODULE hmRender;
 
 	void MakeModesList();
 	void AddMode(int x, int y, int bits, int baseHeight, int refreshHz);
@@ -58,6 +79,8 @@ private:
 public:
 	int GetTrueHeight() { return m_trueHeight; }
 };
+
+
 
 class Win32GLFrameBuffer : public BaseWinFB
 {
@@ -76,14 +99,12 @@ public:
 
 	bool Lock(bool buffered);
 	bool Lock ();
-	void Update();
 	void Unlock();
 	bool IsLocked ();
 
 	PalEntry *GetPalette();
 	void GetFlashedPalette(PalEntry palette[256]);
 	void UpdatePalette();
-	bool SetGamma(float gamma);
 	bool SetFlash(PalEntry rgb, int amount);
 	void GetFlash(PalEntry &rgb, int &amount);
 	int GetPageCount();
@@ -96,17 +117,11 @@ public:
 	void Dim (PalEntry color, float damount, int x1, int y1, int w, int h) const;
 	void FlatFill (int left, int top, int right, int bottom, FTexture *src);
 
-
-	bool CheckExtension(const char *ext);
 	void InitializeState();
+	void Update();
+	bool SetGamma(float gamma);
 
-private:
-	HWND InitDummy();
-	bool LoadRequiredExtensions();
-	void ShutdownDummy(HWND dummy);
-	bool ReadInitExtensions();
-	bool SetupPixelFormat();
-	void CollectExtensions();
+protected:
 
 	PalEntry SourcePalette[256];
 	BYTE m_gammaTable[256];
@@ -115,11 +130,7 @@ private:
 	bool m_Fullscreen;
 	int m_Width, m_Height, m_Bits, m_RefreshHz;
 
-	HDC m_hDC;
-	HGLRC m_hRC;
-	TArray<char *> m_Extensions;
-
-	friend Win32GLVideo;
+	friend class Win32GLVideo;
 };
 
 #endif //__WIN32GLIFACE_H__

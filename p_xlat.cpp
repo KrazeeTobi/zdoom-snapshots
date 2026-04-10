@@ -199,6 +199,10 @@ void P_TranslateLineDef (line_t *ld, maplinedef_t *mld)
 					ld->args[4] = tag;
 					break;
 				}
+				if (ld->flags & ML_SECRET)
+				{
+					ld->flags &= ~ML_MONSTERSCANACTIVATE;
+				}
 				return;
 			}
 			tlate += (high - low + 1) * 7;

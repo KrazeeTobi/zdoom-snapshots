@@ -1,0 +1,42 @@
+varying vec3 position; 
+uniform vec3 fogcolor;
+uniform float fogdensity;
+uniform vec3 camera;
+uniform int colormode;
+uniform float desaturation;
+uniform sampler2D tex;
+
+const CM_DEFAULT = 0;
+const CM_DESAT1 = 1;
+const CM_DESAT31 = 31;
+const CM_INVERT = 32;
+const CM_GOLDMAP = 33;
+
+void main()
+{
+	vec4 texel = texture2D(tex,gl_TexCoord[0].st) * gl_Color;
+	
+	if (colormode==CM_DEFAULT)
+	{
+		if (fogdensity>0)
+		{
+			float factor = exp ( -fogdensity * distance(position, camera));
+			vec3 fogged = (texel.rgb * (1.0 - factor) + fogcolor * factor);
+			
+			gl_FragColor = vec4(fogged, texel.a);
+		}
+		else 
+		{
+			gl_FragColor = texel;
+		}
+	}
+	else if (colormode <=CM_DESAT1)
+	{
+	}
+	else if (colormode == CM_INVERT)
+	{
+	}
+	else if (colormode == CM_GOLDMAP)
+	{
+	}
+}

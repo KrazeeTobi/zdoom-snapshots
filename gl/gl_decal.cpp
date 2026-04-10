@@ -65,6 +65,7 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 	
 
 	if (actor->renderflags & RF_INVISIBLE) return;
+	if (flag==RENDERWALL_FFBLOCK && gltexture->tex->bMasked) return;	// No decals on 3D floors with transparent textures.
 
 	//if (actor->sprite != 0xffff)
 	{
@@ -129,9 +130,7 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 	
 	if (actor->renderflags & RF_FULLBRIGHT)
 	{
-		light=255;
-		// I don't thik this is such a good idea...
-		//glDisable(GL_FOG);	
+		light = 255;
 	}
 	else
 	{
@@ -164,27 +163,7 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 		blue = b * blue / 255.f;
 		
 		// adjust colors to current colormap
-		if (Colormap.LightColor.a>=1 && Colormap.LightColor.a<=CM_DESAT31)
-		{
-			int fac=Colormap.LightColor.a-CM_DESAT0;
-			float gray=(red*77 + green*143 + blue*37)/255.0f;
-
-			red =   (red  *(32-fac)+ gray*fac)/32;
-			green = (green*(32-fac)+ gray*fac)/32;
-			blue =  (blue *(32-fac)+ gray*fac)/32;
-		}
-		else if (Colormap.LightColor.a==CM_INVERT)
-		{
-			red=green=blue=clamp<float>(255-(red*77 + green*143 + blue*37)/255.0f,0.0f,1.0f);
-		}
-		else if (Colormap.LightColor.a==CM_GOLDMAP)
-		{
-			float gray=(red*77 + green*143 + blue*37)/255.0f;
-			red=clamp<float>(gray*1.5f, 0.0f, 1.0f);
-			green=clamp<float>(gray, 0.0f, 1.0f);
-			blue=0;
-		}
-		else if (Colormap.LightColor.a>=CM_FIRSTCOLORMAP)
+		if (Colormap.LightColor.a>=CM_FIRSTCOLORMAP)
 		{
 			// Get the most appropriate translated color from the colormap
 			int palindex = ColorMatcher.Pick(quickertoint(red*255), quickertoint(green*255), quickertoint(blue*255));
@@ -193,6 +172,29 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 			red = GPalette.BaseColors[newindex].r / 255.f;
 			green = GPalette.BaseColors[newindex].g / 255.f;
 			blue = GPalette.BaseColors[newindex].b / 255.f;
+		}
+		else if (!gl_shaderactive)
+		{
+			if (Colormap.LightColor.a>=1 && Colormap.LightColor.a<=CM_DESAT31)
+			{
+				int fac=Colormap.LightColor.a-CM_DESAT0;
+				float gray=(red*77 + green*143 + blue*37)/255.0f;
+
+				red =   (red  *(32-fac)+ gray*fac)/32;
+				green = (green*(32-fac)+ gray*fac)/32;
+				blue =  (blue *(32-fac)+ gray*fac)/32;
+			}
+			else if (Colormap.LightColor.a==CM_INVERT)
+			{
+				red=green=blue=clamp<float>(255-(red*77 + green*143 + blue*37)/255.0f,0.0f,1.0f);
+			}
+			else if (Colormap.LightColor.a==CM_GOLDMAP)
+			{
+				float gray=(red*77 + green*143 + blue*37)/255.0f;
+				red=clamp<float>(gray*1.5f, 0.0f, 1.0f);
+				green=clamp<float>(gray, 0.0f, 1.0f);
+				blue=0;
+			}
 		}
 	}	
 	else
@@ -204,62 +206,55 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 	}
 	a = actor->alpha / (FRACUNIT * 1.f);
 	
-	// now clip the decal to the actual polygon - we do this in full texel coordinates
-	int decalwidth=((1<<5)+tex->TextureWidth()*actor->xscale)>>6;
-	int decalheight=((1<<5)+tex->TextureHeight()*actor->xscale)>>6;
-	int decallefto=((1<<5)+tex->GetLeftOffset()*actor->xscale)>>6;
-	int decaltopo=((1<<5)+tex->GetTopOffset()*actor->xscale)>>6;
-	
-	// texel index of the decal's left edge
-	int decalpixpos=MulScale20(side->TexelLength, actor->floorclip)	- (flipx? decalwidth-decallefto : decallefto);
-	
-	
-	if (glseg.noorigverts) 
-	{
-		// this is getting complicated...
-		return;
-	}
+	// now clip the decal to the actual polygon
+	float decalwidth = (tex->TextureWidth()*actor->xscale)/63.f;
+	float decalheight= (tex->TextureHeight()*actor->yscale)/63.f;
+	float decallefto = (tex->GetLeftOffset()*actor->xscale)/63.f;
+	float decaltopo  = (tex->GetTopOffset()*actor->yscale)/63.f;
 
-	int left,right;
-	int lefttex,righttex;
+	
+	float leftedge = fracleft * side->TexelLength;
+	float linelength = fracright * side->TexelLength - leftedge;
+
+	// texel index of the decal's left edge
+	float decalpixpos = (float)side->TexelLength * actor->floorclip / (1<<20) - (flipx? decalwidth-decallefto : decallefto) - leftedge;
+
+	float left,right;
+	float lefttex,righttex;
 
 	// decal is off the left edge
-	if (decalpixpos<0)
+	if (decalpixpos < 0)
 	{
-		left=0;
-		lefttex=-decalpixpos;
+		left = 0;
+		lefttex = -decalpixpos;
 	}
 	else
 	{
-		left=decalpixpos;
-		lefttex=0;
+		left = decalpixpos;
+		lefttex = 0;
 	}
 	
 	// decal is off the right edge
-	if (decalpixpos+decalwidth>side->TexelLength)
+	if (decalpixpos + decalwidth > linelength)
 	{
-		right=side->TexelLength;
-		righttex=right-decalpixpos;
+		right = linelength;
+		righttex = right - decalpixpos;
 	}
 	else
 	{
-		right=decalpixpos+decalwidth;
-		righttex=decalwidth;
+		right = decalpixpos + decalwidth;
+		righttex = decalwidth;
 	}
 	if (right<=left) return;	// nothing to draw
 
-	float fleft=F_TO_MAP(left);
-	float fright=F_TO_MAP(right);
+	float fleft = F_TO_MAP(left);
+	float fright = F_TO_MAP(right);
 
-	float flength;
+	float flength = F_TO_MAP(linelength);
 
-	if (glseg.noorigverts) flength=sqrtf((glseg.x2-glseg.x1)*(glseg.x2-glseg.x1) + (glseg.z2-glseg.z1)*(glseg.z2-glseg.z1));
-	else flength=F_TO_MAP(side->TexelLength);
-	
 	// one texture unit on the wall as vector
 	float vx=(glseg.x2-glseg.x1)/flength;
 	float vz=(glseg.z2-glseg.z1)/flength;
-	float fracleft=fleft/flength;
 		
 	dv[1].x=dv[0].x=glseg.x1+vx*fleft;
 	dv[1].z=dv[0].z=glseg.z1+vz*fleft;
@@ -329,40 +324,40 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 		float vb=pti->GetVB();
 		for(i=0;i<4;i++) dv[i].v=vb-dv[i].v;
 	}
-	// the fog settings are still from the current wall and thus correct
+	// fog is set once per wall in the calling function and not per decal!
 
-	glColor4f(red, green, blue, a);
+	gl.Color4f(red, green, blue, a);
 	switch(actor->RenderStyle)
 	{
 	case STYLE_Shaded:
 	case STYLE_Translucent:
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glAlphaFunc(GL_GREATER,0.0f);
+		gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		gl.AlphaFunc(GL_GREATER,0.0f);
 		break;
 
 	case STYLE_Add:
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		glAlphaFunc(GL_GREATER,0.0f);
+		gl.BlendFunc(GL_SRC_ALPHA, GL_ONE);
+		gl.AlphaFunc(GL_GREATER,0.0f);
 		break;
 
 	case STYLE_Fuzzy:
-		glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
-		glAlphaFunc(GL_GREATER,0.0f);
+		gl.BlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+		gl.AlphaFunc(GL_GREATER,0.0f);
 		break;
 
 	default:
-		glBlendFunc(GL_ONE,GL_ZERO);	
-		glAlphaFunc(GL_GEQUAL,0.5f);
+		gl.BlendFunc(GL_ONE,GL_ZERO);	
+		gl.AlphaFunc(GL_GEQUAL,0.5f);
 		break;
 
 	}
-	glBegin(GL_TRIANGLE_FAN);
+	gl.Begin(GL_TRIANGLE_FAN);
 	for(i=0;i<4;i++)
 	{
-		glTexCoord2f(dv[i].u,dv[i].v);
-		glVertex3f(dv[i].x,dv[i].y,dv[i].z);
+		gl.TexCoord2f(dv[i].u,dv[i].v);
+		gl.Vertex3f(dv[i].x,dv[i].y,dv[i].z);
 	}
-	glEnd();
+	gl.End();
 	rendered_decals++;
 }
 

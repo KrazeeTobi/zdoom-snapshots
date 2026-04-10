@@ -107,6 +107,7 @@ public:
 	friend class GLPortal;
 
 	GLSeg glseg;
+	float fracleft, fracright;			// fractional offset of left and right end inside the linedef (for decal positioning.
 	vertex_t * vertexes[2];				// required for polygon splitting
 	float ytop[2],ybottom[2];
 	texcoord uplft, uprgt, lolft, lorgt;

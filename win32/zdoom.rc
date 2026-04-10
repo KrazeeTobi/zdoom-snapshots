@@ -1,4 +1,4 @@
-//Microsoft Developer Studio generated resource script.
+// Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
 
@@ -27,18 +27,18 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // TEXTINCLUDE
 //
 
-1 TEXTINCLUDE MOVEABLE PURE 
+1 TEXTINCLUDE 
 BEGIN
     "resource.h\0"
 END
 
-2 TEXTINCLUDE MOVEABLE PURE 
+2 TEXTINCLUDE 
 BEGIN
     "#include ""afxres.h""\r\n"
     "\0"
 END
 
-3 TEXTINCLUDE MOVEABLE PURE 
+3 TEXTINCLUDE 
 BEGIN
     "CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST ""zdoom.exe.manifest""\r\n"
     "\0"
@@ -54,7 +54,7 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_ICON1               ICON    DISCARDABLE     "icon1.ico"
+IDI_ICON1               ICON                    "icon1.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -62,7 +62,7 @@ IDI_ICON1               ICON    DISCARDABLE     "icon1.ico"
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO MOVEABLE PURE 
+GUIDELINES DESIGNINFO 
 BEGIN
     IDD_FMODINITFAILED, DIALOG
     BEGIN
@@ -128,7 +128,6 @@ END
 #endif    // APSTUDIO_INVOKED
 
 
-#ifndef _MAC
 /////////////////////////////////////////////////////////////////////////////
 //
 // Version
@@ -151,16 +150,16 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "Comments", "Thanks to id Software for creating DOOM and then releasing the source code. Thanks also to TeamTNT for creating BOOM, which ZDoom is partially based on. Includes code based on the Cajun Bot 0.97 by Martin Collberg.\0"
-            VALUE "CompanyName", " \0"
-            VALUE "FileDescription", "ZDoom\0"
-            VALUE "FileVersion", "2.0.96\0"
-            VALUE "InternalName", "ZDoom\0"
-            VALUE "LegalCopyright", "Copyright © 1993-1996, id Software & 1998-2004, Randy Heit\0"
-            VALUE "LegalTrademarks", "Doom® is a Registered Trademark of id Software, Inc.\0"
-            VALUE "OriginalFilename", "zdoom.exe\0"
-            VALUE "ProductName", "ZDoom\0"
-            VALUE "ProductVersion", "2.1\0"
+            VALUE "Comments", "Thanks to id Software for creating DOOM and then releasing the source code. Thanks also to TeamTNT for creating BOOM, which ZDoom is partially based on. Includes code based on the Cajun Bot 0.97 by Martin Collberg."
+            VALUE "CompanyName", " "
+            VALUE "FileDescription", "GZDoom"
+            VALUE "FileVersion", "0.9.7"
+            VALUE "InternalName", "GZDoom"
+            VALUE "LegalCopyright", "Copyright © 1993-1996, id Software & 1998-2004, Randy Heit, 2002-2005 Christoph Oelckers"
+            VALUE "LegalTrademarks", "Doom® is a Registered Trademark of id Software, Inc."
+            VALUE "OriginalFilename", "gzdoom.exe"
+            VALUE "ProductName", "GZDoom"
+            VALUE "ProductVersion", "0.9"
         END
     END
     BLOCK "VarFileInfo"
@@ -169,8 +168,6 @@ BEGIN
     END
 END
 
-#endif    // !_MAC
-
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -178,11 +175,11 @@ END
 //
 
 IDD_FMODINITFAILED DIALOGEX 0, 0, 186, 62
-STYLE DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "ZDoom Sound Initialization Failure"
-FONT 8, "MS Shell Dlg"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "Retry",IDOK,129,7,50,14,WS_GROUP
     PUSHBUTTON      "No Sound",IDC_NOSOUND,129,24,50,14,WS_GROUP
@@ -192,11 +189,11 @@ BEGIN
 END
 
 IDD_IWADDIALOG DIALOGEX 0, 0, 212, 151
-STYLE DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "Select an IWAD to use"
-FONT 8, "MS Shell Dlg"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     LISTBOX         IDC_IWADLIST,5,25,200,85,LBS_NOINTEGRALHEIGHT | 
                     WS_VSCROLL | WS_TABSTOP
@@ -211,11 +208,11 @@ BEGIN
 END
 
 IDD_CRASHDIALOG DIALOGEX 0, 0, 401, 283
-STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
-    WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_SETFOREGROUND | DS_FIXEDSYS | 
+    DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "ZDoom Very Fatal Error"
-FONT 8, "MS Shell Dlg", 400
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "Die!",IDOK,176,262,50,14
     EDITTEXT        IDC_CRASHINFO,7,49,387,208,ES_MULTILINE | ES_AUTOHSCROLL | 
@@ -227,7 +224,8 @@ BEGIN
 END
 
 IDD_EAXPROPERTYLIST DIALOGEX 0, 0, 265, 404
-STYLE DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD | WS_VSCROLL
+STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD | 
+    WS_VSCROLL
 EXSTYLE WS_EX_CLIENTEDGE
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -366,8 +364,9 @@ BEGIN
 END
 
 IDD_EAXEDIT DIALOGEX 0, 0, 280, 326
-STYLE DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CLIPSIBLINGS | 
-    WS_CLIPCHILDREN | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_CAPTION | WS_SYSMENU | 
+    WS_THICKFRAME
 EXSTYLE WS_EX_TOOLWINDOW | WS_EX_WINDOWEDGE
 CAPTION "EAX Environment Editor"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
@@ -390,8 +389,8 @@ BEGIN
 END
 
 IDD_NEWEAX DIALOGEX 0, 0, 348, 257
-STYLE DS_MODALFRAME | DS_FIXEDSYS | DS_CENTERMOUSE | WS_POPUP | WS_VISIBLE | 
-    WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTERMOUSE | WS_POPUP | 
+    WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "Create New EAX Environment..."
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -416,8 +415,8 @@ BEGIN
 END
 
 IDD_SAVEEAX DIALOGEX 0, 0, 394, 95
-STYLE DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD | WS_CLIPSIBLINGS | 
-    WS_CLIPCHILDREN | WS_SYSMENU
+STYLE DS_SETFONT | DS_3DLOOK | DS_FIXEDSYS | DS_CONTROL | WS_CHILD | 
+    WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_SYSMENU
 EXSTYLE WS_EX_TRANSPARENT
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -436,7 +435,7 @@ END
 // Cursor
 //
 
-IDC_INVISIBLECURSOR     CURSOR  DISCARDABLE     "cursor1.cur"
+IDC_INVISIBLECURSOR     CURSOR                  "cursor1.cur"
 #endif    // Englisch (USA) resources
 /////////////////////////////////////////////////////////////////////////////
 

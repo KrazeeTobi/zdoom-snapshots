@@ -87,18 +87,18 @@ void GLPortal::DrawPortalStencil()
 	{
 		// Cap the stencil at the top and bottom 
 		// (cheap ass version - but the resulting polygons are far too small to bother! ;) )
-		glBegin(GL_TRIANGLE_FAN);
-		glVertex3f(-256.0f,10000.0f,-256.0f);
-		glVertex3f(-256.0f,10000.0f, 256.0f);
-		glVertex3f( 256.0f,10000.0f, 256.0f);
-		glVertex3f( 256.0f,10000.0f,-256.0f);
-		glEnd();
-		glBegin(GL_TRIANGLE_FAN);
-		glVertex3f(-256.0f,-10000.0f,-256.0f);
-		glVertex3f(-256.0f,-10000.0f, 256.0f);
-		glVertex3f( 256.0f,-10000.0f, 256.0f);
-		glVertex3f( 256.0f,-10000.0f,-256.0f);
-		glEnd();
+		gl.Begin(GL_TRIANGLE_FAN);
+		gl.Vertex3f(-256.0f,10000.0f,-256.0f);
+		gl.Vertex3f(-256.0f,10000.0f, 256.0f);
+		gl.Vertex3f( 256.0f,10000.0f, 256.0f);
+		gl.Vertex3f( 256.0f,10000.0f,-256.0f);
+		gl.End();
+		gl.Begin(GL_TRIANGLE_FAN);
+		gl.Vertex3f(-256.0f,-10000.0f,-256.0f);
+		gl.Vertex3f(-256.0f,-10000.0f, 256.0f);
+		gl.Vertex3f( 256.0f,-10000.0f, 256.0f);
+		gl.Vertex3f( 256.0f,-10000.0f,-256.0f);
+		gl.End();
 	}
 }
 
@@ -115,29 +115,29 @@ void GLPortal::Start(bool usestencil)
 	if (usestencil)
 	{
 		// Create stencil 
-		glStencilFunc(GL_EQUAL,recursion,~0);		// create stencil
-		glStencilOp(GL_KEEP,GL_KEEP,GL_INCR);		// increment stencil of valid pixels
-		glColorMask(0,0,0,0);						// don't write to the graphics buffer
-		glDepthMask(false);							// don't write to Z-buffer!
-		glDisable(GL_TEXTURE_2D);					// Disable textures (important!)
-		glColor3f(1,1,1);
+		gl.StencilFunc(GL_EQUAL,recursion,~0);		// create stencil
+		gl.StencilOp(GL_KEEP,GL_KEEP,GL_INCR);		// increment stencil of valid pixels
+		gl.ColorMask(0,0,0,0);						// don't write to the graphics buffer
+		gl.DepthMask(false);							// don't write to Z-buffer!
+		gl.Disable(GL_TEXTURE_2D);					// Disable textures (important!)
+		gl.Color3f(1,1,1);
 		DrawPortalStencil();
 
 		// Clear Z-buffer
 		recursion++;
 		
-		glStencilFunc(GL_EQUAL,recursion,~0);		// draw sky into stencil
-		glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);		// this stage doesn't modify the stencil
-		glDepthMask(true);							// enable z-buffer again
-		glDepthRange(1,1);
-		glDepthFunc(GL_ALWAYS);
+		gl.StencilFunc(GL_EQUAL,recursion,~0);		// draw sky into stencil
+		gl.StencilOp(GL_KEEP,GL_KEEP,GL_KEEP);		// this stage doesn't modify the stencil
+		gl.DepthMask(true);							// enable z-buffer again
+		gl.DepthRange(1,1);
+		gl.DepthFunc(GL_ALWAYS);
 		DrawPortalStencil();
 		
 		// prepare for drawing to the stencil
-		glEnable(GL_TEXTURE_2D);
-		glDepthFunc(GL_LESS);
-		glColorMask(1,1,1,1);
-		glDepthRange(0,1);
+		gl.Enable(GL_TEXTURE_2D);
+		gl.DepthFunc(GL_LESS);
+		gl.ColorMask(1,1,1,1);
+		gl.DepthRange(0,1);
 		gl_StartDrawInfo(drawinfo);
 	}
 	PortalAll.Stop();
@@ -161,8 +161,7 @@ inline void GLPortal::ClearClipper()
 
 	static int call=0;
 
-	// mask the drawable area in the clipper!
-	/*
+	// Set the clipper to the minimal visible area
 	clipper.AddClipRange(0,0xffffffff);
 	for(int i=0;i<lines.Size();i++)
 	{
@@ -172,9 +171,11 @@ inline void GLPortal::ClearClipper()
 		angle_t endAngle = R_PointToAngle2(savedviewx, savedviewy, 
 												-FROM_MAP(lines[i].glseg.x1), FROM_MAP(lines[i].glseg.z1));
 
-		if (startAngle-endAngle>0) clipper.RemoveClipRange(startAngle + angleOffset, endAngle + angleOffset);
+		if (startAngle-endAngle>0) 
+		{
+			clipper.SafeRemoveClipRange(startAngle + angleOffset, endAngle + angleOffset);
+		}
 	}
-	*/
 
 	// and finally clip it to the visible area
 	angle_t a1 = gl_FrustumAngle();
@@ -205,41 +206,41 @@ void GLPortal::End(bool usestencil)
 
 
 		// first step: reset the depth buffer to max. depth
-		glDepthRange(1,1);							// always
-		glDepthFunc(GL_ALWAYS);						// write the farthest depth value
-		glColorMask(0,0,0,0);						// no graphics
-		glDisable(GL_TEXTURE_2D);					// Disable textures (important!)
-		glColor3f(1,1,1);
+		gl.DepthRange(1,1);							// always
+		gl.DepthFunc(GL_ALWAYS);						// write the farthest depth value
+		gl.ColorMask(0,0,0,0);						// no graphics
+		gl.Disable(GL_TEXTURE_2D);
+		gl.Color3f(1,1,1);
 		DrawPortalStencil();
 		
 		// second step: restore the depth buffer to the previous values and reset the stencil
-		glDepthFunc(GL_LEQUAL);
-		glDepthRange(0,1);
-		glStencilOp(GL_KEEP,GL_KEEP,GL_DECR);
-		glStencilFunc(GL_EQUAL,recursion,~0);		// draw sky into stencil
+		gl.DepthFunc(GL_LEQUAL);
+		gl.DepthRange(0,1);
+		gl.StencilOp(GL_KEEP,GL_KEEP,GL_DECR);
+		gl.StencilFunc(GL_EQUAL,recursion,~0);		// draw sky into stencil
 		DrawPortalStencil();
-		glDepthFunc(GL_LESS);
+		gl.DepthFunc(GL_LESS);
 
 
-		glEnable(GL_TEXTURE_2D);
-		glColorMask(1,1,1,1);
+		gl.Enable(GL_TEXTURE_2D);
+		gl.ColorMask(1,1,1,1);
 		recursion--;
 
 		// restore old stencil op.
-		glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
-		glStencilFunc(GL_EQUAL,recursion,~0);		// draw sky into stencil
+		gl.StencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
+		gl.StencilFunc(GL_EQUAL,recursion,~0);		// draw sky into stencil
 	}
 	else
 	{
 		// only used for skies drawn as background - no skyboxes!
-		glDepthFunc(GL_LEQUAL);
-		glDepthRange(0,1);
-		glColorMask(0,0,0,0);						// no graphics
-		glDisable(GL_TEXTURE_2D);					// Disable textures (important!)
+		gl.DepthFunc(GL_LEQUAL);
+		gl.DepthRange(0,1);
+		gl.ColorMask(0,0,0,0);						// no graphics
+		gl.Disable(GL_TEXTURE_2D);
 		DrawPortalStencil();
-		glEnable(GL_TEXTURE_2D);
-		glColorMask(1,1,1,1);
-		glDepthFunc(GL_LESS);
+		gl.Enable(GL_TEXTURE_2D);
+		gl.ColorMask(1,1,1,1);
+		gl.DepthFunc(GL_LESS);
 	}
 	PortalAll.Stop();
 }
@@ -341,11 +342,10 @@ void GLSkyboxPortal::DrawContents()
 {
 	if (skyboxrecursion>=2) return;
 	skyboxrecursion++;
-	//Printf("Starting skybox %08x at %f, %f\n", origin, origin->x/65536.0f, origin->y/65536.0f);
 	origin->flags|=MF_JUSTHIT;
 	extralight = 0;
 
-	glDisable(GL_DEPTH_CLAMP_NV);
+	gl.Disable(GL_DEPTH_CLAMP_NV);
 
 	viewx = origin->x;
 	viewy = origin->y;
@@ -369,8 +369,7 @@ void GLSkyboxPortal::DrawContents()
 	gl_DrawScene();
 	origin->flags&=~MF_JUSTHIT;
 	inskybox=false;
-	glEnable(GL_DEPTH_CLAMP_NV);
-	//Printf("Finishing skybox %08x at %f, %f\n", origin, origin->x/65536.0f, origin->y/65536.0f);
+	gl.Enable(GL_DEPTH_CLAMP_NV);
 	skyboxrecursion--;
 }
 
@@ -465,7 +464,11 @@ void GLMirrorPortal::DrawContents()
 	MirrorFlag++;
 	gl_SetupView(viewx, viewy, viewz, viewangle, !!(MirrorFlag&1));
 
-	ClearClipper();
+	clipper.Clear();
+
+	angle_t af = gl_FrustumAngle();
+	if (af<ANGLE_180) clipper.SafeAddClipRange(viewangle+af, viewangle-af);
+
 	angle_t a2=R_PointToAngle(mirrorline->v1->x, mirrorline->v1->y);
 	angle_t a1=R_PointToAngle(mirrorline->v2->x, mirrorline->v2->y);
 	clipper.SafeAddClipRange(a1,a2);
@@ -536,76 +539,76 @@ void GLHorizonPortal::DrawContents()
 
 	gl_SetColor(lightlevel+(extralight<<LIGHTSEGSHIFT), color, 1.0f);
 	gl_SetFog(lightlevel, origin->colormap.FadeColor, STYLE_Normal);
-	glAlphaFunc(GL_GEQUAL,0.5f);
-	glBlendFunc(GL_ONE,GL_ZERO);
+	gl.AlphaFunc(GL_GEQUAL,0.5f);
+	gl.BlendFunc(GL_ONE,GL_ZERO);
 
 
 	float vx=TO_MAP(viewx);
 	float vy=TO_MAP(viewy);
 
 	// Draw to some far away boundary
-	for(float x=-256+vx; x<256+vx; x+=32)
+	for(float x=-F_TO_MAP(32768)+vx; x<F_TO_MAP(32768)+vx; x+=F_TO_MAP(4096))
 	{
-		for(float y=-256+vy; y<256+vy;y+=32)
+		for(float y=-F_TO_MAP(32768)+vy; y<F_TO_MAP(32768)+vy;y+=F_TO_MAP(4096))
 		{
-			glBegin(GL_TRIANGLE_FAN);
+			gl.Begin(GL_TRIANGLE_FAN);
 
-			glTexCoord2f(-x*2, -y*2);
-			glVertex3f(x, z, y);
+			gl.TexCoord2f(-x*2*FOG_COEFF, -y*2*FOG_COEFF);
+			gl.Vertex3f(x, z, y);
 
-			glTexCoord2f(-x*2 - 64, -y*2);
-			glVertex3f(x + 32, z, y);
+			gl.TexCoord2f(-x*2*FOG_COEFF - 64, -y*2*FOG_COEFF);
+			gl.Vertex3f(x + F_TO_MAP(4096), z, y);
 
-			glTexCoord2f(-x*2 - 64, -y*2 - 64);
-			glVertex3f(x + 32, z, y + 32);
+			gl.TexCoord2f(-x*2*FOG_COEFF - 64, -y*2*FOG_COEFF - 64);
+			gl.Vertex3f(x + F_TO_MAP(4096), z, y + F_TO_MAP(4096));
 
-			glTexCoord2f(-x*2, -y*2 - 64);
-			glVertex3f(x, z, y + 32);
+			gl.TexCoord2f(-x*2*FOG_COEFF, -y*2*FOG_COEFF - 64);
+			gl.Vertex3f(x, z, y + F_TO_MAP(4096));
 
-			glEnd();
+			gl.End();
 
 		}
 	}
 
-	float vz=TO_MAP(viewz);
+	float vz=F_TO_MAP(viewz);
 	float tz=(z-vz);///64.0f;
 
 	// fill the gap between the polygon and the true horizon
 	// Since I can't draw into infinity there can always be a
 	// small gap
 
-	glBegin(GL_TRIANGLE_STRIP);
+	gl.Begin(GL_TRIANGLE_STRIP);
 
-	glTexCoord2f(512.f, 0);
-	glVertex3f(-256.f+vx, z, -256.f+vy);
-	glTexCoord2f(512.f, tz);
-	glVertex3f(-256.f+vx, vz, -256.f+vy);
+	gl.TexCoord2f(512.f, 0);
+	gl.Vertex3f(-F_TO_MAP(32768)+vx, z, -F_TO_MAP(32768)+vy);
+	gl.TexCoord2f(512.f, tz);
+	gl.Vertex3f(-F_TO_MAP(32768)+vx, vz, -F_TO_MAP(32768)+vy);
 
-	glTexCoord2f(-512.f, 0);
-	glVertex3f(-256.f+vx, z,  256.f+vy);
-	glTexCoord2f(-512.f, tz);
-	glVertex3f(-256.f+vx, vz,  256.f+vy);
+	gl.TexCoord2f(-512.f, 0);
+	gl.Vertex3f(-F_TO_MAP(32768)+vx, z,  F_TO_MAP(32768)+vy);
+	gl.TexCoord2f(-512.f, tz);
+	gl.Vertex3f(-F_TO_MAP(32768)+vx, vz,  F_TO_MAP(32768)+vy);
 
-	glTexCoord2f(512.f, 0);
-	glVertex3f( 256.f+vx, z,  256.f+vy);
-	glTexCoord2f(512.f, tz);
-	glVertex3f( 256.f+vx, vz,  256.f+vy);
+	gl.TexCoord2f(512.f, 0);
+	gl.Vertex3f( F_TO_MAP(32768)+vx, z,  F_TO_MAP(32768)+vy);
+	gl.TexCoord2f(512.f, tz);
+	gl.Vertex3f( F_TO_MAP(32768)+vx, vz,  F_TO_MAP(32768)+vy);
 
-	glTexCoord2f(-512.f, 0);
-	glVertex3f( 256.f+vx, z, -256.f+vy);
-	glTexCoord2f(-512.f, tz);
-	glVertex3f( 256.f+vx, vz, -256.f+vy);
+	gl.TexCoord2f(-512.f, 0);
+	gl.Vertex3f( F_TO_MAP(32768)+vx, z, -F_TO_MAP(32768)+vy);
+	gl.TexCoord2f(-512.f, tz);
+	gl.Vertex3f( F_TO_MAP(32768)+vx, vz, -F_TO_MAP(32768)+vy);
 
-	glTexCoord2f(512.f, 0);
-	glVertex3f(-256.f+vx, z, -256.f+vy);
-	glTexCoord2f(512.f, tz);
-	glVertex3f(-256.f+vx, vz, -256.f+vy);
+	gl.TexCoord2f(512.f, 0);
+	gl.Vertex3f(-F_TO_MAP(32768)+vx, z, -F_TO_MAP(32768)+vy);
+	gl.TexCoord2f(512.f, tz);
+	gl.Vertex3f(-F_TO_MAP(32768)+vx, vz, -F_TO_MAP(32768)+vy);
 
-	glEnd();
+	gl.End();
 
-	glMatrixMode(GL_TEXTURE);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
+	gl.MatrixMode(GL_TEXTURE);
+	gl.PopMatrix();
+	gl.MatrixMode(GL_MODELVIEW);
 
 	PortalAll.Stop();
 

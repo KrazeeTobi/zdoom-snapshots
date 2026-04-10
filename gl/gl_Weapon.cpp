@@ -96,12 +96,12 @@ static void DrawPSprite (player_t * player,pspdef_t *psp,fixed_t sx, fixed_t sy,
 	fU2=pti->GetUR();
 	fV2=pti->GetVB();
 
-	glBegin(GL_TRIANGLE_STRIP);
-	glTexCoord2f(0  , 0  ); glVertex2f(x1,y1);
-	glTexCoord2f(0  , fV2); glVertex2f(x1,y2);
-	glTexCoord2f(fU2, 0  ); glVertex2f(x2,y1);
-	glTexCoord2f(fU2, fV2); glVertex2f(x2,y2);
-	glEnd();
+	gl.Begin(GL_TRIANGLE_STRIP);
+	gl.TexCoord2f(0  , 0  ); gl.Vertex2f(x1,y1);
+	gl.TexCoord2f(0  , fV2); gl.Vertex2f(x1,y2);
+	gl.TexCoord2f(fU2, 0  ); gl.Vertex2f(x2,y1);
+	gl.TexCoord2f(fU2, fV2); gl.Vertex2f(x2,y2);
+	gl.End();
 }
 
 //==========================================================================
@@ -206,18 +206,18 @@ void gl_DrawPlayerSprites(sector_t * viewsector)
 	{
 	case STYLE_OptFuzzy:
 	case STYLE_Fuzzy:
-		glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
-		glAlphaFunc(GL_GEQUAL,0.1f);
-		glColor4f(0.2f,0.2f,0.2f,0.33f);
+		gl.BlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+		gl.AlphaFunc(GL_GEQUAL,0.1f);
+		gl.Color4f(0.2f,0.2f,0.2f,0.33f);
 		break;
 	/*
 	case STYLE_Subtract:
-		glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+		gl.BlendEquation(GL_FUNC_REVERSE_SUBTRACT);
 	*/
 	case STYLE_Add:
 	case STYLE_Translucent:
-		if (vis.RenderStyle == STYLE_Add) glBlendFunc(GL_SRC_ALPHA,GL_ONE);
-		glAlphaFunc(GL_GEQUAL,(0.5f/65536.0f)*abs(playermo->alpha));
+		if (vis.RenderStyle == STYLE_Add) gl.BlendFunc(GL_SRC_ALPHA,GL_ONE);
+		gl.AlphaFunc(GL_GEQUAL,(0.5f/65536.0f)*abs(playermo->alpha));
 		gl_SetColor(lightlevel,cm.LightColor,playermo->alpha/65536.0f);
 		break;
 	case STYLE_Normal:
@@ -248,11 +248,11 @@ void gl_DrawPlayerSprites(sector_t * viewsector)
 	case STYLE_Fuzzy:
 	case STYLE_Add:
 	case STYLE_Translucent:
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glAlphaFunc(GL_GEQUAL,0.5f);
+		gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		gl.AlphaFunc(GL_GEQUAL,0.5f);
 		break;
 	}
-	glColor3f(1.0f,1.0f,1.0f);
+	gl.Color3f(1.0f,1.0f,1.0f);
 
 	// The Targeter's sprites are always drawn normally!
 	for (; i<NUMPSPRITES; i++,psp++)

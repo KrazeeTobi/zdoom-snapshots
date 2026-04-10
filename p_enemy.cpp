@@ -1707,7 +1707,7 @@ void A_DoChase(AActor * actor, bool fastchase, FState * meleestate, FState * mis
 			}
 			actor->target = NULL;
 			actor->flags |= MF_JUSTATTACKED;
-			if (actor->reactiontime>0)
+			if (actor->goal != NULL && actor->goal->args[1] != 0)
 			{
 				actor->flags4 |= MF4_INCOMBAT;
 				actor->SetState (actor->SpawnState);

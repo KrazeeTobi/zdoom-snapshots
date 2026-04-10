@@ -49,11 +49,6 @@
 #include <il/il.h>
 #include <il/ilu.h>
 
-CUSTOM_CVAR(Bool, gl_useshaders, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG|CVAR_NOINITCALL)
-{
-	FGLTexture::FlushAll();
-}
-
 CUSTOM_CVAR(Bool, gl_texture_usehires, true, CVAR_ARCHIVE|CVAR_NOINITCALL)
 {
 	FGLTexture::FlushAll();
@@ -1202,7 +1197,7 @@ const PatchTextureInfo * FGLTexture::GetPatchTextureInfo()
 	{
 		glpatch=new GLTexture(Width, Height, false, false);
 
-		if (!GLTexture::supportsNonPower2 && CheckExternalFile()) 
+		if (!(gl.flags&RFL_NPOT_TEXTURE) && CheckExternalFile()) 
 		{
 			int w,h;
 
@@ -1228,16 +1223,13 @@ const WorldTextureInfo * FGLTexture::Bind(int cm)
 {
 	if (GetWorldTextureInfo())
 	{
-		// Shaders are mainly used to apply an invulnerability colormaps to
-		// camera textures. But they can optionally be used for all textures
-		// The problem is that this is slower than creating a different texture. :(
-		if (gl_useshaders || tex->bHasCanvas)
+		if (cm >= CM_FIRSTCOLORMAP)
 		{
-			if (gl_SetShader(cm)) cm=CM_DEFAULT;
+			gl_SetColorMode(CM_DEFAULT);
 		}
 		else
 		{
-			gl_SetShader(CM_DEFAULT);
+			if (gl_SetColorMode(cm, tex->bHasCanvas)) cm=CM_DEFAULT;
 		}
 
 		// If this is a warped texture that needs updating
@@ -1281,23 +1273,15 @@ const PatchTextureInfo * FGLTexture::BindPatch(int cm, int translation, const by
 	if (tex->bHasCanvas) return NULL;	// no canvas textures outside of a level!
 	if (GetPatchTextureInfo())
 	{
-		// Shaders are mainly used to apply an invulnerability colormaps to
-		// camera textures. But they can optionally be used for all textures
-		// The problem is that this is slower than creating a different texture. :(
-		if (gl_useshaders)
+		// CM_LITE is a special case and must use remapped textures in any case!
+		// It is covered by this 'if'!
+		if (cm >= CM_SHADE)
 		{
-			if (cm==CM_LITE)
-			{
-				// The shader can't handle this case!
-				gl_SetShader(CM_DEFAULT);
-				cm=CM_INVERT;
-			}
-			else if (gl_SetShader(cm)) cm=CM_DEFAULT;
+			gl_SetColorMode(CM_DEFAULT);
 		}
 		else
 		{
-			if (cm==CM_LITE) cm=CM_INVERT;
-			gl_SetShader(CM_DEFAULT);
+			if (gl_SetColorMode(cm, tex->bHasCanvas)) cm=CM_DEFAULT;
 		}
 
 		// If this is a warped texture that needs updating
@@ -1371,4 +1355,5 @@ FGLTexture * FGLTexture::ValidateTexture(int no, bool translate)
 {
 	return FGLTexture::ValidateTexture(translate? TexMan(no) : TexMan[no]);
 }
+
 

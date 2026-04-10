@@ -19,6 +19,7 @@ class FCanvasTexture;
 // gl_data.cpp
 
 void gl_CheckNodes(int lumpnum);
+bool gl_LoadGLNodes(int lumpnum);
 void gl_InitData();
 void gl_CleanLevelData();
 void gl_PreprocessLevel(void);
@@ -81,6 +82,17 @@ void gl_SetFog(int lightlevel, PalEntry pe, int renderstyle);
 void gl_SetPlaneTextureRotation(const GLSectorPlane * secplane, FGLTexture * gltexture);
 
 void gl_InitShaders();
+void gl_EnableShader(bool on);
+
+// These are wrappers around the different means to pass this data
+// to either the shader or the conventional GL state.
+void gl_FogColor(float *  rgb);
+void gl_FogDensity(float dens);
+void gl_EnableFog(bool on);
+void gl_SetCamera(float x, float y, float z);
+bool gl_SetColorMode(int cm, bool force=false);
+void gl_EnableTexture(bool on);
+
 
 int gl_GetSpriteFrame(unsigned sprite, int frame, int rot, angle_t angle=0);
 

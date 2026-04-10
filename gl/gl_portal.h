@@ -193,17 +193,9 @@ public:
 
 struct GLHorizonPortal : public GLPortal
 {
-	static TArray<float> vtx;
-	static GLUtesselator * tess;
 	GLHorizonInfo * origin;
 
-	static void AddVertexToArray(float x, float y, float f);
-	int FindEdge(angle_t * edgeangles, angle_t angle);
-	void AddIntersection(fixed_t * box, int edge, fixed_t ox, fixed_t oy, angle_t angle);
-
 protected:
-	int CreateGeometry();
-	void RenderGeometry();
 	virtual void DrawContents();
 	virtual void * GetSource() const { return origin; }
 

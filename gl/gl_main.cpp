@@ -45,14 +45,9 @@
 //
 //==========================================================================
 
-PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
-
 void gl_SetVSync(bool self)
 {
-	if (wglSwapIntervalEXT)
-	{
-		wglSwapIntervalEXT(self);
-	}
+	gl.SetVSync(self);
 }
 
 //==========================================================================
@@ -62,12 +57,12 @@ void gl_SetVSync(bool self)
 //==========================================================================
 void gl_Set2DMode()
 {
-	gl_SetShader(CM_DEFAULT);	// disable colormap shaders if active
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glOrtho(
+	gl_SetColorMode(CM_DEFAULT);	// no colormap translations in 3D mode!
+	gl.MatrixMode(GL_MODELVIEW);
+	gl.LoadIdentity();
+	gl.MatrixMode(GL_PROJECTION);
+	gl.LoadIdentity();
+	gl.Ortho(
 		(GLdouble) 0,
 		(GLdouble) SCREENWIDTH, 
 		(GLdouble) SCREENHEIGHT, 
@@ -75,7 +70,7 @@ void gl_Set2DMode()
 		(GLdouble) -1.0, 
 		(GLdouble) 1.0 
 		);
-	glDisable(GL_DEPTH_TEST);
+	gl.Disable(GL_DEPTH_TEST);
 }
 
 

@@ -905,7 +905,10 @@ void R_InterpolateView (player_t *player, fixed_t frac, InterpolationViewer *ivi
 		!LocalKeyboardTurner)
 	{
 		viewangle = iview->nviewangle + (LocalViewAngle & 0xFFFF0000);
-		viewpitch = clamp<int> (iview->nviewpitch - (LocalViewPitch & 0xFFFF0000), -ANGLE_1*90, +ANGLE_1*90);
+		if (currentrenderer==0)
+			viewpitch = clamp<int> (iview->nviewpitch - (LocalViewPitch & 0xFFFF0000), -ANGLE_1*50, +ANGLE_1*60);
+		else
+			viewpitch = clamp<int> (iview->nviewpitch - (LocalViewPitch & 0xFFFF0000), -ANGLE_1*90, +ANGLE_1*90);
 	}
 	else
 	{

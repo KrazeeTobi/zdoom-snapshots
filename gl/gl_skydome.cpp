@@ -162,13 +162,13 @@ static void SkyVertex(int r, int c)
 		}
 		
 		
-		glTexCoord2f(u, v);
+		gl.TexCoord2f(u, v);
 	}
 	// And finally the vertex.
 	fx = x / (float)FRACUNIT;
 	fy = y / (float)FRACUNIT;
 	fz = z / (float)FRACUNIT;
-	glVertex3f(fx, fy - 1.f, fz);
+	gl.Vertex3f(fx, fy - 1.f, fz);
 }
 
 
@@ -203,32 +203,32 @@ static void RenderSkyHemisphere(int hemi)
 	{
 		columns = 4 * (gl_sky_detail > 0 ? gl_sky_detail : 1);
 		foglayer=true;
-		glDisable(GL_TEXTURE_2D);
+		gl.Disable(GL_TEXTURE_2D);
 
 
 		if (!secondlayer)
 		{
-			glColor3f(R, G ,B);
-			glBegin(GL_TRIANGLE_FAN);
+			gl.Color3f(R, G ,B);
+			gl.Begin(GL_TRIANGLE_FAN);
 			for(c = 0; c < columns; c++)
 			{
 				SkyVertex(1, c);
 			}
-			glEnd();
+			gl.End();
 		}
 
-		glEnable(GL_TEXTURE_2D);
+		gl.Enable(GL_TEXTURE_2D);
 		foglayer=false;
 	}
 	else
 	{
 		columns=4;	// no need to do more!
-		glBegin(GL_TRIANGLE_FAN);
+		gl.Begin(GL_TRIANGLE_FAN);
 		for(c = 0; c < columns; c++)
 		{
 			SkyVertex(0, c);
 		}
-		glEnd();
+		gl.End();
 	}
 	
 	// The total number of triangles per hemisphere can be calculated
@@ -237,7 +237,7 @@ static void RenderSkyHemisphere(int hemi)
 	{
 		if (yflip)
 		{
-			glBegin(GL_TRIANGLE_STRIP);
+			gl.Begin(GL_TRIANGLE_STRIP);
             SkyVertex(r + 1, 0);
 			SkyVertex(r, 0);
 			for(c = 1; c <= columns; c++)
@@ -245,11 +245,11 @@ static void RenderSkyHemisphere(int hemi)
 				SkyVertex(r + 1, c);
 				SkyVertex(r, c);
 			}
-			glEnd();
+			gl.End();
 		}
 		else
 		{
-			glBegin(GL_TRIANGLE_STRIP);
+			gl.Begin(GL_TRIANGLE_STRIP);
             SkyVertex(r, 0);
 			SkyVertex(r + 1, 0);
 			for(c = 1; c <= columns; c++)
@@ -257,7 +257,7 @@ static void RenderSkyHemisphere(int hemi)
 				SkyVertex(r, c);
 				SkyVertex(r + 1, c);
 			}
-			glEnd();
+			gl.End();
 		}
 	}
 }
@@ -283,7 +283,7 @@ static void RenderDome(int texno, FGLTexture * tex, float x_offset, float y_offs
 
 		if (texh>190 && skystretch) texh=190;
 
-		glRotatef(180.0f-x_offset, 0.f, 1.f, 0.f);
+		gl.Rotatef(180.0f-x_offset, 0.f, 1.f, 0.f);
 
 		yAdd = y_offset/texh;
 
@@ -309,9 +309,20 @@ static void RenderDome(int texno, FGLTexture * tex, float x_offset, float y_offs
 	{
 		PalEntry pe = SkyCapColor(texno, false);
 		if (CM_Index!=CM_DEFAULT) ModifyPalette(&pe, &pe, CM_Index, 1);
+
 		R=pe.r/255.0f;
 		G=pe.g/255.0f;
 		B=pe.b/255.0f;
+
+		if (gl_fixedcolormap)
+		{
+			float rr, gg, bb;
+
+			gl_GetLightColor(255, 255, 255, 255, &rr, &gg, &bb);
+			R*=rr;
+			G*=gg;
+			B*=bb;
+		}
 	}
 
 	RenderSkyHemisphere(SKYHEMI_UPPER);
@@ -343,7 +354,7 @@ static void RenderDome(int texno, FGLTexture * tex, float x_offset, float y_offs
 
 	if (tex)
 	{
-		glRotatef(-180.0f+x_offset, 0.f, 1.f, 0.f);
+		gl.Rotatef(-180.0f+x_offset, 0.f, 1.f, 0.f);
 	}
 }
 
@@ -371,15 +382,15 @@ void GLSkyPortal::DrawContents()
 
 	if (origin->texture[0]==origin->texture[1] && origin->doublesky) origin->doublesky=false;	
 
-	glDepthMask(GL_FALSE);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_FOG);
-	glDisable(GL_ALPHA_TEST);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	gl.DepthMask(GL_FALSE);
+	gl.Disable(GL_DEPTH_TEST);
+	gl_EnableFog(false);
+	gl.Disable(GL_ALPHA_TEST);
+	gl.BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
-	glPushMatrix();
+	gl.PushMatrix();
 	gl_SetupView(viewx, viewy, viewz, viewangle, !!(MirrorFlag&1), true);
-	glTranslatef(0.f, -1000.f, 0.f);
+	gl.Translatef(0.f, -1000.f, 0.f);
 
 	if (origin->texture[0])
 	{
@@ -396,8 +407,8 @@ void GLSkyPortal::DrawContents()
 		RenderDome(origin->skytexno1, origin->texture[0], origin->x_offset[0], origin->y_offset, CM_Index);
 	}
 	
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GEQUAL,0.05f);
+	gl.Enable(GL_ALPHA_TEST);
+	gl.AlphaFunc(GL_GEQUAL,0.05f);
 	
 	if (origin->doublesky && origin->texture[1])
 	{
@@ -427,17 +438,17 @@ void GLSkyPortal::DrawContents()
 		}
 		*/
 
-		glDisable(GL_TEXTURE_2D);
+		gl.Disable(GL_TEXTURE_2D);
 		foglayer=true;
-		glColor4f(FadeColor.r/255.0f,FadeColor.g/255.0f,FadeColor.b/255.0f,skyfog/255.0f);
+		gl.Color4f(FadeColor.r/255.0f,FadeColor.g/255.0f,FadeColor.b/255.0f,skyfog/255.0f);
 		RenderDome(0, NULL, 0, 0, CM_DEFAULT);
-		glEnable(GL_TEXTURE_2D);
+		gl.Enable(GL_TEXTURE_2D);
 		foglayer=false;
 	}
 
-	glPopMatrix();
+	gl.PopMatrix();
 	
-	glEnable(GL_DEPTH_TEST);
-	glDepthMask(GL_TRUE);
+	gl.Enable(GL_DEPTH_TEST);
+	gl.DepthMask(GL_TRUE);
 }
 

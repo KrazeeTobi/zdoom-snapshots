@@ -98,6 +98,7 @@ public:
 	byte GetBlue() const { return args[LIGHT_BLUE]; }
 	float GetIntensity() const { return m_currentIntensity; }
 	float GetRadius() const { return (IsActive() ? GetIntensity() * 2.f : 0.f); }
+	void LinkLight();
 
 	virtual void BeginPlay();
 	void PostBeginPlay();
@@ -121,7 +122,6 @@ public:
 private:
 	float DistToSeg(seg_t *seg);
 	void CollectWithinRadius(subsector_t *subSec, float radius);
-	void LinkLight();
 
 protected:
 	fixed_t m_offX, m_offY, m_offZ;
