@@ -338,6 +338,8 @@ void GLDrawList::SortSpriteIntoPlane(SortNode * head,SortNode * sort)
 	GLSprite * ss=&sprites[drawitems[sort->itemindex].index];
 	GLSprite * ss1;
 
+	bool ceiling = fh->z > TO_MAP(viewz);
+
 	if (ss->y1>fh->z && ss->y2<fh->z)
 	{
 		// We have to split this sprite!
@@ -345,9 +347,9 @@ void GLDrawList::SortSpriteIntoPlane(SortNode * head,SortNode * sort)
 		AddSprite(&s);
 		ss1=&sprites[sprites.Size()-1];
 		ss=&sprites[drawitems[sort->itemindex].index];	// may have been reallocated!
-		float newtexv=((ss->vb-ss->vt)/(ss->y2-ss->y1))*(fh->z-ss->y1);
+		float newtexv=ss->vt + ((ss->vb-ss->vt)/(ss->y2-ss->y1))*(fh->z-ss->y1);
 
-		if (!fh->ceiling)
+		if (!ceiling)
 		{
 			ss->y1=ss1->y2=fh->z;
 			ss->vt=ss1->vb=newtexv;
@@ -365,7 +367,7 @@ void GLDrawList::SortSpriteIntoPlane(SortNode * head,SortNode * sort)
 		head->AddToLeft(sort);
 		head->AddToRight(sort2);
 	}
-	else if ((ss->y1<fh->z && !fh->ceiling) || (ss->y2>fh->z && fh->ceiling))	// completely on the left side
+	else if ((ss->y1<fh->z && !ceiling) || (ss->y2>fh->z && ceiling))	// completely on the left side
 	{
 		head->AddToLeft(sort);
 	}

@@ -268,7 +268,7 @@ static void PrepareTransparentDoors(sector_t * sector)
 	sector_t * nextsec=NULL;
 
 #ifdef _DEBUG
-	if (sector-sectors==142)
+	if (sector-sectors==590)
 	{
 		__asm nop
 	}
@@ -320,9 +320,9 @@ static void PrepareTransparentDoors(sector_t * sector)
 		// This is a crude attempt to fix an incorrect transparent door effect I found in some
 		// WolfenDoom maps but considering the amount of code required to handle it I left it in.
 		// Do this only if the sector only contains one-sided walls or ones with no lower texture.
-		if (solidwall && solidwall+nobtextures+selfref==sector->linecount)
+		if (solidwall)
 		{
-			if (nextsec)
+			if (solidwall+nobtextures+selfref==sector->linecount && nextsec)
 			{
 				sector->heightsec=nextsec;
 				sector->heightsec->MoreFlags=0;

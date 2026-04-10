@@ -1,3 +1,22 @@
+13. Oct 2005
+- Fixed: Sprite sorting was broken when multiple translucent 3D-floors were involved
+- Fixed: The fixes for missing textures done yesterday introduced some unwanted side effects.
+
+
+12. Oct 2005
+- Fixed: Recalculation of the light list wasn't done properly when a sector's height
+  was interpolated by the renderer.
+- Fixed: Sorting of translucent flats was done incorrectly
+- Fixed: Missing texture render hacks with sky flats didn't work.
+- Fixed: Flooding texture gaps must not write into the Z-buffer.
+- Fixed: The speed for crouching down was applied inconsistently.
+
+
+10. Oct 2005
+- Changed: Removed all player error messages from FraggleScript and let them silently
+  fail instead. 
+
+
 9. Oct 2005
 - Fixed: FraggleScript's ceiling height changer did not stop the sector interpolation.
 - Fixed: Dynamic lights were not properly cleared when deactivated
