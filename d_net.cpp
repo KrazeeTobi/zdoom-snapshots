@@ -2222,7 +2222,10 @@ void Net_DoCommand (int type, byte **stream, int player)
 		break;
 
 	case DEM_CROUCH:
-		players[player].crouching = players[player].mo->GetDefault()->height / (players[player].crouchdir<0? 1:2);
+		if (gamestate == GS_LEVEL && players[player].mo != NULL)
+		{
+			players[player].crouching = players[player].mo->GetDefault()->height / (players[player].crouchdir<0? 1:2);
+		}
 		break;
 
 

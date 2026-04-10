@@ -974,16 +974,19 @@ void P_PlayerThink (player_t *player)
 
 	player->xviewshift = 0;		// [RH] Make sure view is in right place
 
+	// Handle crouching
 	if (player->crouching>0)
 	{
+		fixed_t crouchdelta = FixedDiv(20*FRACUNIT, player->mo->GetDefault()->height/2);
+
 		if (player->crouching > player->mo->height)
 		{
 			if (player->mo->z+player->mo->height<player->mo->ceilingz)
 			{
 				player->crouchdir=1;
 				player->mo->height+=FRACUNIT;
-				player->viewheight+=FRACUNIT;
-				player->defaultviewheight+=FRACUNIT;
+				player->viewheight+=crouchdelta;
+				player->defaultviewheight+=crouchdelta;
 				if (player->mo->height>=player->crouching)
 				{
 					player->crouching=0;
@@ -999,8 +1002,8 @@ void P_PlayerThink (player_t *player)
 		{
 			player->crouchdir=-1;
 			player->mo->height-=FRACUNIT;
-			player->viewheight-=FRACUNIT;
-			player->defaultviewheight-=FRACUNIT;
+			player->viewheight-=crouchdelta;
+			player->defaultviewheight-=crouchdelta;
 			if (player->defaultviewheight<7*FRACUNIT || player->mo->height <= player->crouching)
 			{
 				player->crouching=0;
@@ -1008,6 +1011,7 @@ void P_PlayerThink (player_t *player)
 		}
 		player->mo->yscale = Scale(player->mo->height, 63, player->mo->GetDefault()->height);
 	}
+	player->crouchoffset = -40* (FRACUNIT - FixedDiv(player->mo->height, player->mo->GetDefault()->height));
 
 	// [RH] Zoom the player's FOV
 	if (player->FOV != player->DesiredFOV)

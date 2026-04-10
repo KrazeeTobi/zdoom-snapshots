@@ -616,5 +616,11 @@ CCMD (warp)
 
 CCMD(crouch)
 {
+	if (gamestate != GS_LEVEL || players[consoleplayer].mo==NULL)
+	{
+		return;
+	}
+
 	Net_WriteByte(DEM_CROUCH);
 }
+	

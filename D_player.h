@@ -277,6 +277,7 @@ public:
 
 	fixed_t defaultviewheight;
 	fixed_t crouching;
+	fixed_t crouchoffset;
 	signed char	crouchdir;
 };
 

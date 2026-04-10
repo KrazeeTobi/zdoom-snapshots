@@ -1198,6 +1198,8 @@ void P_XYMovement (AActor *mo, bool bForceSlide)
 	fixed_t startx, starty;
 
 	fixed_t maxmove = (mo->waterlevel < 1) || (mo->flags & MF_MISSILE) ? MAXMOVE : MAXMOVE/4;
+	// Crouching also slows down!
+	if (mo->player && mo->player->crouchoffset<-10*FRACUNIT) maxmove=MAXMOVE/4;
 
 	if (mo->flags2 & MF2_WINDTHRUST && mo->waterlevel < 2 && !(mo->flags & MF_NOCLIP))
 	{
@@ -1223,7 +1225,8 @@ void P_XYMovement (AActor *mo, bool bForceSlide)
 	// that large thrusts can't propel an actor through a wall, because wall
 	// running depends on the player's original movement continuing even after
 	// it gets blocked.
-	if (mo->player != NULL && (compatflags & COMPATF_WALLRUN) || (mo->waterlevel >= 1))
+	if (mo->player != NULL && (compatflags & COMPATF_WALLRUN) || (mo->waterlevel >= 1) ||
+		(mo->player && mo->player->crouchoffset<-10*FRACUNIT))
 	{
 		// try to preserve the direction instead of clamping x and y independently.
 		xmove = clamp (mo->momx, -maxmove, maxmove);
@@ -4525,7 +4528,7 @@ AActor *P_SpawnPlayerMissile (AActor *source, fixed_t x, fixed_t y, fixed_t z,
 	}
 	if (z != ONFLOORZ && z != ONCEILINGZ)
 	{
-		z += 4*8*FRACUNIT - source->floorclip;
+		z += 4*8*FRACUNIT - source->floorclip + (source->player? source->player->crouchoffset : 0);
 	}
 	MissileActor = Spawn (type, x, y, z);
 

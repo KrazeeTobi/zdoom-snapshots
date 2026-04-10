@@ -594,16 +594,16 @@ void GLSprite::ProcessParticle (particle_t *particle, sector_t *sector)//, int s
 		TArray<lightlist_t> & lightlist=sector->e->lightlist;
 		int lightbottom;
 
-		Colormap=sector->ColorMap;
+		Colormap = sector->ColorMap;
 		for(int i=0;i<lightlist.Size();i++)
 		{
-			if (i<lightlist.Size()-1) lightbottom=lightlist[i+1].plane.ZatPoint(particle->x,particle->y);
-			else lightbottom=frontsector->floorplane.ZatPoint(particle->x,particle->y);
+			if (i<lightlist.Size()-1) lightbottom = lightlist[i+1].plane.ZatPoint(particle->x,particle->y);
+			else lightbottom = sector->floorplane.ZatPoint(particle->x,particle->y);
 
 			if (lightbottom < particle->y)
 			{
-				lightlevel=*lightlist[i].p_lightlevel;
-				Colormap.LightColor=(*lightlist[i].p_extra_colormap)->Color;
+				lightlevel = *lightlist[i].p_lightlevel;
+				Colormap.LightColor = (*lightlist[i].p_extra_colormap)->Color;
 				break;
 			}
 		}
