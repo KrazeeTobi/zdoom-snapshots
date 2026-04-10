@@ -1,0 +1,186 @@
+
+#ifndef __GL_TEXTURE_H
+#define __GL_TEXTURE_H
+
+#include "gl/gltexture.h"
+#include "r_data.h"
+#include "i_system.h"
+
+struct GL_RECT;
+
+void ModifyPalette(PalEntry * p, int cm, int count);
+
+// Two intermediate classes which wrap the low level textures.
+// These ones are returned by the Bind* functions to ensure
+// that the coordinate functions aren't used without the texture
+// being initialized.
+// Unfortunately it is necessary to maintain 2 of these.
+// On older graphics cards which don't support non-power of 2 textures
+// these are not interchangable so if a texture happens to be used
+// both as sprite and texture there need to be different versions.
+
+class WorldTextureInfo
+{
+protected:
+	GLTexture * gltexture;
+	float scalex;
+	float scaley;
+
+	void Clean(bool all)
+	{
+		if (gltexture) 
+		{
+			if (!all) gltexture->Clean(false);
+			else
+			{
+				delete gltexture;
+				gltexture=NULL;
+			}
+		}
+	}
+
+public:
+
+	float GetU(float upix) const { return gltexture->GetU(upix*scalex); }
+	float GetV(float vpix) const { return gltexture->GetV(vpix*scaley); }
+		  
+	float FloatToTexU(float v) const { return gltexture->FloatToTexU(v*scalex); }
+	float FixToTexU(int v) const { return gltexture->FixToTexU(v)*scalex; }
+	float FixToTexV(int v) const { return gltexture->FixToTexV(v)*scaley; }
+};
+
+class PatchTextureInfo
+{
+protected:
+	GLTexture * glpatch;
+
+	void Clean(bool all)
+	{
+		if (glpatch) 
+		{
+			if (!all) glpatch->Clean(false);
+			else
+			{
+				delete glpatch;
+				glpatch=NULL;
+			}
+		}
+	}
+
+public:
+	float GetUR() const { return glpatch->GetUR(); }
+	float GetVB() const { return glpatch->GetVB(); }
+	float GetU(float upix) const { return glpatch->GetU(upix); }
+	float GetV(float vpix) const { return glpatch->GetV(vpix); }
+};
+
+
+//===========================================================================
+// 
+// this is the texture maintenance class for OpenGL. 
+//
+//===========================================================================
+class FGLTexture : protected WorldTextureInfo, protected PatchTextureInfo
+{
+
+	static TArray<FGLTexture *> * gltextures;
+public:
+	FTexture * tex;
+private:
+	int index;
+
+	signed char areacount;
+	GL_RECT * areas;
+
+	short LeftOffset;
+	short TopOffset;
+	short Width;
+	short Height;
+	short RenderWidth;
+	short RenderHeight;
+
+	bool FindHoles(const unsigned char * buffer, int w, int h);
+	void ProcessData(unsigned char * buffer, int w, int h, int cm, bool ispatch);
+	static bool SmoothEdges(unsigned char * buffer,int w, int h, bool clampsides);
+
+
+	void SetSize(int w, int h)
+	{
+		Width=w;
+		Height=h;
+		scalex=Width/RenderWidth;
+		scaley=Height/RenderHeight;
+	}
+
+public:
+	FGLTexture(FTexture * tx);
+	~FGLTexture();
+
+	unsigned char * CreateTexBuffer(int cm, int translation, const byte * translationtable=NULL);
+	const WorldTextureInfo * Bind(int cm);
+	const PatchTextureInfo * BindPatch(int cm, int translation=0, const byte * translationtable=NULL);
+
+	const WorldTextureInfo * GetWorldTextureInfo();
+	const PatchTextureInfo * GetPatchTextureInfo();
+
+	void Clean(bool all)
+	{
+		WorldTextureInfo::Clean(all);
+		PatchTextureInfo::Clean(all);
+	}
+
+	static void FlushAll();
+	static FGLTexture * ValidateTexture(FTexture * tex);
+	static FGLTexture * ValidateTexture(int no, bool translate=true);
+
+
+	// Patch drawing utilities
+
+	void GetRect(GL_RECT * r) const;
+
+	int TextureHeight() const { return RenderHeight; }
+	int TextureWidth() const { return RenderWidth; }
+
+	int GetAreaCount() const { return areacount; }
+	GL_RECT * GetAreas() const { return areas; }
+
+	fixed_t RowOffset(fixed_t rowoffset) const
+	{
+		if (tex->ScaleY==0 || tex->ScaleY==8 || !tex->bWorldPanning) return rowoffset;
+		else return quickertoint(rowoffset/scaley);
+	}
+
+	fixed_t TextureOffset(fixed_t textureoffset) const
+	{
+		if (tex->ScaleX==0 || tex->ScaleX==8 || !tex->bWorldPanning) return textureoffset;
+		else return quickertoint(textureoffset/scalex);
+	}
+
+	int GetWidth() const
+	{
+		return Width;
+	}
+
+	int GetHeight() const
+	{
+		return Height;
+	}
+
+	int GetLeftOffset() const
+	{
+		return LeftOffset;
+	}
+
+	int GetTopOffset() const
+	{
+		return TopOffset;
+	}
+
+	int GetIndex() const
+	{
+		return index;
+	}
+};
+
+
+#endif

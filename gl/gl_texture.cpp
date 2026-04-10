@@ -1,0 +1,1228 @@
+#include "gl_pch.h"
+/*
+** gltexture.cpp
+** The texture classes for hardware rendering
+** (Even though they are named 'gl' there is nothing hardware dependent
+**  in this file. That is all encapsulated in the GLTexture class.)
+**
+**---------------------------------------------------------------------------
+** Copyright 2004-2005 Christoph Oelckers
+** All rights reserved.
+**
+** Redistribution and use in source and binary forms, with or without
+** modification, are permitted provided that the following conditions
+** are met:
+**
+** 1. Redistributions of source code must retain the above copyright
+**    notice, this list of conditions and the following disclaimer.
+** 2. Redistributions in binary form must reproduce the above copyright
+**    notice, this list of conditions and the following disclaimer in the
+**    documentation and/or other materials provided with the distribution.
+** 3. The name of the author may not be used to endorse or promote products
+**    derived from this software without specific prior written permission.
+**
+** THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+** IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+** OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+** IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+** INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+** NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+** DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+** THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+** (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+** THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**---------------------------------------------------------------------------
+**
+*/
+
+#include "w_wad.h"
+#include "m_png.h"
+#include "r_draw.h"
+
+#include "gl/gl_struct.h"
+#include "gl/gl_texture.h"
+#include "gl/gl_functions.h"
+
+CVAR(Bool, gl_useshaders, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG);
+
+
+// internal parameters for ModifyPalette
+enum SpecialModifications
+{
+	CM_ICE=-2,					// The bluish ice translation for frozen corpses
+	CM_GRAY=-3,					// a simple grayscale map for colorizing blood splats
+};
+
+
+//===========================================================================
+// 
+// Creates one of the special palette translations for the given palette
+//
+//===========================================================================
+void ModifyPalette(PalEntry * p, int cm, int count)
+{
+	int i;
+	int fac;
+
+	static const BYTE IcePalette[16][3] =
+	{
+		{  10,  8, 18 },
+		{  15, 15, 26 },
+		{  20, 16, 36 },
+		{  30, 26, 46 },
+		{  40, 36, 57 },
+		{  50, 46, 67 },
+		{  59, 57, 78 },
+		{  69, 67, 88 },
+		{  79, 77, 99 },
+		{  89, 87,109 },
+		{  99, 97,120 },
+		{ 109,107,130 },
+		{ 118,118,141 },
+		{ 128,128,151 },
+		{ 138,138,162 },
+		{ 148,148,172 }
+	};
+
+	switch(cm)
+	{
+	case CM_INVERT:
+		// Doom's inverted invulnerability map
+		for(i=0;i<count;i++)
+		{
+			int gray = 255-((p[i].r*77 + p[i].g*143 + p[i].b*37) >> 8);
+			p[i].r = p[i].g = p[i].b = clamp<int>(gray, 0, 255);
+		}
+		break;
+
+	case CM_GOLDMAP:
+		// Heretic's golden invulnerability map
+		for(i=0;i<count;i++)
+		{
+			int gray = (p[i].r*77 + p[i].g*143 + p[i].b*37)>>8;
+			p[i].r = clamp<int>(gray+(gray>>1), 0, 255);
+			p[i].g = clamp<int>(gray, 0, 255);
+			p[i].b = 0;
+		}
+		break;
+
+	case CM_GRAY:
+		// this is used for colorization of blood.
+		// To get the best results the brightness is taken from 
+		// the most intense component and not averaged because that would be too dark.
+		for(i=0;i<count;i++)
+		{
+			p[i].r = p[i].g = p[i].b = max(max(p[i].r, p[i].g), p[i].b);
+		}
+		break;
+
+	case CM_ICE:
+		// Create the ice translation table, based on Hexen's.
+		// Since this is done in True Color the purplish tint is fully preserved - even in Doom!
+		for(i=0;i<count;i++)
+		{
+			int gray=(p[i].r*77 + p[i].g*143 + p[i].b*37)>>12;
+
+			p[i].r = IcePalette[gray][0];
+			p[i].g = IcePalette[gray][1];
+			p[i].b = IcePalette[gray][2];
+		}
+		break;
+	
+	default:
+		// Boom colormaps.
+		if (cm>=CM_FIRSTCOLORMAP)
+		{
+			// CreateTexBuffer has already taken care of needed palette mapping so this
+			// buffer is guaranteed to be in the base palette.
+			byte * cmapp = &realcolormaps [NUMCOLORMAPS*256*(cm - CM_FIRSTCOLORMAP)];
+
+			for(i=0;i<count;i++)
+			{
+				p[i].r = GPalette.BaseColors[*cmapp].r;
+				p[i].g = GPalette.BaseColors[*cmapp].g;
+				p[i].b = GPalette.BaseColors[*cmapp].b;
+				cmapp++;
+			}
+		}
+		else
+		{
+			// Desaturated light settings.
+			fac=cm-CM_DESAT0;
+			for(i=0;i<count;i++)
+			{
+				int gray=(p[i].r*77 + p[i].g*143 + p[i].b*37)>>8;
+
+				p[i].r = (p[i].r*(32-fac) + gray*fac)/32;
+				p[i].g = (p[i].g*(32-fac) + gray*fac)/32;
+				p[i].b = (p[i].b*(32-fac) + gray*fac)/32;
+			}
+		}
+		break;
+	}
+}
+
+
+//===========================================================================
+//
+// True Color texture copy function
+//
+//===========================================================================
+static void CopyPixelData(BYTE * buffer, int texwidth, int texheight, int originx, int originy,
+				  const BYTE * patch, int pix_width, int pix_height, 
+				  int step_x, int step_y,
+				  int cm, int translation, PalEntry * palette)
+{
+	PalEntry penew[256];
+	int srcwidth=pix_width;
+	int srcheight=pix_height;
+	int pitch=texwidth;
+
+	int x,y,pos,i;
+	
+	// clip source rectangle to destination
+	if (originx<0)
+	{
+		srcwidth+=originx;
+		patch-=originx*step_x;
+		originx=0;
+		if (srcwidth<=0) return;
+	}
+	if (originx+srcwidth>texwidth)
+	{
+		srcwidth=texwidth-originx;
+		if (srcwidth<=0) return;
+	}
+		
+	if (originy<0)
+	{
+		srcheight+=originy;
+		patch-=originy*step_y;
+		originy=0;
+		if (srcheight<=0) return;
+	}
+	if (originy+srcheight>texheight)
+	{
+		srcheight=texheight-originy;
+		if (srcheight<=0) return;
+	}
+	buffer+=4*originx + 4*pitch*originy;
+
+
+	if (translation!=DIRECT_PALETTE)
+	{
+		// CM_SHADE is an alpha map with 0==transparent and 1==opaque
+		if (cm==CM_SHADE) 
+		{
+			for(int i=0;i<256;i++) penew[i]=PalEntry(255-i,255,255,255);
+		}
+		else
+		{
+			memcpy(penew, palette, 256*sizeof(PalEntry));
+
+			// apply any translation. 
+			if (translation)
+			{
+				// The ice and blood color translations are done in true color
+				// because that yields better results.
+				switch(translation)
+				{
+				case (TRANSLATION_Standard<<8) | 8:
+					ModifyPalette(penew, CM_GRAY, 256);
+					break;
+
+				case (TRANSLATION_Standard<<8) | 7:
+					ModifyPalette(penew, CM_ICE, 256);
+					break;
+
+				default:
+					const unsigned char * tbl = &translationtables[translation>>8][256*(translation&0xff)];
+					for(i =0;i<256;i++)
+					{
+						penew[i] = palette[tbl[i]];
+					}
+				}
+			}
+			if (cm!=0)
+			{
+				// Apply color modifications like invulnerability, desaturation and Boom colormaps
+				ModifyPalette(penew, cm, 256);
+			}
+		}
+	}
+	else
+	{
+		// fonts create their own translation palettes
+		BYTE * translationp=(BYTE*)cm;
+		for(int i=0;i<256;i++)
+		{
+			penew[i].r=*translationp++;
+			penew[i].g=*translationp++;
+			penew[i].b=*translationp++;
+			penew[i].a=0;
+		}
+		penew[0].a=255;
+	}
+	// Now penew contains the actual palette that is to be used for creating the image.
+
+	// convert the image according to the translated palette.
+	// Please note that the alpha of the passed palette is inverted. This is
+	// so that the base palette can be used without constantly changing it.
+	// This can also handle full PNG translucency.
+	for (y=0;y<srcheight;y++)
+	{
+		pos=4*(y*pitch);
+		for (x=0;x<srcwidth;x++,pos+=4)
+		{
+			int v=(unsigned char)patch[y*step_y+x*step_x];
+			if (penew[v].a==0)
+			{
+				buffer[pos]=penew[v].r;
+				buffer[pos+1]=penew[v].g;
+				buffer[pos+2]=penew[v].b;
+				buffer[pos+3]=255-penew[v].a;
+			}
+			else if (penew[v].a!=255)
+			{
+				buffer[pos  ] = (buffer[pos  ] * penew[v].a + penew[v].r * (1-penew[v].a)) / 255;
+				buffer[pos+1] = (buffer[pos+1] * penew[v].a + penew[v].g * (1-penew[v].a)) / 255;
+				buffer[pos+2] = (buffer[pos+2] * penew[v].a + penew[v].b * (1-penew[v].a)) / 255;
+				buffer[pos+3] = clamp<int>(buffer[pos+3] + (( 255-buffer[pos+3]) * (255-penew[v].a))/255, 0, 255);
+			}
+		}
+	}
+}
+
+//===========================================================================
+//
+// FTexture::CopyTrueColorPixels 
+//
+// this is the generic case that can handle
+// any properly implemented texture for software rendering.
+// Its drawback is that it is limited to the base palette which is
+// why all classes that handle different palettes should subclass this
+// methos
+//
+//===========================================================================
+
+void FTexture::CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_height, int x, int y, 
+									 int cm, int translation)
+{
+	GPalette.BaseColors[0].a=255;
+	CopyPixelData(buffer, buf_width, buf_height, x, y,
+				  GetPixels(), Width, Height, Height, 1, 
+				  cm, translation, GPalette.BaseColors);
+
+	Unload();
+	GPalette.BaseColors[0].a=0;
+}
+
+//===========================================================================
+//
+// FMultipatchTexture::CopyTrueColorPixels
+//
+// This needs to be subclassed so it can handle textures that use
+// patches with different palettes
+//
+//===========================================================================
+
+void FMultiPatchTexture::CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_height, int x, int y, 
+									 int cm, int translation)
+{
+	for(int i=0;i<NumParts;i++)
+	{
+		if (!stricmp(Name, "Brown144") && (i==5 || i==5)) 
+			__asm nop
+
+		Parts[i].Texture->GetWidth();
+		Parts[i].Texture->CopyTrueColorPixels(buffer, buf_width, buf_height, 
+											  x+Parts[i].OriginX, y+Parts[i].OriginY, cm, translation);
+	}
+}
+
+//===========================================================================
+//
+// FPNGTexture::CopyTrueColorPixels
+//
+// Preserves the full PNG palette (unlike software mode)
+//
+//===========================================================================
+
+void FPNGTexture::CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_height, int x, int y, 
+									 int cm, int translation)
+{
+	// Parse pre-IDAT chunks. I skip the CRCs. Is that bad?
+	PalEntry pe[256];
+	DWORD len, id;
+	FWadLump lump = Wads.OpenLumpNum (SourceLump);
+
+	lump.Seek (33, SEEK_SET);
+	for(int i=0;i<256;i++) pe[i]=PalEntry(0,i,i,i);	// default to a gray map
+
+	lump >> len >> id;
+	while (id != MAKE_ID('I','D','A','T') && id != MAKE_ID('I','E','N','D'))
+	{
+		len = BELONG((unsigned int)len);
+		switch (id)
+		{
+		default:
+			lump.Seek (len, SEEK_CUR);
+			break;
+
+		case MAKE_ID('P','L','T','E'):
+			for(int i=0;i<PaletteSize;i++)
+				lump >> pe[i].r >> pe[i].g >> pe[i].b;
+			break;
+
+		case MAKE_ID('t','R','N','S'):
+			for(int i=0;i<PaletteSize;i++)
+			{
+				lump >> pe[i].a;
+				pe[i].a=255-pe[i].a;	// use inverse alpha so the default palette can be used unchanged
+			}
+			break;
+		}
+		lump >> len >> len;	// Skip CRC
+		id = MAKE_ID('I','E','N','D');
+		lump >> id;
+	}
+
+	BYTE * Pixels = new BYTE[Width*Height];
+
+	lump.Seek (StartOfIDAT, SEEK_SET);
+	lump >> len >> id;
+	M_ReadIDAT (&lump, Pixels, Width, Height, Width, BitDepth, ColorType, Interlace, BELONG((unsigned int)len));
+
+	CopyPixelData(buffer, buf_width, buf_height, x, y,
+				  Pixels, Width, Height, 1, Width,
+				  cm, translation, pe);
+
+	delete[] Pixels;
+}
+
+//===========================================================================
+//
+// FWarpTexture::CopyTrueColorPixels
+//
+// Since the base texture can be anything the warping must be done in
+// true color
+//
+//===========================================================================
+
+void FWarpTexture::CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_height, int xx, int yy, 
+									 int cm, int translation)
+{
+	unsigned long * in=new unsigned long[Width*Height];
+	unsigned long * out;
+	bool direct;
+	
+	if (Width == buf_width && Height == buf_height && xx==0 && yy==0)
+	{
+		out = (unsigned long*)buffer;
+		direct=true;
+	}
+	else
+	{
+		out = new unsigned long[Width*Height];
+		direct=false;
+	}
+
+	GenTime = r_FrameTime;
+	SourcePic->CopyTrueColorPixels((BYTE*)in, Width, Height, 0, 0, cm, translation);
+
+	static unsigned long linebuffer[4096];	// that's the maximum texture size for most graphics cards!
+	int timebase = r_FrameTime*23/28;
+	int xsize = Width;
+	int ysize = Height;
+	int xmask = xsize - 1;
+	int ymask = ysize - 1;
+	int ds_xbits;
+	int i,x;
+
+	for(ds_xbits=-1,i=Width; i; i>>=1, ds_xbits++);
+
+	for (x = xsize-1; x >= 0; x--)
+	{
+		int yt, yf = (finesine[(timebase+(x+17)*128)&FINEMASK]>>13) & ymask;
+		const unsigned long *source = in + x;
+		unsigned long *dest = out + x;
+		for (yt = ysize; yt; yt--, yf = (yf+1)&ymask, dest += xsize)
+		{
+			*dest = *(source+(yf<<ds_xbits));
+		}
+	}
+	timebase = r_FrameTime*32/28;
+	int y;
+	for (y = ysize-1; y >= 0; y--)
+	{
+		int xt, xf = (finesine[(timebase+y*128)&FINEMASK]>>13) & xmask;
+		unsigned long *source = out + (y<<ds_xbits);
+		unsigned long *dest = linebuffer;
+		for (xt = xsize; xt; xt--, xf = (xf+1)&xmask)
+		{
+			*dest++ = *(source+xf);
+		}
+		memcpy (out+y*xsize, linebuffer, xsize*sizeof(unsigned long));
+	}
+
+	if (!direct)
+	{
+		// Negative offsets cannot occur here.
+		if (xx<0) xx=0;
+		if (yy<0) yy=0;
+
+		unsigned long * targ = ((unsigned long*)buffer) + xx + yy*buf_width;
+		int linelen=MIN<int>(Width, buf_width-xx);
+		int linecount=MIN<int>(Height, buf_height-yy);
+
+		for(i=0;i<linecount;i++)
+		{
+			memcpy(targ, &out[Width*i], linelen*sizeof(unsigned long));
+			targ+=buf_width;
+		}
+		delete [] out;
+	}
+	delete [] in;
+	GenTime=r_FrameTime;
+}
+
+//===========================================================================
+//
+// FWarpTexture::CopyTrueColorPixels
+//
+// Since the base texture can be anything the warping must be done in
+// true color
+//
+//===========================================================================
+
+void FWarp2Texture::CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_height, int xx, int yy, 
+									 int cm, int translation)
+{
+	unsigned long * in=new unsigned long[Width*Height];
+	unsigned long * out;
+	bool direct;
+	
+	if (Width == buf_width && Height == buf_height && xx==0 && yy==0)
+	{
+		out = (unsigned long*)buffer;
+		direct=true;
+	}
+	else
+	{
+		out = new unsigned long[Width*Height];
+		direct=false;
+	}
+
+	GenTime = r_FrameTime;
+	SourcePic->CopyTrueColorPixels((BYTE*)in, Width, Height, 0, 0, cm, translation);
+
+	int xsize = Width;
+	int ysize = Height;
+	int xmask = xsize - 1;
+	int ymask = ysize - 1;
+	int ybits;
+	int x, y;
+	int i;
+
+	for(ybits=-1,i=ysize; i; i>>=1, ybits++);
+
+	DWORD timebase = r_FrameTime * 40 / 28;
+	for (x = xsize-1; x >= 0; x--)
+	{
+		for (y = ysize-1; y >= 0; y--)
+		{
+			int xt = (x + 128
+				+ ((finesine[(y*128 + timebase*5 + 900) & 8191]*2)>>FRACBITS)
+				+ ((finesine[(x*256 + timebase*4 + 300) & 8191]*2)>>FRACBITS)) & xmask;
+			int yt = (y + 128
+				+ ((finesine[(y*128 + timebase*3 + 700) & 8191]*2)>>FRACBITS)
+				+ ((finesine[(x*256 + timebase*4 + 1200) & 8191]*2)>>FRACBITS)) & ymask;
+			const unsigned long *source = in + (xt << ybits) + yt;
+			unsigned long *dest = out + (x << ybits) + y;
+			*dest = *source;
+		}
+	}
+
+	if (!direct)
+	{
+		// Negative offsets cannot occur here.
+		if (xx<0) xx=0;
+		if (yy<0) yy=0;
+
+		unsigned long * targ = ((unsigned long*)buffer) + xx + yy*buf_width;
+		int linelen=MIN<int>(Width, buf_width-xx);
+		int linecount=MIN<int>(Height, buf_height-yy);
+
+		for(i=0;i<linecount;i++)
+		{
+			memcpy(targ, &out[Width*i], linelen*sizeof(unsigned long));
+			targ+=buf_width;
+		}
+		delete [] out;
+	}
+	delete [] in;
+	GenTime=r_FrameTime;
+}
+
+//===========================================================================
+//
+// The very special and space saving PicZ format ;)
+//
+// This class is basically a stripped down version of FPNGTexture
+//
+//===========================================================================
+
+FPicZTexture::FPicZTexture (int lumpnum)
+: SourceLump(lumpnum), Pixels(0), Spans(0), PaletteMap(0)
+{
+	union
+	{
+		DWORD palette[256];
+		BYTE pngpal[256][3];
+	};
+	BYTE trans[256];
+
+	int i;
+	byte palindex,transcol;
+	int transcolor;
+
+	Wads.GetLumpName (Name, lumpnum);
+	Name[8] = 0;
+
+	UseType = TEX_MiscPatch;
+	bMasked = true;
+
+
+	memset (trans, 255, 256);
+
+	FWadLump lump = Wads.OpenLumpNum (SourceLump);
+
+	lump.Seek(4, SEEK_SET);
+	lump >> Width >> Height >> LeftOffset >> TopOffset >> palindex >> transcol;
+	if (palindex&0x80)
+	{
+		palindex&=0x7f;
+		transcolor=-1;
+	}
+	else
+	{
+		trans[transcol]=0;
+		transcolor=transcol;
+	}
+	PaletteMap=NULL;
+	CalcBitSize ();
+
+	// This allows the use of several shared palettes with one single byte inside the graphic.
+	if (palindex>0)
+	{
+		int lump=Wads.CheckNumForName("PICZPAL");
+		if (lump>=0 && Wads.LumpLength(lump)>=768*palindex)
+		{
+			FWadLump palf=Wads.OpenLumpNum(lump);
+			palf.Seek(768*(palindex-1), SEEK_SET);
+			palf.Read (pngpal, 768);
+			for (i = 256 - 1; i >= 0; --i)
+			{
+				palette[i] = MAKERGB(pngpal[i][0], pngpal[i][1], pngpal[i][2]);
+			}
+		}
+		PaletteMap = new BYTE[256];
+		GPalette.MakeRemap (palette, PaletteMap, trans, 256);
+	}
+	else
+	{
+		PaletteMap = new BYTE[256];
+		memcpy(PaletteMap, GPalette.Remap, 256);
+	}
+	if (transcolor!=-1) PaletteMap[transcolor]=0;
+}
+
+FPicZTexture::~FPicZTexture ()
+{
+	Unload ();
+	if (Spans != NULL)
+	{
+		FreeSpans (Spans);
+	}
+	if (PaletteMap != NULL)
+	{
+		delete[] PaletteMap;
+	}
+}
+
+void FPicZTexture::Unload ()
+{
+	if (Pixels != NULL)
+	{
+		delete[] Pixels;
+		Pixels = NULL;
+	}
+}
+
+const BYTE *FPicZTexture::GetColumn (unsigned int column, const Span **spans_out)
+{
+	if (Pixels == NULL)
+	{
+		MakeTexture ();
+	}
+	if ((unsigned)column >= (unsigned)Width)
+	{
+		if (WidthMask + 1 == Width)
+		{
+			column &= WidthMask;
+		}
+		else
+		{
+			column %= Width;
+		}
+	}
+	if (spans_out != NULL)
+	{
+		*spans_out = Spans[column];
+	}
+	return Pixels + column*Height;
+}
+
+const BYTE *FPicZTexture::GetPixels ()
+{
+	if (Pixels == NULL)
+	{
+		MakeTexture ();
+	}
+	return Pixels;
+}
+
+void FPicZTexture::MakeTexture ()
+{
+	FWadLump lump = Wads.OpenLumpNum (SourceLump);
+
+	Pixels = new BYTE[Width*Height];
+
+	lump.Seek(14,SEEK_SET);
+	FileReaderZ frz(lump);
+	frz.Read(Pixels, Width*Height);
+
+	if (Width == Height)
+	{
+		FlipSquareBlockRemap (Pixels, Width, Height, PaletteMap);
+	}
+	else
+	{
+		BYTE *newpix = new BYTE[Width*Height];
+		FlipNonSquareBlockRemap (newpix, Pixels, Width, Height, PaletteMap);
+		BYTE *oldpix = Pixels;
+		Pixels = newpix;
+		delete[] oldpix;
+	}
+	Spans = CreateSpans (Pixels);
+}
+
+//===========================================================================
+//
+// FPicZTexture::GetTrueColorPixels
+//
+//===========================================================================
+
+void FPicZTexture::CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_height, int x, int y, 
+									 int cm, int translation)
+{
+	PalEntry pe[256];
+	byte palette, transcol;
+	char * palfile;
+	FWadLump lump = Wads.OpenLumpNum (SourceLump);
+
+	lump.Seek (12, SEEK_SET);
+	lump >> palette >> transcol; 
+
+	BYTE * Pixels = new BYTE[Width*Height];
+
+	FileReaderZ frz(lump);
+	frz.Read(Pixels, Width*Height);
+
+	// There's a small problem here: GPalette is already remapped and might miss one color.
+	// So to make things easier here I always load the palette - even if it is the original from PLAYPAL.
+
+	if (palette & 0x80)
+	{
+		palette&=0x7f;
+		transcol=-1;
+	}
+	palfile = palette==0? "PLAYPAL":"PICZPAL";
+	if (palette>0) 
+		palette--;
+
+	int plump=Wads.CheckNumForName(palfile);
+	if (plump>=0 && Wads.LumpLength(plump)>=768*(palette+1))
+	{
+		FWadLump palf=Wads.OpenLumpNum(plump);
+		palf.Seek(768*palette, SEEK_SET);
+		for(int i=0;i<256;i++)
+		{
+			palf >> pe[i].r >> pe[i].g >> pe[i].b;
+			pe[i].a=0;
+		}
+	}
+	else palette=255;
+	if (transcol>=0) pe[transcol].a=255;
+
+	CopyPixelData(buffer, buf_width, buf_height, x, y,
+				  Pixels, Width, Height, 1, Width,
+				  cm, translation, palette==255? GPalette.BaseColors : pe);
+
+	delete[] Pixels;
+}
+
+
+//===========================================================================
+//
+// The GL texture maintenance class
+//
+//===========================================================================
+TArray<FGLTexture *> * FGLTexture::gltextures;
+
+//===========================================================================
+//
+// Constructor
+//
+//===========================================================================
+FGLTexture::FGLTexture(FTexture * tx)
+{
+	tex = tx;
+
+	glpatch=NULL;
+	gltexture=NULL;
+
+	areacount = 0;
+	areas = NULL;
+
+	Width = tex->GetWidth();
+	Height = tex->GetHeight();
+	LeftOffset = tex->LeftOffset;
+	TopOffset = tex->TopOffset;
+
+	scalex = tex->ScaleX? tex->ScaleX/8.0f : 1.0f;
+	scaley = tex->ScaleY? tex->ScaleY/8.0f : 1.0f;
+	RenderWidth=(short)(Width/scalex);
+	RenderHeight=(short)(Height/scaley);
+
+	// a little adjustment to make sprites look better with texture filtering:
+	// create a 1 pixel wide empty frame around them.
+	if (tex->UseType == FTexture::TEX_Sprite || 
+		tex->UseType == FTexture::TEX_SkinSprite || 
+		tex->UseType == FTexture::TEX_Decal)
+	{
+		RenderWidth+=2;
+		RenderHeight+=2;
+		Width+=2;
+		Height+=2;
+		LeftOffset+=1;
+		TopOffset+=1;
+	}
+	if (!gltextures) gltextures = new TArray<FGLTexture *>;
+	index = gltextures->Push(this);
+}
+
+//===========================================================================
+//
+// Destructor
+//
+//===========================================================================
+
+FGLTexture::~FGLTexture()
+{
+	Clean(true);
+	if (areas) delete [] areas;
+
+	for(int i=0;i<gltextures->Size();i++)
+	{
+		if ((*gltextures)[i]==this) 
+		{
+			gltextures->Delete(i);
+			break;
+		}
+	}
+}
+
+//===========================================================================
+//
+// GetRect
+//
+//===========================================================================
+void FGLTexture::GetRect(GL_RECT * r) const
+{
+	r->left=-(float)LeftOffset;
+	r->top=-(float)TopOffset;
+	r->width=(float)RenderWidth;
+	r->height=(float)RenderHeight;
+}
+
+//===========================================================================
+// 
+//	Finds gaps in the texture which can be skipped by the renderer
+//  This was mainly added to speed up one area in E4M6 of 007LTSD
+//
+//===========================================================================
+bool FGLTexture::FindHoles(const unsigned char * buffer, int w, int h)
+{
+	const unsigned char * li;
+	int y,x;
+	int startdraw,lendraw;
+	int gaps[5][2];
+	int gapc=0;
+
+
+	// already done!
+	if (areacount) return false;
+	if (tex->UseType==FTexture::TEX_Flat) return false;	// flats don't have transparent parts
+	areacount=-1;	//whatever happens next, it shouldn't be done twice!
+
+	// large textures are excluded for performance reasons
+	if (h>256) return false;	
+
+	startdraw=-1;
+	lendraw=0;
+	for(y=0;y<h;y++)
+	{
+		li=buffer+w*y*4+3;
+
+		for(x=0;x<w;x++,li+=4)
+		{
+			if (*li!=0) break;
+		}
+
+		if (x!=w)
+		{
+			// non - transparent
+			if (startdraw==-1) 
+			{
+				startdraw=y;
+				// merge transparent gaps of less than 16 pixels into the last drawing block
+				if (gapc && y<=gaps[gapc-1][0]+gaps[gapc-1][1]+16)
+				{
+					gapc--;
+					startdraw=gaps[gapc][0];
+					lendraw=y-startdraw;
+				}
+				if (gapc==4) return false;	// too many splits - this isn't worth it
+			}
+			lendraw++;
+		}
+		else if (startdraw!=-1)
+		{
+			if (lendraw==1) lendraw=2;
+			gaps[gapc][0]=startdraw;
+			gaps[gapc][1]=lendraw;
+			gapc++;
+
+			startdraw=-1;
+			lendraw=0;
+		}
+	}
+	if (startdraw!=-1)
+	{
+		gaps[gapc][0]=startdraw;
+		gaps[gapc][1]=lendraw;
+		gapc++;
+	}
+	if (startdraw==0 && lendraw==h) return false;	// nothing saved so don't create a split list
+
+	GL_RECT * rcs=new GL_RECT[gapc];
+
+	for(x=0;x<gapc;x++)
+	{
+		// gaps are stored as texture (u/v) coordinates
+		rcs[x].width=rcs[x].left=-1.0f;
+		rcs[x].top=(float)gaps[x][0]/(float)h;
+		rcs[x].height=(float)gaps[x][1]/(float)h;
+	}
+	areas=rcs;
+	areacount=gapc;
+
+	return false;
+}
+
+
+//===========================================================================
+// 
+// smooth the edges of transparent fields in the texture
+// returns false when nothing is manipulated to save the work on further
+// levels
+
+// 28/10/2003: major optimization: This function was far too pedantic.
+// taking the value of one of the neighboring pixels is fully sufficient
+//
+//===========================================================================
+#define CHKPIX(ofs) \
+	(l1[(ofs)*4+3]==255 ? (( ((long*)l1)[0] = ((long*)l1)[ofs]&0xffffff), trans=true ) : false)
+
+bool FGLTexture::SmoothEdges(unsigned char * buffer,int w, int h, bool clampsides)
+{
+	int x,y;
+	bool trans=false;
+	unsigned char * l1;
+
+	if (h<=1 || w<=1) return false;	// makes (a) no sense and (b) doesn't work with this code!
+
+	l1=buffer;
+
+
+	if (l1[3]==0 && !CHKPIX(1)) CHKPIX(w);
+	l1+=4;
+	for(x=1;x<w-1;x++, l1+=4)
+	{
+		if (l1[3]==0 &&	!CHKPIX(-1) && !CHKPIX(1)) CHKPIX(w);
+	}
+	if (l1[3]==0 && !CHKPIX(-1)) CHKPIX(w);
+	l1+=4;
+
+	for(y=1;y<h-1;y++)
+	{
+		if (l1[3]==0 && !CHKPIX(-w) && !CHKPIX(1)) CHKPIX(w);
+		l1+=4;
+		for(x=1;x<w-1;x++, l1+=4)
+		{
+			if (l1[3]==0 &&	!CHKPIX(-w) && !CHKPIX(-1) && !CHKPIX(1)) CHKPIX(w);
+		}
+		if (l1[3]==0 && !CHKPIX(-w) && !CHKPIX(-1)) CHKPIX(w);
+		l1+=4;
+	}
+
+	if (l1[3]==0 && !CHKPIX(-w)) CHKPIX(1);
+	l1+=4;
+	for(x=1;x<w-1;x++, l1+=4)
+	{
+		if (l1[3]==0 &&	!CHKPIX(-w) && !CHKPIX(-1)) CHKPIX(1);
+	}
+	if (l1[3]==0 && !CHKPIX(-w)) CHKPIX(-1);
+
+	return trans;
+}
+
+
+//===========================================================================
+// 
+// Post-process the texture data after the buffer has been created
+//
+//===========================================================================
+void FGLTexture::ProcessData(unsigned char * buffer, int w, int h, int cm, bool ispatch)
+{
+	if (tex->bMasked) 
+	{
+		tex->bMasked=SmoothEdges(buffer, w, h, ispatch);
+		if (tex->bMasked && !ispatch) FindHoles(buffer, w, h);
+	}
+}
+
+
+//===========================================================================
+// 
+//	Initializes the buffer for the texture data
+//
+//===========================================================================
+
+unsigned char * FGLTexture::CreateTexBuffer(int cm, int translation, const byte * translationtable)
+{
+	unsigned char * buffer=new unsigned char[Width*(Height+1)*4];
+	memset(buffer, 0, Width * (Height+1) * 4);
+
+	if (translationtable)
+	{
+		// todo: check whether it is one of the standard tables
+		cm=(int)translationtable;
+		translation=DIRECT_PALETTE;
+	}
+	if (cm<CM_FIRSTCOLORMAP || translation==DIRECT_PALETTE)
+	{
+		tex->CopyTrueColorPixels(buffer, Width, Height, LeftOffset - tex->LeftOffset, TopOffset - tex->TopOffset,
+								cm, translation);
+	}
+	else
+	{
+		// For Boom colormaps it is easiest to pass a buffer that has been mapped to the base palette
+		// Since FTexture's method is doing exactly that by calling GetPixels let's use that here
+		// to do all the dirty work for us. ;)
+		tex->FTexture::CopyTrueColorPixels(buffer, Width, Height, LeftOffset - tex->LeftOffset, 
+											TopOffset - tex->TopOffset,	cm, translation);
+	}
+
+	return buffer;
+}
+
+//===========================================================================
+// 
+//	Gets texture coordinate info for world (wall/flat) textures
+//  The wrapper class is there to provide a set of coordinate
+//  functions to access the texture
+//
+//===========================================================================
+const WorldTextureInfo * FGLTexture::GetWorldTextureInfo()
+{
+
+	if (tex->UseType==FTexture::TEX_Null) return NULL;		// Cannot register a NULL texture!
+	if (!gltexture) gltexture=new GLTexture(Width, Height, true);
+	if (gltexture) return (WorldTextureInfo*)this; 	
+	return NULL;
+}
+
+//===========================================================================
+// 
+//	Gets texture coordinate info for sprites
+//  The wrapper class is there to provide a set of coordinate
+//  functions to access the texture
+//
+//===========================================================================
+const PatchTextureInfo * FGLTexture::GetPatchTextureInfo()
+{
+	if (tex->UseType==FTexture::TEX_Null) return NULL;		// Cannot register a NULL texture!
+	if (!glpatch) glpatch=new GLTexture(Width, Height, false);
+	if (glpatch) return (PatchTextureInfo*)this; 	
+	return NULL;
+}
+
+//===========================================================================
+// 
+//	Binds a texture to the renderer
+//
+//===========================================================================
+
+const WorldTextureInfo * FGLTexture::Bind(int cm)
+{
+	if (GetWorldTextureInfo())
+	{
+		// Shaders are mainly used to apply an invulnerability colormaps to
+		// camera textures. But they can optionally be used for all textures
+		// The problem is that this is slower than creating a different texture. :(
+		if (gl_useshaders || tex->bHasCanvas)
+		{
+			if (gl_SetShader(cm)) cm=CM_DEFAULT;
+		}
+		else
+		{
+			gl_SetShader(CM_DEFAULT);
+		}
+
+		// If this is a warped texture that needs updating
+		// delete all system textures created for this
+		if (tex->CheckModified())
+		{
+			gltexture->Clean(true);
+		}
+
+		// Bind it to the system. For multitexturing this
+		// should be the only thing that needs adjusting
+		if (!gltexture->Bind(cm))
+		{
+			// Create this texture
+			unsigned char * buffer = CreateTexBuffer(cm, 0);
+			ProcessData(buffer, Width, Height, cm, false);
+			if (!gltexture->CreateTexture(buffer, true, cm)) 
+			{
+				// could not create texture
+				delete buffer;
+				return NULL;
+			}
+			delete buffer;
+		}
+		if (tex->bHasCanvas) static_cast<FCanvasTexture*>(tex)->NeedUpdate();
+		return (WorldTextureInfo*)this; 
+	}
+	return NULL;
+}
+
+//===========================================================================
+// 
+//	Binds a sprite to the renderer
+//
+//===========================================================================
+const PatchTextureInfo * FGLTexture::BindPatch(int cm, int translation, const byte * translationtable)
+{
+	if (tex->bHasCanvas) return NULL;	// no canvas textures outside of a level!
+	if (GetPatchTextureInfo())
+	{
+		// Shaders are mainly used to apply an invulnerability colormaps to
+		// camera textures. But they can optionally be used for all textures
+		// The problem is that this is slower than creating a different texture. :(
+		if (gl_useshaders)
+		{
+			if (cm==CM_LITE)
+			{
+				// The shader can't handle this case!
+				gl_SetShader(CM_DEFAULT);
+				cm=CM_INVERT;
+			}
+			else if (gl_SetShader(cm)) cm=CM_DEFAULT;
+		}
+		else
+		{
+			if (cm==CM_LITE) cm=CM_INVERT;
+			gl_SetShader(CM_DEFAULT);
+		}
+
+		// If this is a warped texture that needs updating
+		// delete all system textures created for this
+		if (tex->CheckModified())
+		{
+			glpatch->Clean(true);
+		}
+
+		// Bind it to the system. For multitexturing this
+		// should be the only thing that needs adjusting
+		if (!glpatch->Bind(cm, translation))
+		{
+			// Create this texture
+			unsigned char * buffer = CreateTexBuffer(cm, translation, translationtable);
+			ProcessData(buffer, Width, Height, cm, true);
+			if (!glpatch->CreateTexture(buffer, false, cm, translation, translationtable)) 
+			{
+				// could not create texture
+				delete buffer;
+				return NULL;
+			}
+			delete buffer;
+		}
+		return (PatchTextureInfo*)this; 	
+	}
+	return NULL;
+}
+
+
+
+//==========================================================================
+//
+// Flushes all hardware dependent data
+//
+//==========================================================================
+
+void FGLTexture::FlushAll()
+{
+	if (gltextures)
+	{
+		for(int i=gltextures->Size()-1;i>=0;i--)
+		{
+			(*gltextures)[i]->Clean(true);
+		}
+	}
+}
+
+//==========================================================================
+//
+// Gets a texture from the texture manager and checks its validity for
+// GL rendering. 
+//
+//==========================================================================
+
+FGLTexture * FGLTexture::ValidateTexture(FTexture * tex)
+{
+	if (tex	&& tex->UseType!=FTexture::TEX_Null)
+	{
+		if (!tex->gltex) tex->gltex = new FGLTexture(tex);
+		return tex->gltex;
+	}
+	return NULL;
+}
+
+FGLTexture * FGLTexture::ValidateTexture(int no, bool translate)
+{
+	return FGLTexture::ValidateTexture(translate? TexMan(no) : TexMan[no]);
+}
+

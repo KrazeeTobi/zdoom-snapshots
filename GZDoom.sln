@@ -1,0 +1,35 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CDoom", "CDoom.vcproj", "{0EB62FAF-B9B4-4339-B5F9-EAFAEA004CAE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{1804751D-23BC-4762-AFC3-8F163AA99DBE} = {1804751D-23BC-4762-AFC3-8F163AA99DBE}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FLAC", "flac\FLAC.vcproj", "{1804751D-23BC-4762-AFC3-8F163AA99DBE}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Optimized Debug = Optimized Debug
+		Release = Release
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{0EB62FAF-B9B4-4339-B5F9-EAFAEA004CAE}.Debug.ActiveCfg = Debug|Win32
+		{0EB62FAF-B9B4-4339-B5F9-EAFAEA004CAE}.Debug.Build.0 = Debug|Win32
+		{0EB62FAF-B9B4-4339-B5F9-EAFAEA004CAE}.Optimized Debug.ActiveCfg = Optimized Debug|Win32
+		{0EB62FAF-B9B4-4339-B5F9-EAFAEA004CAE}.Optimized Debug.Build.0 = Optimized Debug|Win32
+		{0EB62FAF-B9B4-4339-B5F9-EAFAEA004CAE}.Release.ActiveCfg = Release|Win32
+		{0EB62FAF-B9B4-4339-B5F9-EAFAEA004CAE}.Release.Build.0 = Release|Win32
+		{1804751D-23BC-4762-AFC3-8F163AA99DBE}.Debug.ActiveCfg = Debug|Win32
+		{1804751D-23BC-4762-AFC3-8F163AA99DBE}.Debug.Build.0 = Debug|Win32
+		{1804751D-23BC-4762-AFC3-8F163AA99DBE}.Optimized Debug.ActiveCfg = Optimized Debug|Win32
+		{1804751D-23BC-4762-AFC3-8F163AA99DBE}.Optimized Debug.Build.0 = Optimized Debug|Win32
+		{1804751D-23BC-4762-AFC3-8F163AA99DBE}.Release.ActiveCfg = Release|Win32
+		{1804751D-23BC-4762-AFC3-8F163AA99DBE}.Release.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal
