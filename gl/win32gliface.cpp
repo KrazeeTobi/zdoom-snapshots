@@ -314,6 +314,10 @@ void Win32GLFrameBuffer::InitializeState()
 		{
 			Printf("Support for non power 2 textures enabled.\n");
 		}
+		if (gl.flags&RFL_OCCLUSION_QUERY)
+		{
+			Printf("Occlusion query enabled.\n");
+		}
 	}
 	gl.ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	gl.ClearDepth(1.0f);
@@ -539,4 +543,3 @@ void Win32GLFrameBuffer::FlatFill (int left, int top, int right, int bottom, FTe
 {
 	gl_FlatFill(left, top, right, bottom, src);
 }
-

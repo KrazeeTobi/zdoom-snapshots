@@ -841,48 +841,51 @@ static void FloodLowerGap(seg_t * seg)
 
 void DrawUnhandledMissingTextures()
 {
-	// Set the drawing mode
-	gl.DepthMask(false);							// don't write to Z-buffer!
-	gl_EnableFog(true);
-	gl.AlphaFunc(GL_GEQUAL,0.5f);
-	gl.BlendFunc(GL_ONE,GL_ZERO);
-
-	validcount++;
-	for(int i=MissingUpperSegs.Size()-1; i>=0; i--)
+	if (!(gl.flags&RFL_NOSTENCIL))	// needs a stencil to work!
 	{
-		int index = MissingUpperSegs[i].MTI_Index;
-		if (index>=0 && MissingUpperTextures[index].seg==NULL) continue;
+		// Set the drawing mode
+		gl.DepthMask(false);							// don't write to Z-buffer!
+		gl_EnableFog(true);
+		gl.AlphaFunc(GL_GEQUAL,0.5f);
+		gl.BlendFunc(GL_ONE,GL_ZERO);
 
-		seg_t * seg = MissingUpperSegs[i].seg;
+		validcount++;
+		for(int i=MissingUpperSegs.Size()-1; i>=0; i--)
+		{
+			int index = MissingUpperSegs[i].MTI_Index;
+			if (index>=0 && MissingUpperTextures[index].seg==NULL) continue;
 
-		// already done!
-		if (seg->linedef->validcount==validcount) continue;		// already done
-		seg->linedef->validcount=validcount;
-		if (seg->frontsector->ceilingtexz < viewz) continue;	// out of sight
-		//if (seg->frontsector->ceilingpic==skyflatnum) continue;
-		if (gl_sectors[seg->backsector->sectornum].transdoor) continue;
-		if (seg->backsector->CeilingSkyBox && seg->backsector->CeilingSkyBox->bAlways) continue;
+			seg_t * seg = MissingUpperSegs[i].seg;
 
-		if (!gl_notexturefill) FloodUpperGap(seg);
-	}
+			// already done!
+			if (seg->linedef->validcount==validcount) continue;		// already done
+			seg->linedef->validcount=validcount;
+			if (seg->frontsector->ceilingtexz < viewz) continue;	// out of sight
+			//if (seg->frontsector->ceilingpic==skyflatnum) continue;
+			if (gl_sectors[seg->backsector->sectornum].transdoor) continue;
+			if (seg->backsector->CeilingSkyBox && seg->backsector->CeilingSkyBox->bAlways) continue;
 
-	validcount++;
-	for(int i=MissingLowerSegs.Size()-1; i>=0; i--)
-	{
-		int index = MissingLowerSegs[i].MTI_Index;
-		if (index>=0 && MissingLowerTextures[index].seg==NULL) continue;
+			if (!gl_notexturefill) FloodUpperGap(seg);
+		}
 
-		seg_t * seg = MissingLowerSegs[i].seg;
+		validcount++;
+		for(int i=MissingLowerSegs.Size()-1; i>=0; i--)
+		{
+			int index = MissingLowerSegs[i].MTI_Index;
+			if (index>=0 && MissingLowerTextures[index].seg==NULL) continue;
 
-		// already done!
-		if (seg->linedef->validcount==validcount) continue;		// already done
-		seg->linedef->validcount=validcount;
-		if (!(gl_sectors[seg->backsector->sectornum].renderflags&SSRF_RENDERFLOOR)) continue;
-		if (seg->frontsector->floortexz > viewz) continue;	// out of sight
-		if (gl_sectors[seg->backsector->sectornum].transdoor) continue;
-		if (seg->backsector->FloorSkyBox && seg->backsector->FloorSkyBox->bAlways) continue;
+			seg_t * seg = MissingLowerSegs[i].seg;
 
-		if (!gl_notexturefill) FloodLowerGap(seg);
+			// already done!
+			if (seg->linedef->validcount==validcount) continue;		// already done
+			seg->linedef->validcount=validcount;
+			if (!(gl_sectors[seg->backsector->sectornum].renderflags&SSRF_RENDERFLOOR)) continue;
+			if (seg->frontsector->floortexz > viewz) continue;	// out of sight
+			if (gl_sectors[seg->backsector->sectornum].transdoor) continue;
+			if (seg->backsector->FloorSkyBox && seg->backsector->FloorSkyBox->bAlways) continue;
+
+			if (!gl_notexturefill) FloodLowerGap(seg);
+		}
 	}
 	MissingUpperTextures.Clear();
 	MissingLowerTextures.Clear();

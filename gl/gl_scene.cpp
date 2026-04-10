@@ -1013,7 +1013,7 @@ ADD_STAT(rendertimes,out)
 		SecondsPerCycle * (double)* SetupFlat * 1000,
 		SecondsPerCycle * (double)*RenderSprite* 1000,
 		SecondsPerCycle * (double)* SetupSprite* 1000,
-		SecondsPerCycle * (double)*       All * 1000,
+		SecondsPerCycle * (double)((*       All)+(*Finish)) * 1000,
 		SecondsPerCycle * (double)* RenderAll * 1000,
 		SecondsPerCycle * (double)*ProcessAll * 1000,
 		SecondsPerCycle * (double)*PortalAll * 1000,

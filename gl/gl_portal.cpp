@@ -71,6 +71,7 @@ int GLPortal::MirrorFlag;
 int GLPortal::PlaneMirrorFlag;
 int GLPortal::renderdepth;
 int GLPortal::PlaneMirrorMode;
+GLuint GLPortal::QueryObject;
 
 line_t * GLPortal::mirrorline;
 bool	 GLPortal::inupperstack;
@@ -116,8 +117,11 @@ void GLPortal::DrawPortalStencil()
 // Start
 //
 //-----------------------------------------------------------------------------
-void GLPortal::Start(bool usestencil)
+CVAR(Bool, gl_noquery, false, 0)
+
+bool GLPortal::Start(bool usestencil, bool doquery)
 {
+
 	PortalAll.Start();
 	if (usestencil)
 	{
@@ -128,23 +132,51 @@ void GLPortal::Start(bool usestencil)
 		gl.DepthMask(false);							// don't write to Z-buffer!
 		gl.Disable(GL_TEXTURE_2D);					// Disable textures (important!)
 		gl.Color3f(1,1,1);
+
+		// If occlusion query is supported let's use it to avoid rendering portals that aren't visible
+		if (doquery && gl.flags&RFL_OCCLUSION_QUERY)
+		{
+			if (!QueryObject) gl.GenQueries(1, &QueryObject);
+			gl.BeginQuery(GL_SAMPLES_PASSED_ARB, QueryObject);
+		}
+
 		DrawPortalStencil();
 
+		if (doquery && gl.flags&RFL_OCCLUSION_QUERY)
+		{
+			gl.EndQuery(GL_SAMPLES_PASSED_ARB);
+		}
+
 		// Clear Z-buffer
-		recursion++;
-		
-		gl.StencilFunc(GL_EQUAL,recursion,~0);		// draw sky into stencil
+		gl.StencilFunc(GL_EQUAL,recursion+1,~0);		// draw sky into stencil
 		gl.StencilOp(GL_KEEP,GL_KEEP,GL_KEEP);		// this stage doesn't modify the stencil
 		gl.DepthMask(true);							// enable z-buffer again
 		gl.DepthRange(1,1);
 		gl.DepthFunc(GL_ALWAYS);
 		DrawPortalStencil();
-		
-		// prepare for drawing to the stencil
+
+		// set normal drawing mode
 		gl.Enable(GL_TEXTURE_2D);
 		gl.DepthFunc(GL_LESS);
 		gl.ColorMask(1,1,1,1);
 		gl.DepthRange(0,1);
+
+		if (doquery && gl.flags&RFL_OCCLUSION_QUERY)
+		{
+			GLuint sampleCount;
+
+			gl.GetQueryObjectuiv(QueryObject, GL_QUERY_RESULT_ARB, &sampleCount);
+
+			if (sampleCount==0) 	// not visible
+			{
+				// restore default stencil op.
+				gl.StencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
+				gl.StencilFunc(GL_EQUAL,recursion,~0);		// draw sky into stencil
+				return false;
+			}
+		}
+		recursion++;
+
 		gl_StartDrawInfo(drawinfo);
 	}
 	PortalAll.Stop();
@@ -157,6 +189,7 @@ void GLPortal::Start(bool usestencil)
 	savedviewangle=viewangle;
 	savedviewarea=in_area;
 	mirrorline=NULL;
+	return true;
 }
 
 
@@ -280,9 +313,13 @@ void GLPortal::EndFrame()
 {
 	GLPortal * p;
 
+	// Only use occlusion query if there are more than 2 portals. 
+	// Otherwise there's too much overhead.
+	bool usequery = portals.Size() > 2;
+
 	while (portals.Pop(p) && p)
 	{
-		p->RenderPortal(true);
+		p->RenderPortal(true, usequery);
 		delete p;
 	}
 	renderdepth--;
@@ -304,7 +341,7 @@ bool GLPortal::RenderFirstSkyPortal()
 		if (p->IsSky())
 		{
 			GLSkyInfo * sky = (GLSkyInfo *)p->GetSource();
-			p->RenderPortal(false);
+			p->RenderPortal(false, false);
 			portals.Delete(i);
 			delete p;
 			return true;

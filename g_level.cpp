@@ -1764,7 +1764,7 @@ void G_DoLoadLevel (int position, bool autosave)
 	level.thisleveltime = 0;
 	G_UnSnapshotLevel (!savegamerestore);	// [RH] Restore the state of the level.
 	G_FinishTravel ();
-	players[consoleplayer].camera = players[consoleplayer].mo;	// view the guy you are playing
+	if (players[consoleplayer].camera == NULL) players[consoleplayer].camera = players[consoleplayer].mo;	// view the guy you are playing
 	StatusBar->AttachToPlayer (&players[consoleplayer]);
 	P_DoDeferedScripts ();	// [RH] Do script actions that were triggered on another map.
 	

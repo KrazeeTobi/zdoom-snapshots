@@ -1,4 +1,7 @@
 20. Nov. 2005
+- Fixed a ZDoom bug: Cameras were always cleared when loading a savegame.
+- Added support for GL_ARB_OCCLUSION_QUERY to the portal code. This gives a 
+  significant speed boost to SSD's MAP03.
 - Added -nogl command line switch which completely disables all GL related code.
 - Added gl_vid_compatibility CVAR to force the system to use a GL mode that is
   compatible with OpenGL 1.1. Some drivers don't report hardware support properly

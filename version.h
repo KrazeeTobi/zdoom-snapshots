@@ -32,12 +32,12 @@
 */
 
 #ifndef __VERSION_H__
-#define __VERSION_H__
+#define __VERSION_H__	 
 
 // Lots of different representations for the version number
 enum { GAMEVERSION = 255 };
 #define STRVERSION "308"
-#define DOTVERSIONSTR "2.0.98x (0.9.18)"
+#define DOTVERSIONSTR "2.0.98x (0.9.19)"
 #define GAMEVER (3*256+1)
 
 // SAVEVER is the version of the information stored in level snapshots.
