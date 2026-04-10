@@ -93,6 +93,8 @@ void P_PlayerOnSpecial3DFloor(player_s* player);
 void P_LineOpening (AActor * thing,const line_s *linedef, fixed_t x, fixed_t y, fixed_t refx=FIXED_MIN, fixed_t refy=0);
 
 void P_Get3DFloorAndCeiling(AActor * thing, sector_t * sector, fixed_t * floorz, fixed_t * ceilingz, int * floorpic);
+bool P_CheckFor3DFloorHit(AActor * mo);
+bool P_CheckFor3DCeilingHit(AActor * mo);
 void P_Recalculate3DFloors(sector_t *);
 lightlist_t * P_GetPlaneLight(sector_t * , secplane_t * plane, bool underside);
 bool P_GetMidTexturePosition(const line_s * linedef, int side, fixed_t * ptextop, fixed_t * ptexbot);

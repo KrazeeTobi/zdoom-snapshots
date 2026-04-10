@@ -236,10 +236,10 @@ static void gl_StartDrawScene(GL_IRECT * bounds, float fov, float ratio)
 		int trueheight = static_cast<Win32GLFrameBuffer*>(screen)->GetTrueHeight();	// ugh...
 		int bars = (trueheight-screen->GetHeight())/2; 
 
-		//glViewport(viewwindowx, SCREENHEIGHT-(height+viewwindowy-((height-viewheight)/2)), viewwidth, height);
-		//glScissor(viewwindowx, SCREENHEIGHT-(viewheight+viewwindowy), viewwidth, viewheight);
-		glViewport(viewwindowx, trueheight-bars-(height+viewwindowy-((height-viewheight)/2)), viewwidth, height);
-		glScissor(viewwindowx, trueheight-bars-(viewheight+viewwindowy), viewwidth, viewheight);
+		int vw = realviewwidth;
+		int vh = realviewheight;
+		glViewport(viewwindowx, trueheight-bars-(height+viewwindowy-((height-vh)/2)), vw, height);
+		glScissor(viewwindowx, trueheight-bars-(vh+viewwindowy), vw, vh);
 	}
 	else
 	{
@@ -300,7 +300,6 @@ void gl_SetupView(fixed_t viewx, fixed_t viewy, fixed_t viewz, angle_t viewangle
 	float xCamera,yCamera;
 	float trZ = -5.0f;
 	float trY ;
-	
 	
 	yaw=270.0f-fviewangle;
 	
@@ -416,6 +415,7 @@ void gl_DrawScene()
 	gl_RenderBSPNode (nodes + numnodes - 1);
 	gl_RenderMissingLines();
 	HandleMissingTextures();
+	HandleHackedSubsectors();
 
 	ProcessAll.Stop();
 	RenderAll.Start();
@@ -519,6 +519,7 @@ void gl_DrawScene()
 	glAlphaFunc(GL_GEQUAL,0.5f);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	gl_drawlist[GLDL_TRANSLUCENTBORDER].Draw(GLPASS_UNLIT);
 	gl_drawlist[GLDL_TRANSLUCENT].DrawSorted();
 
 	glDepthMask(true);
@@ -818,11 +819,14 @@ void gl_RenderTextureView(FCanvasTexture *Texture, AActor * Viewpoint, int FOV)
 	GL_IRECT bounds;
 	FGLTexture * gltex = FGLTexture::ValidateTexture(Texture);
 
+	int width=Texture->GetWidth();
+	int height=Texture->GetHeight();
+
 	bounds.left=bounds.top=0;
-	bounds.width=Texture->GetWidth();
-	bounds.height=Texture->GetHeight();
+	bounds.width=GLTexture::GetTexDimension(width);
+	bounds.height=GLTexture::GetTexDimension(height);
 	glFlush();
-	gl_RenderView(Viewpoint, &bounds, FOV, (float)bounds.width/bounds.height*1.6/1.333, false);
+	gl_RenderView(Viewpoint, &bounds, FOV, (float)width/height*1.6/1.333, false);
 	glFlush();
 	gltex->Bind(CM_DEFAULT);
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, bounds.width, bounds.height);
@@ -876,6 +880,8 @@ void gl_RenderViewToCanvas(DCanvas * pic, int x, int y, int width, int height)
 // R_RenderPlayerView - the main rendering function
 //
 //-----------------------------------------------------------------------------
+EXTERN_CVAR (Int, r_detail)
+
 void gl_RenderPlayerView (player_t* player)
 {       
 	static AActor * LastCamera;

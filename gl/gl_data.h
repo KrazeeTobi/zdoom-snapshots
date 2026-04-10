@@ -26,6 +26,8 @@ struct gl_subsectordata
 	int							numvertices;
 	int							validcount;
 	fixed_t						bbox[4];
+	int							hacked;			// 1: is part of a render hack
+												// 2: is neighboring only subsectors which are part of a render hack
 };
 
 //==========================================================================

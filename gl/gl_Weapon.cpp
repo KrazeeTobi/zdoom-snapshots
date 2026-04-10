@@ -40,6 +40,8 @@
 #include "gl/gl_functions.h"
 #include "gl/gl_intern.h"
 
+EXTERN_CVAR (Bool, r_drawplayersprites)
+
 //==========================================================================
 //
 // R_DrawPSprite
@@ -65,16 +67,19 @@ static void DrawPSprite (player_t * player,pspdef_t *psp,fixed_t sx, fixed_t sy,
 	const PatchTextureInfo * pti = tex->BindPatch(cm_index);
 	if (!pti) return;
 
+	int vw = realviewwidth;
+	int vh = realviewheight;
+
 	// calculate edges of the shape
-	scalex=FRACUNIT * viewwidth / 320 * BaseRatioSizes[WidescreenRatio][3] / 48;
+	scalex=FRACUNIT * vw / 320 * BaseRatioSizes[WidescreenRatio][3] / 48;
 
 	tx = sx - ((160 + tex->GetLeftOffset())<<FRACBITS);
-	x1 = (FixedMul(tx, scalex)>>FRACBITS) + (viewwidth>>1);
-	if (x1 > viewwidth)	return; // off the right side
+	x1 = (FixedMul(tx, scalex)>>FRACBITS) + (vw>>1);
+	if (x1 > vw)	return; // off the right side
 	x1+=viewwindowx;
 
 	tx +=  tex->TextureWidth() << FRACBITS;
-	x2 = (FixedMul(tx, scalex)>>FRACBITS) + (viewwidth>>1);
+	x2 = (FixedMul(tx, scalex)>>FRACBITS) + (vw>>1);
 	if (x2 < 0) return; // off the left side
 	x2+=viewwindowx;
 
@@ -84,8 +89,8 @@ static void DrawPSprite (player_t * player,pspdef_t *psp,fixed_t sx, fixed_t sy,
 	AWeapon * wi=player->ReadyWeapon;
 	if (wi && wi->YAdjust && screenblocks>=11) texturemid -= wi->YAdjust;
 
-	scale = ((SCREENHEIGHT*viewwidth)/SCREENWIDTH) / 200.0f;    
-	y1=viewwindowy+(viewheight>>1)-(int)(((float)texturemid/(float)FRACUNIT)*scale);
+	scale = ((SCREENHEIGHT*vw)/SCREENWIDTH) / 200.0f;    
+	y1=viewwindowy+(vh>>1)-(int)(((float)texturemid/(float)FRACUNIT)*scale);
 	y2=y1+(int)((float)tex->TextureHeight()*scale)+1;
 
 	fU2=pti->GetUR();
@@ -117,7 +122,7 @@ void gl_DrawPlayerSprites(sector_t * viewsector)
 	AActor * playermo=players[displayplayer].camera;
 	player_t * player=playermo->player;
 	
-	if(!player || playermo->renderflags&RF_INVISIBLE || 
+	if(!player || playermo->renderflags&RF_INVISIBLE || !r_drawplayersprites ||
 		viewactor!=playermo || playermo->RenderStyle==STYLE_None) return;
 
 	// check for fullbright

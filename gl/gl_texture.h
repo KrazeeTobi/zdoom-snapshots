@@ -6,9 +6,11 @@
 #include "r_data.h"
 #include "i_system.h"
 
+EXTERN_CVAR(Bool, gl_precache)
+
 struct GL_RECT;
 
-void ModifyPalette(PalEntry * p, int cm, int count);
+void ModifyPalette(PalEntry * pout, PalEntry * pin, int cm, int count, bool bgra=false);
 
 // Two intermediate classes which wrap the low level textures.
 // These ones are returned by the Bind* functions to ensure
@@ -90,6 +92,8 @@ private:
 	int index;
 
 	signed char areacount;
+	byte isHires;
+	const char * hirespath;
 	GL_RECT * areas;
 
 	short LeftOffset;
@@ -102,6 +106,10 @@ private:
 	bool FindHoles(const unsigned char * buffer, int w, int h);
 	void ProcessData(unsigned char * buffer, int w, int h, int cm, bool ispatch);
 	static bool SmoothEdges(unsigned char * buffer,int w, int h, bool clampsides);
+	bool CheckExternalFile();
+	unsigned char * LoadFile(const char *fileName, int *width, int *height, int cm);
+	unsigned char * LoadExternalFile(int *width, int *height,int cm);
+	unsigned char * LoadFromLump(const char *lumpName, int *width, int *height, int cm);
 
 
 	void SetSize(int w, int h)
@@ -116,18 +124,14 @@ public:
 	FGLTexture(FTexture * tx);
 	~FGLTexture();
 
-	unsigned char * CreateTexBuffer(int cm, int translation, const byte * translationtable=NULL);
+	unsigned char * CreateTexBuffer(int cm, int translation, const byte * translationtable, int & w, int & h);
 	const WorldTextureInfo * Bind(int cm);
 	const PatchTextureInfo * BindPatch(int cm, int translation=0, const byte * translationtable=NULL);
 
 	const WorldTextureInfo * GetWorldTextureInfo();
 	const PatchTextureInfo * GetPatchTextureInfo();
 
-	void Clean(bool all)
-	{
-		WorldTextureInfo::Clean(all);
-		PatchTextureInfo::Clean(all);
-	}
+	void Clean(bool all);
 
 	static void FlushAll();
 	static FGLTexture * ValidateTexture(FTexture * tex);

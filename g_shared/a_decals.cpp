@@ -642,7 +642,7 @@ AImpactDecal *AImpactDecal::StaticCreate (const FDecal *decal, fixed_t x, fixed_
 
 		if (decal->LowerDecal)
 		{
-			StaticCreate (decal->LowerDecal->GetDecal(), x, y, z, wall);
+			StaticCreate (decal->LowerDecal->GetDecal(), x, y, z, wall, ffloor);
 		}
 		if (ImpactCount >= cl_maxdecals)
 		{

@@ -39,13 +39,27 @@
 #include "m_png.h"
 #include "r_draw.h"
 #include "sbar.h"
+#include "gi.h"
+#include "cmdlib.h"
 
 #include "gl/gl_struct.h"
 #include "gl/gl_texture.h"
 #include "gl/gl_functions.h"
 
-CVAR(Bool, gl_useshaders, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG);
+#include <il/il.h>
+#include <il/ilu.h>
 
+CUSTOM_CVAR(Bool, gl_useshaders, false, CVAR_ARCHIVE|CVAR_GLOBALCONFIG|CVAR_NOINITCALL)
+{
+	FGLTexture::FlushAll();
+}
+
+CUSTOM_CVAR(Bool, gl_texture_usehires, true, CVAR_ARCHIVE|CVAR_NOINITCALL)
+{
+	FGLTexture::FlushAll();
+}
+
+CVAR(Bool, gl_precache, false, CVAR_ARCHIVE)
 
 // internal parameters for ModifyPalette
 enum SpecialModifications
@@ -60,7 +74,7 @@ enum SpecialModifications
 // Creates one of the special palette translations for the given palette
 //
 //===========================================================================
-void ModifyPalette(PalEntry * p, int cm, int count)
+void ModifyPalette(PalEntry * pout, PalEntry * pin, int cm, int count, bool bgra)
 {
 	int i;
 	int fac;
@@ -87,23 +101,46 @@ void ModifyPalette(PalEntry * p, int cm, int count)
 
 	switch(cm)
 	{
+	case CM_DEFAULT:
+		if (pin != pout)
+		{
+			memcpy(pout, pin, count * sizeof(PalEntry));
+		}
+		break;
+
 	case CM_INVERT:
 		// Doom's inverted invulnerability map
 		for(i=0;i<count;i++)
 		{
-			int gray = 255-((p[i].r*77 + p[i].g*143 + p[i].b*37) >> 8);
-			p[i].r = p[i].g = p[i].b = clamp<int>(gray, 0, 255);
+			int gray = 255-((pin[i].r*77 + pin[i].g*143 + pin[i].b*37) >> 8);
+			pout[i].r = pout[i].g = pout[i].b = clamp<int>(gray, 0, 255);
+			pout[i].a = pin[i].a;
 		}
 		break;
 
 	case CM_GOLDMAP:
 		// Heretic's golden invulnerability map
-		for(i=0;i<count;i++)
+		if (!bgra)
 		{
-			int gray = (p[i].r*77 + p[i].g*143 + p[i].b*37)>>8;
-			p[i].r = clamp<int>(gray+(gray>>1), 0, 255);
-			p[i].g = clamp<int>(gray, 0, 255);
-			p[i].b = 0;
+			for(i=0;i<count;i++)
+			{
+				int gray = (pin[i].r*77 + pin[i].g*143 + pin[i].b*37)>>8;
+				pout[i].r = clamp<int>(gray+(gray>>1), 0, 255);
+				pout[i].g = clamp<int>(gray, 0, 255);
+				pout[i].b = 0;
+				pout[i].a = pin[i].a;
+			}
+		}
+		else	// Raw image data is stored differently
+		{
+			for(i=0;i<count;i++)
+			{
+				int gray = (pin[i].r*77 + pin[i].g*143 + pin[i].b*37)>>8;
+				pout[i].b = clamp<int>(gray+(gray>>1), 0, 255);
+				pout[i].g = clamp<int>(gray, 0, 255);
+				pout[i].r = 0;
+				pout[i].a = pin[i].a;
+			}
 		}
 		break;
 
@@ -113,20 +150,37 @@ void ModifyPalette(PalEntry * p, int cm, int count)
 		// the most intense component and not averaged because that would be too dark.
 		for(i=0;i<count;i++)
 		{
-			p[i].r = p[i].g = p[i].b = max(max(p[i].r, p[i].g), p[i].b);
+			pout[i].r = pout[i].g = pout[i].b = max(max(pin[i].r, pin[i].g), pin[i].b);
+			pout[i].a = pin[i].a;
 		}
 		break;
 
 	case CM_ICE:
 		// Create the ice translation table, based on Hexen's.
 		// Since this is done in True Color the purplish tint is fully preserved - even in Doom!
-		for(i=0;i<count;i++)
+		if (!bgra)
 		{
-			int gray=(p[i].r*77 + p[i].g*143 + p[i].b*37)>>12;
+			for(i=0;i<count;i++)
+			{
+				int gray=(pin[i].r*77 + pin[i].g*143 + pin[i].b*37)>>12;
 
-			p[i].r = IcePalette[gray][0];
-			p[i].g = IcePalette[gray][1];
-			p[i].b = IcePalette[gray][2];
+				pout[i].r = IcePalette[gray][0];
+				pout[i].g = IcePalette[gray][1];
+				pout[i].b = IcePalette[gray][2];
+				pout[i].a = pin[i].a;
+			}
+		}
+		else
+		{
+			for(i=0;i<count;i++)
+			{
+				int gray=(pin[i].r*77 + pin[i].g*143 + pin[i].b*37)>>12;
+
+				pout[i].b = IcePalette[gray][0];
+				pout[i].g = IcePalette[gray][1];
+				pout[i].r = IcePalette[gray][2];
+				pout[i].a = pin[i].a;
+			}
 		}
 		break;
 	
@@ -134,16 +188,27 @@ void ModifyPalette(PalEntry * p, int cm, int count)
 		// Boom colormaps.
 		if (cm>=CM_FIRSTCOLORMAP)
 		{
-			// CreateTexBuffer has already taken care of needed palette mapping so this
-			// buffer is guaranteed to be in the base palette.
-			byte * cmapp = &realcolormaps [NUMCOLORMAPS*256*(cm - CM_FIRSTCOLORMAP)];
-
-			for(i=0;i<count;i++)
+			if (count<=256)	// This does not work for raw image data because it assumes
+							// the use of the base palette!
 			{
-				p[i].r = GPalette.BaseColors[*cmapp].r;
-				p[i].g = GPalette.BaseColors[*cmapp].g;
-				p[i].b = GPalette.BaseColors[*cmapp].b;
-				cmapp++;
+				// CreateTexBuffer has already taken care of needed palette mapping so this
+				// buffer is guaranteed to be in the base palette.
+				byte * cmapp = &realcolormaps [NUMCOLORMAPS*256*(cm - CM_FIRSTCOLORMAP)];
+
+				for(i=0;i<count;i++)
+				{
+					pout[i].r = GPalette.BaseColors[*cmapp].r;
+					pout[i].g = GPalette.BaseColors[*cmapp].g;
+					pout[i].b = GPalette.BaseColors[*cmapp].b;
+					pout[i].a = pin[i].a;
+					cmapp++;
+				}
+			}
+			else if (pin != pout)
+			{
+				// Boom colormaps cannot be applied to hires texture replacements.
+				// For those you have to set the colormap usage to  'blend'.
+				memcpy(pout, pin, count * sizeof(PalEntry));
 			}
 		}
 		else
@@ -152,11 +217,12 @@ void ModifyPalette(PalEntry * p, int cm, int count)
 			fac=cm-CM_DESAT0;
 			for(i=0;i<count;i++)
 			{
-				int gray=(p[i].r*77 + p[i].g*143 + p[i].b*37)>>8;
+				int gray=(pin[i].r*77 + pin[i].g*143 + pin[i].b*37)>>8;
 
-				p[i].r = (p[i].r*(32-fac) + gray*fac)/32;
-				p[i].g = (p[i].g*(32-fac) + gray*fac)/32;
-				p[i].b = (p[i].b*(32-fac) + gray*fac)/32;
+				pout[i].r = (pin[i].r*(32-fac) + gray*fac)/32;
+				pout[i].g = (pin[i].g*(32-fac) + gray*fac)/32;
+				pout[i].b = (pin[i].b*(32-fac) + gray*fac)/32;
+				pout[i].a = pin[i].a;
 			}
 		}
 		break;
@@ -219,8 +285,6 @@ static void CopyPixelData(BYTE * buffer, int texwidth, int texheight, int origin
 		}
 		else
 		{
-			memcpy(penew, palette, 256*sizeof(PalEntry));
-
 			// apply any translation. 
 			if (translation)
 			{
@@ -229,26 +293,30 @@ static void CopyPixelData(BYTE * buffer, int texwidth, int texheight, int origin
 				switch(translation)
 				{
 				case (TRANSLATION_Standard<<8) | 8:
-					ModifyPalette(penew, CM_GRAY, 256);
+					ModifyPalette(penew, palette, CM_GRAY, 256);
 					break;
 
 				case (TRANSLATION_Standard<<8) | 7:
-					ModifyPalette(penew, CM_ICE, 256);
+					ModifyPalette(penew, palette, CM_ICE, 256);
 					break;
 
 				default:
 					const unsigned char * tbl = &translationtables[translation>>8][256*(translation&0xff)];
-					penew[0]=PalEntry(255,0,0,0);
-					for(i =1;i<256;i++)
+
+					for(i = 0; i < 256; i++)
 					{
-						penew[i] = palette[GPalette.Remap[tbl[i]]];
+						penew[i] = (palette[tbl[i]]&0xffffff) | (palette[i]&0xff000000);
 					}
 				}
+			}
+			else
+			{
+				memcpy(penew, palette, 256*sizeof(PalEntry));
 			}
 			if (cm!=0)
 			{
 				// Apply color modifications like invulnerability, desaturation and Boom colormaps
-				ModifyPalette(penew, cm, 256);
+				ModifyPalette(penew, penew, cm, 256);
 			}
 		}
 	}
@@ -588,9 +656,6 @@ FPicZTexture::FPicZTexture (int lumpnum)
 	Wads.GetLumpName (Name, lumpnum);
 	Name[8] = 0;
 
-	if (!stricmp(Name, "playa2a8"))
-		__asm nop
-
 	UseType = TEX_MiscPatch;
 	bMasked = true;
 
@@ -736,12 +801,13 @@ void FPicZTexture::CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_hei
 									 int cm, int translation)
 {
 	PalEntry pe[256];
-	byte palette, transcol;
+	byte palette, transcol1;
+	int transcol;
 	char * palfile;
 	FWadLump lump = Wads.OpenLumpNum (SourceLump);
 
 	lump.Seek (12, SEEK_SET);
-	lump >> palette >> transcol; 
+	lump >> palette >> transcol1; 
 
 	BYTE * Pixels = new BYTE[Width*Height];
 
@@ -756,6 +822,8 @@ void FPicZTexture::CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_hei
 		palette&=0x7f;
 		transcol=-1;
 	}
+	else transcol=transcol1;
+
 	palfile = palette==0? "PLAYPAL":"PICZPAL";
 	if (palette>0) 
 		palette--;
@@ -801,6 +869,9 @@ FGLTexture::FGLTexture(FTexture * tx)
 	glpatch=NULL;
 	gltexture=NULL;
 
+	isHires=0;
+	hirespath=NULL;
+
 	areacount = 0;
 	areas = NULL;
 
@@ -812,20 +883,6 @@ FGLTexture::FGLTexture(FTexture * tx)
 	scalex = tex->ScaleX? tex->ScaleX/8.0f : 1.0f;
 	scaley = tex->ScaleY? tex->ScaleY/8.0f : 1.0f;
 
-	if (tex->bHasCanvas)
-	{
-		if (!GLTexture::supportsNonPower2)
-		{
-			// We have to resize to the nearest power of 2 
-			int p = 2 << (int)(log10f(Width)/log10f(2)); 
-			int q = 2 << (int)(log10f(Height)/log10f(2)); 
-
-			scalex = (float)p * scalex / Width;
-			scaley = (float)q * scaley / Height;
-			Width=p;
-			Height=q;
-		}
-	}
 	RenderWidth=(short)(Width/scalex);
 	RenderHeight=(short)(Height/scaley);
 
@@ -859,6 +916,7 @@ FGLTexture::~FGLTexture()
 {
 	Clean(true);
 	if (areas) delete [] areas;
+	if (hirespath) delete [] hirespath;
 
 	for(int i=0;i<gltextures->Size();i++)
 	{
@@ -1041,15 +1099,53 @@ void FGLTexture::ProcessData(unsigned char * buffer, int w, int h, int cm, bool 
 }
 
 
+
+//===========================================================================
+// 
+//	Deletes all allocated resources
+//
+//===========================================================================
+
+void FGLTexture::Clean(bool all)
+{
+	WorldTextureInfo::Clean(all);
+	PatchTextureInfo::Clean(all);
+	if (all)
+	{
+		if (isHires==1)
+		{
+			if (hirespath) delete [] hirespath;
+			hirespath=NULL;
+		}
+		isHires=0;
+	}
+}
+
 //===========================================================================
 // 
 //	Initializes the buffer for the texture data
 //
 //===========================================================================
 
-unsigned char * FGLTexture::CreateTexBuffer(int cm, int translation, const byte * translationtable)
+unsigned char * FGLTexture::CreateTexBuffer(int cm, int translation, const byte * translationtable, int & w, int & h)
 {
-	unsigned char * buffer=new unsigned char[Width*(Height+1)*4];
+	unsigned char * buffer;
+
+	// Textures that are already scaled in the texture lump will not get replaced
+	// by hires textures
+	if (gl_texture_usehires && scalex==1.f && scaley==1.f)
+	{
+		buffer = LoadExternalFile (&w, &h, cm<CM_FIRSTCOLORMAP? cm : CM_DEFAULT);
+		if (buffer)
+		{
+			return buffer;
+		}
+	}
+
+	w=Width;
+	h=Height;
+
+	buffer=new unsigned char[Width*(Height+1)*4];
 	memset(buffer, 0, Width * (Height+1) * 4);
 
 	if (translationtable)
@@ -1139,10 +1235,12 @@ const WorldTextureInfo * FGLTexture::Bind(int cm)
 		// should be the only thing that needs adjusting
 		if (!gltexture->Bind(cm))
 		{
+			int w,h;
+
 			// Create this texture
-			unsigned char * buffer = CreateTexBuffer(cm, 0);
-			ProcessData(buffer, Width, Height, cm, false);
-			if (!gltexture->CreateTexture(buffer, true, cm)) 
+			unsigned char * buffer = CreateTexBuffer(cm, 0, NULL, w, h);
+			ProcessData(buffer, w, h, cm, false);
+			if (!gltexture->CreateTexture(buffer, w, h, true, cm)) 
 			{
 				// could not create texture
 				delete buffer;
@@ -1196,10 +1294,11 @@ const PatchTextureInfo * FGLTexture::BindPatch(int cm, int translation, const by
 		// should be the only thing that needs adjusting
 		if (!glpatch->Bind(cm, translation))
 		{
+			int w, h;
 			// Create this texture
-			unsigned char * buffer = CreateTexBuffer(cm, translation, translationtable);
-			ProcessData(buffer, Width, Height, cm, true);
-			if (!glpatch->CreateTexture(buffer, false, cm, translation, translationtable)) 
+			unsigned char * buffer = CreateTexBuffer(cm, translation, translationtable, w, h);
+			ProcessData(buffer, w, h, cm, true);
+			if (!glpatch->CreateTexture(buffer, w, h, false, cm, translation, translationtable)) 
 			{
 				// could not create texture
 				delete buffer;
@@ -1213,6 +1312,310 @@ const PatchTextureInfo * FGLTexture::BindPatch(int cm, int translation, const by
 }
 
 
+//==========================================================================
+//
+// Checks for the presence of a hires texture replacement
+//
+//==========================================================================
+bool FGLTexture::CheckExternalFile()
+{
+	static const char * doom1texpath[]= {
+		"./textures/doom/doom1/%s.%s", "./textures/doom/doom1/%s-ck.%s", 
+		"./textures/doom/%s.%s", "./textures/doom/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
+	};
+
+	static const char * doom2texpath[]= {
+		"./textures/doom/doom2/%s.%s", "./textures/doom/doom2/%s-ck.%s", 
+		"./textures/doom/%s.%s", "./textures/doom/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
+	};
+
+	static const char * pluttexpath[]= {
+		"./textures/doom/plut/%s.%s", "./textures/doom/plut/%s-ck.%s", 
+		"./textures/doom/%s.%s", "./textures/doom/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
+	};
+
+	static const char * tnttexpath[]= {
+		"./textures/doom/tnt/%s.%s", "./textures/doom/tnt/%s-ck.%s", 
+		"./textures/doom/%s.%s", "./textures/doom/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
+	};
+
+	static const char * heretictexpath[]= {
+		"./textures/heretic/%s.%s", "./textures/heretic/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
+	};
+
+	static const char * hexentexpath[]= {
+		"./textures/hexen/%s.%s", "./textures/hexen/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
+	};
+
+	static const char * strifetexpath[]= {
+		"./textures/strife/%s.%s", "./textures/strife/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
+	};
+
+	static const char * doom1flatpath[]= {
+		"./flats/doom/doom1/%s.%s", "./textures/doom/doom1/flat-%s.%s", 
+		"./flats/doom/%s.%s", "./textures/doom/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
+	};
+
+	static const char * doom2flatpath[]= {
+		"./flats/doom/doom2/%s.%s", "./textures/doom/doom2/flat-%s.%s", 
+		"./flats/doom/%s.%s", "./textures/doom/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
+	};
+
+	static const char * plutflatpath[]= {
+		"./flats/doom/plut/%s.%s", "./textures/doom/plut/flat-%s.%s", 
+		"./flats/doom/%s.%s", "./textures/doom/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
+	};
+
+	static const char * tntflatpath[]= {
+		"./flats/doom/tnt/%s.%s", "./textures/doom/tnt/flat-%s.%s", 
+		"./flats/doom/%s.%s", "./textures/doom/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
+	};
+
+	static const char * hereticflatpath[]= {
+		"./flats/heretic/%s.%s", "./textures/heretic/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
+	};
+
+	static const char * hexenflatpath[]= {
+			"./flats/hexen/%s.%s", "./textures/hexen/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
+	};
+
+	static const char * strifeflatpath[]= {
+			"./flats/strife/%s.%s", "./textures/strife/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
+	};
+
+	static const char * doom1patchpath[]= {
+		"./patches/doom/doom1/%s.%s", "./patches/doom/%s.%s", "./patches/%s.%s", NULL
+	};
+
+	static const char * doom2patchpath[]= {
+		"./patches/doom/doom2/%s.%s", "./patches/doom/%s.%s", "./patches/%s.%s", NULL
+	};
+
+	static const char * plutpatchpath[]= {
+		"./patches/doom/plut/%s.%s", "./patches/doom/%s.%s", "./patches/%s.%s", NULL
+	};
+
+	static const char * tntpatchpath[]= {
+		"./patches/doom/tnt/%s.%s", "./patches/doom/%s.%s", "./patches/%s.%s", NULL
+	};
+
+	static const char * hereticpatchpath[]= {
+		"./patches/heretic/%s.%s", "./patches/%s.%s", NULL
+	};
+
+	static const char * hexenpatchpath[]= {
+		"./patches/hexen/%s.%s", "./patches/%s.%s", NULL
+	};
+
+	static const char * strifepatchpath[]= {
+		"./patches/strife/%s.%s", "./patches/%s.%s", NULL
+	};
+
+	char checkName[50];
+	const char ** checklist;
+	BYTE useType=tex->UseType;
+
+	if (useType==FTexture::TEX_SkinSprite || useType==FTexture::TEX_Decal || useType==FTexture::TEX_FontChar)
+	{
+		return false;
+	}
+
+	bool ispatch = (useType==FTexture::TEX_MiscPatch || useType==FTexture::TEX_Sprite) ;
+
+	// for patches this doesn't work yet
+	if (ispatch) return false;
+
+	switch (gameinfo.gametype)
+	{
+	case GAME_Doom:
+		switch (gamemission)
+		{
+		case doom:
+			checklist = ispatch ? doom1patchpath : useType==FTexture::TEX_Flat? doom1flatpath : doom1texpath;
+			break;
+		case doom2:
+			checklist = ispatch ? doom2patchpath : useType==FTexture::TEX_Flat? doom2flatpath : doom2texpath;
+			break;
+		case pack_tnt:
+			checklist = ispatch ? tntpatchpath : useType==FTexture::TEX_Flat? tntflatpath : tnttexpath;
+			break;
+		case pack_plut:
+			checklist = ispatch ? plutpatchpath : useType==FTexture::TEX_Flat? plutflatpath : pluttexpath;
+			break;
+		default:
+			return false;
+		}
+		break;
+
+	case GAME_Heretic:
+		checklist = ispatch ? hereticpatchpath : useType==FTexture::TEX_Flat? hereticflatpath : heretictexpath;
+		break;
+	case GAME_Hexen:
+		checklist = ispatch ? hexenpatchpath : useType==FTexture::TEX_Flat? hexenflatpath : hexentexpath;
+		break;
+	case GAME_Strife:
+		checklist = ispatch ?strifepatchpath : useType==FTexture::TEX_Flat? strifeflatpath : strifetexpath;
+		break;
+	default:
+		return false;
+	}
+
+	while (*checklist)
+	{
+		static const char * extensions[] = { "PNG", "JPG", "TGA", "PCX", NULL };
+
+		for (const char ** extp=extensions; *extp; extp++)
+		{
+			sprintf(checkName, *checklist, tex->Name, *extp);
+			if (_access(checkName, 0) == 0) 
+			{
+				hirespath=copystring(checkName);
+				return true;
+			}
+		}
+		checklist++;
+	}
+	return false;
+}
+
+
+//==========================================================================
+//
+// Loads a hires texture
+//
+//==========================================================================
+static bool ilinited=false;
+
+unsigned char *FGLTexture::LoadFile(const char *fileName, int *width, int *height, int cm)
+{
+	unsigned char *buffer = NULL;
+	byte *data;
+	ILuint imgID;
+	int imgSize;
+
+	if (!ilinited)
+	{
+		ilinited=true;
+		ilInit();
+	}
+
+	ilGenImages(1, &imgID);
+	ilBindImage(imgID);
+	ilLoad(IL_TYPE_UNKNOWN, (const ILstring)fileName);
+	ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE);
+
+	*width = ilGetInteger(IL_IMAGE_WIDTH);
+	*height = ilGetInteger(IL_IMAGE_HEIGHT);
+	imgSize = *width * *height;
+	buffer = new unsigned char[4*imgSize];
+	data = ilGetData();
+
+	// for some reason, tga's load upside down
+	if (strstr(fileName, ".TGA") != NULL) 
+	{
+		for(int i=0;i< *height/2;i++)
+		{
+			DWORD * p1 = ((DWORD*)data) + i * *width;
+			DWORD * p2 = ((DWORD*)data) + (*height-1-i) * *width;
+
+			for(int j=0;i< *width; j++)
+			{
+				DWORD v1 = *p1;
+				*p1=*p2;
+				*p2=v1;
+				p1++;
+				p2++;
+			}
+		}
+	}
+	if (strstr(fileName, "-ck."))
+	{
+		// This is a crappy Doomsday color keyed image
+		// We have to remove the key manually. :(
+		DWORD * dwdata=(DWORD*)data;
+		for(int i=0;i<imgSize;i++)
+		{
+			if (dwdata[i]==0xffffff00 || dwdata[i]==0xffff00ff) dwdata[i]=0;
+		}
+	}
+
+	// Since I have to copy the image anyway I'll do the 
+	// palette manipulation in the same step.
+	ModifyPalette((PalEntry*)buffer, (PalEntry*)data, cm, imgSize, true);
+
+	ilDeleteImages(1, &imgID);
+	return buffer;
+}
+
+
+//==========================================================================
+//
+// Checks for the presence of a hires texture replacement and loads it
+//
+//==========================================================================
+unsigned char *FGLTexture::LoadExternalFile(int *width, int *height,int cm)
+{
+	if (isHires==0)
+	{
+		isHires = CheckExternalFile()? 1:2;
+	}
+	if (hirespath != NULL)
+	{
+		unsigned char * buffer = LoadFile(hirespath, width, height, cm);
+		if (buffer) return buffer;
+
+		// don't try again
+		isHires=2;
+		delete [] hirespath;
+		hirespath=NULL;
+	}
+	return NULL;
+}
+
+//==========================================================================
+//
+// Loads a hires texture from a lump (to be moved into a subclass!)
+//
+//==========================================================================
+unsigned char * FGLTexture::LoadFromLump(const char *lumpName, int *width, int *height, int cm)
+{
+	unsigned char *buffer = NULL;
+	byte *data;
+	ILuint imgID;
+	int lumpNum, imgSize;
+	FMemLump memLump;
+
+	lumpNum=Wads.CheckNumForName (lumpName);
+	if (lumpNum == -1) return NULL;
+
+	memLump = Wads.ReadLump(lumpNum);
+
+	if (!ilinited)
+	{
+		ilinited=true;
+		ilInit();
+	}
+
+	ilGenImages(1, &imgID);
+	ilBindImage(imgID);
+	ilLoadL(IL_TYPE_UNKNOWN, memLump.GetMem(), Wads.LumpLength(lumpNum));
+
+	ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE);
+
+	*width = ilGetInteger(IL_IMAGE_WIDTH);
+	*height = ilGetInteger(IL_IMAGE_HEIGHT);
+	imgSize = *width * *height;
+	buffer = new unsigned char[imgSize*4];
+	data = ilGetData();
+
+	// Since I have to copy the image anyway I'll do the 
+	// palette manipulation in the same step.
+	ModifyPalette((PalEntry*)buffer, (PalEntry*)data, cm, imgSize, true);
+
+	ilDeleteImages(1, &imgID);
+
+	return buffer;
+}
 
 //==========================================================================
 //

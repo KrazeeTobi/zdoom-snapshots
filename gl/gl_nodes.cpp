@@ -257,6 +257,7 @@ bool gl_LoadGLSegs(FILE * f, wadlump_t * lump)
 			{
 				segs[i].linedef = NULL;
 				segs[i].sidedef = NULL;
+
 				segs[i].frontsector = NULL;
 				segs[i].backsector  = NULL;
 			}
@@ -367,6 +368,16 @@ bool gl_LoadGLSubsectors(FILE * f, wadlump_t * lump)
 			}
 		}
 	}
+
+	for (i=0; i<numsubsectors; i++)
+	{
+		for(unsigned j=0;j<subsectors[i].numlines;j++)
+		{
+			seg_t * seg = &segs[subsectors[i].firstline+j];
+			if (seg->linedef==NULL) seg->frontsector = seg->backsector = segs[subsectors[i].firstline].frontsector;
+		}
+	}
+
 	delete datab;	
 	return true;
 }

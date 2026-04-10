@@ -378,7 +378,7 @@ static void DoSubsector(subsector_t * sub)
 	RenderThings(sub, fakesector);
 
 	// Subsectors with only 2 lines cannot have any area!
-	if (sub->numlines>2) 
+	if (sub->numlines>2 || (gl_subsectors[sub-subsectors].hacked&1)) 
 	{
 		// Exclude the case when it tries to render a sector with a heightsec
 		// but undetermined heightsec state. This can only happen if the

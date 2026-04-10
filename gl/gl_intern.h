@@ -48,6 +48,8 @@ EXTERN_CVAR (Bool, gl_light_particles);
 EXTERN_CVAR(Bool, gl_depthfog)
 EXTERN_CVAR(Bool,gl_mirror_envmap)
 
+extern bool gl_nostencil;
+
 extern float pitch;
 extern float viewvecX,viewvecY;
 

@@ -196,7 +196,7 @@ void gl_DrawBuffer(byte * sbuffer, int width, int height, int x, int y, int dx, 
 	}
 
 	GLTexture * gltex = new GLTexture(width, height, false);
-	gltex->CreateTexture(buffer, false, CM_DEFAULT);
+	gltex->CreateTexture(buffer, width, height, false, CM_DEFAULT);
 	delete[] buffer;
 
 	glBegin(GL_TRIANGLE_STRIP);
@@ -297,6 +297,7 @@ void gl_DrawSavePic(DCanvas * canvas, const char * Filename, int x, int y, int d
 void gl_DrawLine(int x1, int y1, int x2, int y2, int color)
 {
 	PalEntry p = color&0xff000000? color : GPalette.BaseColors[color];
+	gl_SetShader(CM_DEFAULT);
 	glDisable(GL_TEXTURE_2D);
 	glColor3ub(p.r, p.g, p.b);
 	glBegin(GL_LINES);
@@ -316,6 +317,7 @@ void gl_Dim (PalEntry color, float amount, int x1, int y1, int w, int h)
 {
 	float r, g, b;
 	
+	gl_SetShader(CM_DEFAULT);
 	glDisable(GL_TEXTURE_2D);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glAlphaFunc(GL_GREATER,0);
@@ -389,6 +391,7 @@ void gl_Clear (int left, int top, int right, int bottom, int color)
 	}
 	*/
 	
+	gl_SetShader(CM_DEFAULT);
 	glEnable(GL_SCISSOR_TEST);
 	glScissor(left, rt - height, width, height);
 	

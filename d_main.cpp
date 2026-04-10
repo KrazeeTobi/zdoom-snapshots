@@ -1961,7 +1961,7 @@ void D_DoomMain (void)
 
 	// [RH] Make sure zdoom.wad is always loaded,
 	// as it contains magic stuff we need.
-	wad = BaseFileSearch ("zdoom.wad", NULL);
+	wad = BaseFileSearch ("gzdoom.wad", NULL);
 	if (wad)
 		D_AddFile (wad);
 	else

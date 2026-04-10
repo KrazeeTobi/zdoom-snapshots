@@ -141,7 +141,7 @@ int GLTexture::GetTexDimension(int value)
 	if (supportsNonPower2) return value;
 
 	int i=1;
-	while (i<value) i*=2;
+	while (i<value) i+=i;
 	return i;
 }
 
@@ -154,69 +154,79 @@ int GLTexture::GetTexDimension(int value)
 // strange crashes deep inside the GL driver when I didn't do it!
 //
 //===========================================================================
-void GLTexture::LoadImage(unsigned char * buffer,unsigned int & glTexID,int wrapparam, bool alphatexture)
+void GLTexture::LoadImage(unsigned char * buffer,int w, int h, unsigned int & glTexID,int wrapparam, bool alphatexture)
 {
-	int realtexformat=TexFormat[gl_texture_format].texformat;
+	int rh,rw;
+	int texformat=TexFormat[gl_texture_format].texformat;
 	bool deletebuffer=false;
 	bool use_mipmapping = TexFilter[gl_texture_filter].mipmapping;
 
-	if (alphatexture) realtexformat=GL_ALPHA8;
+	if (alphatexture) texformat=GL_ALPHA8;
 	if (glTexID==0) glGenTextures(1,&glTexID);
 	glBindTexture(GL_TEXTURE_2D, glTexID);
 	lastbound=glTexID;
 
 	if (!buffer)
 	{
+		w=texwidth;
+		h=abs(texheight);
+		rw = GetTexDimension (w);
+		rh = GetTexDimension (h);
+
 		// The texture must at least be initialized if no data is present.
 		mipmap=false;
-		buffer=(unsigned char *)calloc(4,tex_width*(tex_height+1));
+		buffer=(unsigned char *)calloc(4,rw * (rh+1));
 		deletebuffer=true;
-		realtexheight=-realtexheight;	
+		//texheight=-h;	
 	}
 	else
 	{
+		rw = GetTexDimension (w);
+		rh = GetTexDimension (h);
+
 		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, (mipmap && use_mipmapping));
 
-		// If the graphics card requires power of 2 textures some resizing might be necessary
-		if (realtexwidth!=tex_width || realtexheight!=tex_height)
+		if (rw == w && rh == h)
 		{
-			if (wrapparam==GL_REPEAT || realtexwidth>tex_width || realtexheight>tex_height) 
+			scalexfac=scaleyfac=1.f;
+		}
+		else if (wrapparam==GL_REPEAT || rw < w || rh < h)
+		{
+			// The image must be scaled to fit the texture
+			unsigned char * scaledbuffer=(unsigned char *)calloc(4,rw * (rh+1));
+			if (scaledbuffer)
 			{
-				// The image must be scaled to fit the texture
-				unsigned char * scaledbuffer=(unsigned char *)calloc(4,tex_width*tex_height);
-				if (scaledbuffer)
-				{
-					gluScaleImage(GL_RGBA,realtexwidth,realtexheight,GL_UNSIGNED_BYTE,buffer,
-						tex_width,tex_height,GL_UNSIGNED_BYTE,scaledbuffer);
-					deletebuffer=true;
-					buffer=scaledbuffer;
-				}
+				gluScaleImage(GL_RGBA,w, h,GL_UNSIGNED_BYTE,buffer, rw, rh, GL_UNSIGNED_BYTE,scaledbuffer);
+				deletebuffer=true;
+				buffer=scaledbuffer;
 			}
-			else
+			scalexfac=scaleyfac=1.f;
+		}
+		else
+		{
+			// The image must be copied to a larger buffer
+			unsigned char * scaledbuffer=(unsigned char *)calloc(4,rw * (rh+1));
+			if (scaledbuffer)
 			{
-				// The image must be copied to a larger buffer
-				unsigned char * scaledbuffer=(unsigned char *)calloc(4,tex_width*(tex_height+1));
-				if (scaledbuffer)
+				for(int y=0;y<h;y++)
 				{
-					for(int y=0;y<realtexheight;y++)
-					{
-						memcpy(scaledbuffer + tex_width * y * 4, buffer + realtexwidth * y * 4, realtexwidth * 4);
-						// duplicate the last row to eliminate texture filtering artifacts on borders!
-						if (tex_width>realtexwidth) 
-							memcpy(	scaledbuffer + tex_width * y * 4 + realtexwidth * 4,
-							scaledbuffer + tex_width * y * 4 + realtexwidth * 4 -4, 4);
-					}
-					// also duplicate the last line for the same reason!
-					memcpy(	scaledbuffer + tex_width * realtexheight * 4, 
-						scaledbuffer + tex_width * (realtexheight-1) * 4, realtexwidth*4 + 4);
-					
-					deletebuffer=true;
-					buffer=scaledbuffer;
+					memcpy(scaledbuffer + rw * y * 4, buffer + w * y * 4, w * 4);
+					// duplicate the last row to eliminate texture filtering artifacts on borders!
+					if (rw>w) 
+						memcpy(	scaledbuffer + rw * y * 4 + w * 4,
+						scaledbuffer + rw * y * 4 + w * 4 -4, 4);
 				}
+				// also duplicate the last line for the same reason!
+				memcpy(	scaledbuffer + rw * h * 4, 	scaledbuffer + rw * (h-1) * 4, w*4 + 4);
+				
+				deletebuffer=true;
+				buffer=scaledbuffer;
+				scalexfac = (float)w / rw;
+				scaleyfac = (float)h / rh;
 			}
 		}
 	}
-	glTexImage2D(GL_TEXTURE_2D, 0, realtexformat, tex_width, tex_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, texformat, rw, rh, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 
 	if (deletebuffer) free(buffer);
 
@@ -248,14 +258,15 @@ void GLTexture::LoadImage(unsigned char * buffer,unsigned int & glTexID,int wrap
 GLTexture::GLTexture(int _width, int _height, bool _mipmap) 
 {
 	mipmap=_mipmap;
-	realtexwidth=_width;
-	realtexheight=_height;
-	tex_width=GetTexDimension(_width);
-	tex_height=GetTexDimension(_height);
+	texwidth=_width;
+	texheight=_height;
+	scalexfac=1.f;
+	scaleyfac=1.f;
 	cm_arraysize=CM_FIRSTCOLORMAP + numfakecmaps;
 	glTexID = new unsigned[cm_arraysize];
 	memset(glTexID,0,sizeof(unsigned int)*cm_arraysize);
 }
+
 
 //===========================================================================
 // 
@@ -369,13 +380,14 @@ unsigned int GLTexture::Bind(int cm,int translation, const unsigned char * trans
 //	(re-)creates the texture
 //
 //===========================================================================
-unsigned int GLTexture::CreateTexture(unsigned char * buffer, bool wrap, int cm, int translation, const unsigned char * translationtbl)
+unsigned int GLTexture::CreateTexture(unsigned char * buffer, int w, int h, bool wrap, 
+									  int cm, int translation, const unsigned char * translationtbl)
 {
 	if (cm>=cm_arraysize || cm<0) cm=CM_DEFAULT;
 
 	unsigned int * pTexID=GetTexID(cm, translation, translationtbl);
 
-	LoadImage(buffer, *pTexID, wrap? GL_REPEAT:GL_CLAMP, cm==CM_SHADE);
+	LoadImage(buffer, w, h, *pTexID, wrap? GL_REPEAT:GL_CLAMP, cm==CM_SHADE);
 	return Bind(cm, translation);
 }
 

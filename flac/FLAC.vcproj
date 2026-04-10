@@ -124,7 +124,7 @@
 				InlineFunctionExpansion="1"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;FLAC__CPU_IA32;FLAC__HAS_NASM;FLAC__SSE_OS;FLAC__USE_3DNOW"
 				StringPooling="TRUE"
-				RuntimeLibrary="2"
+				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="TRUE"
 				PrecompiledHeaderFile=".\FLAC___Win32_Release/FLAC.pch"
 				AssemblerListingLocation=".\FLAC___Win32_Release/"
@@ -475,7 +475,8 @@
 					Name="Optimized Debug|Win32">
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="nasmw -o &quot;$(IntDir)\$(InputName)&quot;.obj -d OBJ_FORMAT_win32 -f win32 &quot;$(InputPath)&quot;"
+						CommandLine="nasmw -o &quot;$(IntDir)\$(InputName)&quot;.obj -d OBJ_FORMAT_win32 -f win32 &quot;$(InputPath)&quot;
+"
 						Outputs="$(IntDir)\$(InputName).obj"/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -491,7 +492,8 @@
 					Name="Release|Win32">
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="nasmw -o &quot;$(IntDir)\$(InputName)&quot;.obj -d OBJ_FORMAT_win32 -f win32 &quot;$(InputPath)&quot;"
+						CommandLine="nasmw -o &quot;$(IntDir)\$(InputName)&quot;.obj -d OBJ_FORMAT_win32 -f win32 &quot;$(InputPath)&quot;
+"
 						Outputs="$(IntDir)\$(InputName).obj"/>
 				</FileConfiguration>
 			</File>
@@ -501,7 +503,8 @@
 					Name="Optimized Debug|Win32">
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="nasmw -o &quot;$(IntDir)\$(InputName)&quot;.obj -d OBJ_FORMAT_win32 -f win32 &quot;$(InputPath)&quot;"
+						CommandLine="nasmw -o &quot;$(IntDir)\$(InputName)&quot;.obj -d OBJ_FORMAT_win32 -f win32 &quot;$(InputPath)&quot;
+"
 						Outputs="$(IntDir)\$(InputName).obj"/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -517,7 +520,8 @@
 					Name="Release|Win32">
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="nasmw -o &quot;$(IntDir)\$(InputName)&quot;.obj -d OBJ_FORMAT_win32 -f win32 &quot;$(InputPath)&quot;"
+						CommandLine="nasmw -o &quot;$(IntDir)\$(InputName)&quot;.obj -d OBJ_FORMAT_win32 -f win32 &quot;$(InputPath)&quot;
+"
 						Outputs="$(IntDir)\$(InputName).obj"/>
 				</FileConfiguration>
 			</File>
@@ -527,7 +531,8 @@
 					Name="Optimized Debug|Win32">
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="nasmw -o &quot;$(IntDir)\$(InputName)&quot;.obj -d OBJ_FORMAT_win32 -f win32 &quot;$(InputPath)&quot;"
+						CommandLine="nasmw -o &quot;$(IntDir)\$(InputName)&quot;.obj -d OBJ_FORMAT_win32 -f win32 &quot;$(InputPath)&quot;
+"
 						Outputs="$(IntDir)\$(InputName).obj"/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -543,7 +548,8 @@
 					Name="Release|Win32">
 					<Tool
 						Name="VCCustomBuildTool"
-						CommandLine="nasmw -o &quot;$(IntDir)\$(InputName)&quot;.obj -d OBJ_FORMAT_win32 -f win32 &quot;$(InputPath)&quot;"
+						CommandLine="nasmw -o &quot;$(IntDir)\$(InputName)&quot;.obj -d OBJ_FORMAT_win32 -f win32 &quot;$(InputPath)&quot;
+"
 						Outputs="$(IntDir)\$(InputName).obj"/>
 				</FileConfiguration>
 			</File>

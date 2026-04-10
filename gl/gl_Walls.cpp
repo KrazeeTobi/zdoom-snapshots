@@ -84,7 +84,9 @@ bool GLWall::PrepareLight(texcoord * tcs, ADynamicLight * light)
 		return false;
 	}
 
-	if (!gl_SetupLight(p, light, nearPt, up, right, scale, !gl_isBlack(Colormap.FadeColor), Colormap.LightColor.a)) 
+	if (!gl_SetupLight(p, light, nearPt, up, right, scale, 
+		!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE, 
+		Colormap.LightColor.a, true)) 
 	{
 		return false;
 	}
@@ -516,8 +518,16 @@ void GLWall::RenderOneSidedWall(int pass)
 		break;
 
 	case GLPASS_LIGHT:
-		if (!gl_isBlack(Colormap.FadeColor)) gl_SetFog(lightlevel, Colormap.FadeColor, STYLE_Add);	// STYLE_Add forces black fog
-		else gl_SetFog((255+lightlevel)>>1, Colormap.FadeColor, STYLE_Normal);
+		if (!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE) 
+		{
+			// STYLE_Add forces black fog for lights
+			gl_SetFog(lightlevel, Colormap.FadeColor, STYLE_Add);	
+		}
+		else 
+		{
+			// black fog is diminishing light and shouldn't affect the depth fading of lights that strongly.
+			gl_SetFog((255+lightlevel)>>1, Colormap.FadeColor, STYLE_Normal);
+		}
 
 		if (!seg->bPolySeg)
 		{
@@ -600,7 +610,7 @@ void GLWall::Draw(int pass)
 
 	default:
 		if (pass!=GLPASS_DECALS) RenderOneSidedWall(pass);
-		else if (seg->sidedef->BoundActors)
+		else if (seg->sidedef && seg->sidedef->BoundActors)
 		{
 			ADecal * decal=static_cast<ADecal*>(seg->sidedef->BoundActors);
 			gl_SetFog(lightlevel, Colormap.FadeColor, STYLE_Normal);
@@ -665,18 +675,18 @@ void GLWall::PutWall(bool translucent)
 				((seg->linedef->v1->y+seg->linedef->v2->y)>>1) - viewy);
 			list=GLDL_TRANSLUCENT;
 		}
-		else if (!gl_lights || (seg->sidedef->lighthead==NULL && !seg->bPolySeg))
+		else if (!gl_lights || !seg->sidedef || (seg->sidedef->lighthead==NULL && !seg->bPolySeg))
 		{
 			// no light touches this wall
 			list=GLDL_UNLIT;
 		}
 		else if ( !gl_fixedcolormap && passflag[flag]==1)
 		{
-			list = (!gl_isBlack(Colormap.FadeColor)) ? GLDL_LITFOG : GLDL_LIT;
+			list = (!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE) ? GLDL_LITFOG : GLDL_LIT;
 		}
 		else if (flag==RENDERWALL_M2S && !gl_fixedcolormap)
 		{
-			if (!gl_isBlack(Colormap.FadeColor)) list = GLDL_LITFOG;
+			if (!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE) list = GLDL_LITFOG;
 			else list = GLDL_MASKED;
 		}
 		else list = GLDL_UNLIT;
@@ -719,7 +729,7 @@ void GLWall::PutWall(bool translucent)
 				flag=RENDERWALL_MIRRORSURFACE;
 				viewdistance=P_AproxDistance( ((seg->linedef->v1->x+seg->linedef->v2->x)>>1) - viewx,
 					((seg->linedef->v1->y+seg->linedef->v2->y)>>1) - viewy);
-				gl_drawlist[GLDL_TRANSLUCENT].AddWall(this);
+				gl_drawlist[GLDL_TRANSLUCENTBORDER].AddWall(this);
 			}
 			break;
 
@@ -815,6 +825,7 @@ void GLWall::SplitWall(sector_t * frontsector, bool translucent)
 bool GLWall::DoHorizon(seg_t * seg,sector_t * fs, vertex_t * v1,vertex_t * v2)
 {
 	GLHorizonInfo hi;
+	lightlist_t * light;
 
 	// ZDoom doesn't support slopes in a horizon sector so I won't either!
 	ytop[1]=ytop[0]=(float)fs->ceilingtexz/MAP_SCALE;
@@ -835,6 +846,15 @@ bool GLWall::DoHorizon(seg_t * seg,sector_t * fs, vertex_t * v1,vertex_t * v2)
 			hi.plane.GetFromSector(fs, true);
 			hi.lightlevel=GetCeilingLight(fs);
 			hi.colormap=fs->ColorMap;
+
+			if (fs->e->ffloors.Size())
+			{
+				light = P_GetPlaneLight(fs, &fs->ceilingplane, true);
+
+				if(!(fs->CeilingFlags&SECF_ABSLIGHTING)) hi.lightlevel = *light->p_lightlevel;
+				hi.colormap.LightColor = (*light->p_extra_colormap)->Color;
+			}
+
 			if (gl_fixedcolormap) hi.colormap.GetFixedColormap();
 			horizon=&hi;
 			topflat=1;
@@ -856,6 +876,15 @@ bool GLWall::DoHorizon(seg_t * seg,sector_t * fs, vertex_t * v1,vertex_t * v2)
 			hi.plane.GetFromSector(fs, false);
 			hi.lightlevel=GetFloorLight(fs);
 			hi.colormap=fs->ColorMap;
+
+			if (fs->e->ffloors.Size())
+			{
+				light = P_GetPlaneLight(fs, &fs->floorplane, false);
+
+				if(!(fs->FloorFlags&SECF_ABSLIGHTING)) hi.lightlevel = *light->p_lightlevel;
+				hi.colormap.LightColor = (*light->p_extra_colormap)->Color;
+			}
+
 			if (gl_fixedcolormap) hi.colormap.GetFixedColormap();
 			horizon=&hi;
 			topflat=0;
@@ -881,13 +910,15 @@ bool GLWall::SetWallCoordinates(seg_t * seg, int texturetop,
 	// 
 	const WorldTextureInfo * wti;
 	float l_ul;
-	float length= seg->sidedef->TexelLength;
+	float length= seg->sidedef? seg->sidedef->TexelLength: 
+								(P_AproxDistance (seg->v2->x-seg->v1->x, seg->v2->y-seg->v1->y)>>16);
+	fixed_t t_ofs = seg->sidedef? seg->sidedef->textureoffset : 0;
 	
 	
 	if (gltexture) 
 	{
 		wti=gltexture->GetWorldTextureInfo();
-		l_ul=wti->FixToTexU(gltexture->TextureOffset(seg->sidedef->textureoffset));
+		l_ul=wti->FixToTexU(gltexture->TextureOffset(t_ofs));
 	}
 	else 
 	{
@@ -1006,8 +1037,8 @@ void GLWall::DoTexture(int type,seg_t * seg,int peg,
 
 
 	flag=type;
-	if (flag==RENDERWALL_M1S && seg->linedef->special==Line_Mirror) 
-		flag=r_mirrors? RENDERWALL_MIRROR : RENDERWALL_MIRRORSURFACE;
+	if (flag==RENDERWALL_M1S && seg->linedef->special==Line_Mirror && !gl_nostencil) 
+		flag=(r_mirrors) ? RENDERWALL_MIRROR : RENDERWALL_MIRRORSURFACE;
 
 	ceilingrefheight+= 	gltexture->RowOffset(seg->sidedef->rowoffset)+
 						(peg ? (gltexture->TextureHeight()<<FRACBITS)-lh-v_offset:0);
@@ -1679,7 +1710,7 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 	}
 
 
-	if (seg->linedef->special==Line_Horizon)
+	if (seg->linedef->special==Line_Horizon && !gl_nostencil)
 	{
 		SkyNormal(frontsector,v1,v2);
 		DoHorizon(seg,frontsector, v1,v2);
@@ -1780,8 +1811,8 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 		// for all other cases this should be done manually with Line_Fogsheet
 		bool drawfogsheet=((frontsector->ColorMap->Fade&0xffffff)!=0 && 
 							(backsector->ColorMap->Fade&0xffffff)==0 &&
-							!gl_fixedcolormap
-						  );
+							!gl_fixedcolormap &&
+							(frontsector->ceilingpic!=skyflatnum || backsector->ceilingpic!=skyflatnum));
 
 		gltexture=FGLTexture::ValidateTexture(seg->sidedef->midtexture);
 		if (gltexture || drawfogsheet)
@@ -1843,6 +1874,61 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 					AddLowerMissingTexture(seg, bfh1);
 				}
 			}
+		}
+	}
+}
+
+//==========================================================================
+//
+// 
+//
+//==========================================================================
+void GLWall::ProcessLowerMiniseg(seg_t *seg, sector_t * frontsector, sector_t * backsector)
+{
+	vertex_t * v1, * v2;
+	fixed_t ffh;
+	fixed_t bfh;
+
+	if (frontsector->floorpic==skyflatnum) return;
+
+	this->seg=seg;
+	this->sub=NULL;
+
+	v1=seg->v1;
+	v2=seg->v2;
+	vertexes[0]=v1;
+	vertexes[1]=v2;
+
+	glseg.x1=-v1->x/(float)MAP_SCALE;
+	glseg.z1= v1->y/(float)MAP_SCALE;
+	glseg.x2=-v2->x/(float)MAP_SCALE;
+	glseg.z2= v2->y/(float)MAP_SCALE;
+	glseg.noorigverts=true;
+	clampx=clampy=false;
+
+	lightlevel=frontsector->lightlevel;
+
+	alpha=1.0f;
+	RenderStyle=STYLE_Normal;
+	Colormap=frontsector->ColorMap;
+
+	topflat=frontsector->ceilingpic;	// for glowing textures
+	bottomflat=frontsector->floorpic;
+
+	ffh = frontsector->floortexz; 
+	bfh = backsector->floortexz; 
+	yfloor[0] = yfloor[1] = ffh/MAP_SCALE;
+
+
+	if (bfh>ffh)
+	{
+		gltexture=FGLTexture::ValidateTexture(frontsector->floorpic);
+
+		if (gltexture) 
+		{
+			flag=RENDERWALL_BOTTOM;
+			SetWallCoordinates(seg, backsector->floortexz, bfh, bfh, ffh, ffh);
+			PutWall(false);
 		}
 	}
 }

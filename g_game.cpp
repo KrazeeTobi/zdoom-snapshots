@@ -1670,6 +1670,7 @@ void G_DoLoadGame ()
 	delete png;
 	fclose (stdfile);
 	for(int i=0;i<numsectors;i++) P_Recalculate3DFloors(&sectors[i]);
+	gl_RecreateAllAttachedLights();
 }
 
 
@@ -1998,6 +1999,8 @@ void G_DoSaveGame (bool okForQuicksave)
 
 	delete[] savegamefile;
 	savegamefile = NULL;
+	
+	gl_RecreateAllAttachedLights();
 }
 
 

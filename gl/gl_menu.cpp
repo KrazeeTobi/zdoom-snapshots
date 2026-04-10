@@ -12,6 +12,9 @@ void StartGLLightMenu (void);
 
 EXTERN_CVAR (Bool, vid_vsync)
 EXTERN_CVAR(Int, gl_spriteclip)
+EXTERN_CVAR(Bool, gl_blendcolormaps)
+EXTERN_CVAR(Bool, gl_texture_usehires)
+EXTERN_CVAR(Bool, gl_precache)
 
 static value_t SpriteclipModes[]=
 {
@@ -46,20 +49,29 @@ static value_t Anisotropy[] =
 	{ 16.0, "16x" },
 };
 
+static value_t Colormaps[] =
+{
+	{ 0.0, "Use as palette" },
+	{ 1.0, "Blend" },
+};
+
 
 menuitem_t OpenGLItems[] = {
 	{ more,     "Light Options", {NULL}, {0.0}, {0.0},	{0.0}, {(value_t *)StartGLLightMenu} },
 	{ redtext,	" ",						{NULL},							{0.0}, {0.0}, {0.0}, {NULL} },
 	{ discrete, "Vertical Sync",			{&vid_vsync},					{2.0}, {0.0}, {0.0}, {OnOff} },
 	{ discrete, "Environment map on mirrors",{&gl_mirror_envmap},			{2.0}, {0.0}, {0.0}, {OnOff} },
-	{ discrete, "Enhanced Nightvision mode",{&gl_enhanced_lightamp},		{2.0}, {0.0}, {0.0}, {OnOff} },
+	{ discrete, "Enhanced night vision mode",{&gl_enhanced_lightamp},		{2.0}, {0.0}, {0.0}, {OnOff} },
 	{ discrete, "Adjust sprite clipping",	{&gl_spriteclip},				{3.0}, {0.0}, {0.0}, {SpriteclipModes} },
-	{ discrete, "Depth Fog",				{&gl_depthfog},					{3.0}, {0.0}, {0.0}, {OnOff} },
+	{ discrete, "Depth Fog",				{&gl_depthfog},					{2.0}, {0.0}, {0.0}, {OnOff} },
+	{ discrete, "Boom colormap handling",	{&gl_blendcolormaps},			{3.0}, {0.0}, {0.0}, {Colormaps} },
 	{ redtext,	" ",						{NULL},							{0.0}, {0.0}, {0.0}, {NULL} },
 	{ discrete, "Textures enabled",			{&gl_texture},					{2.0}, {0.0}, {0.0}, {YesNo} },
 	{ discrete, "Texture Filter mode",		{&gl_texture_filter},			{5.0}, {0.0}, {0.0}, {FilterModes} },
 	{ discrete, "Anisotropic filter",		{&gl_texture_filter_anisotropic},{5.0},{0.0}, {0.0}, {Anisotropy} },
 	{ discrete, "Texture Format",			{&gl_texture_format},			{4.0}, {0.0}, {0.0}, {TextureFormats} },
+	{ discrete, "Enable hires textures",	{&gl_texture_usehires},			{2.0}, {0.0}, {0.0}, {YesNo} },
+	{ discrete, "Precache GL textures",		{&gl_precache},					{2.0}, {0.0}, {0.0}, {YesNo} },
 };
 
 menuitem_t GLLightItems[] = {

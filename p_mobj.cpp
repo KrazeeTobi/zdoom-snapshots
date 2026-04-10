@@ -54,6 +54,7 @@
 #include "p_conversation.h"
 
 #include "gl/gl_functions.h"
+#include "fragglescript/t_script.h"
 
 // MACROS ------------------------------------------------------------------
 
@@ -1772,6 +1773,7 @@ void P_ZMovement (AActor *mo)
 		{ // [RH] Let the sector do something to the actor
 			mo->Sector->SecActTarget->TriggerAction (mo, SECSPAC_HitFloor);
 		}
+		P_CheckFor3DFloorHit(mo);
 		// [RH] Need to recheck this because the sector action might have
 		// teleported the actor so it is no longer below the floor.
 		if (mo->z <= mo->floorz)
@@ -1882,7 +1884,8 @@ void P_ZMovement (AActor *mo)
 		{ // [RH] Let the sector do something to the actor
 			mo->Sector->SecActTarget->TriggerAction (mo, SECSPAC_HitCeiling);
 		}
-		// [RH] Need to recheck this because the sector action might have
+		P_CheckFor3DCeilingHit(mo);
+// [RH] Need to recheck this because the sector action might have
 		// teleported the actor so it is no longer above the ceiling.
 		if (mo->z + mo->height > mo->ceilingz)
 		{
@@ -3513,6 +3516,8 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 		MTF_MAGE
 	};
 
+	T_PrepareSpawnThing();
+
 	if (mthing->type == 0 || mthing->type == -1)
 		return;
 
@@ -3818,6 +3823,9 @@ void P_SpawnMapThing (mapthing2_t *mthing, int position)
 		return;
 	}
 	mobj->LevelSpawned ();
+
+	T_RegisterSpawnThing(mobj);
+
 }
 
 

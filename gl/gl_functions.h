@@ -71,6 +71,7 @@ inline void gl_SetSpriteLight(AActor * thing, int light, PalEntry pe, float alph
 	gl_SetSpriteLight(thing, light,pe.r,pe.g,pe.b,pe.a,alpha, ThingColor);
 }
 
+void gl_InitFog();
 void gl_SetFogParams(int _fogdensity, PalEntry _outsidefogcolor, int _outsidefogdensity, int _skyfog);
 int gl_GetFogDensity(int lightlevel, PalEntry fogcolor);
 void gl_SetFog(int lightlevel, PalEntry pe, int renderstyle);
@@ -154,6 +155,8 @@ void AddUpperMissingTexture(seg_t * seg, fixed_t backheight);
 void AddLowerMissingTexture(seg_t * seg, fixed_t backheight);
 void HandleMissingTextures();
 void DrawUnhandledMissingTextures();
+void AddHackedSubsector(subsector_t * sub);
+void HandleHackedSubsectors();
 
 // ZDBSP shittiness compensation
 void gl_CollectMissingLines();
@@ -162,6 +165,7 @@ void gl_RenderMissingLines();
 
 void gl_SetActorLights(AActor *);
 void gl_DeleteAllAttachedLights();
+void gl_RecreateAllAttachedLights();
 
 
 void I_RestartRenderer();

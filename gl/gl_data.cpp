@@ -36,6 +36,7 @@
 
 #include "i_system.h"
 #include "p_local.h"
+#include "c_dispatch.h"
 #include "gl/gl_lights.h"
 #include "gl/gl_glow.h"
 #include "gl/gl_data.h"
@@ -84,6 +85,27 @@ inline void M_AddToBox(fixed_t* box,fixed_t x,fixed_t y)
 	if (x>box[BOXRIGHT]) box[BOXRIGHT] = x;
 	if (y<box[BOXBOTTOM]) box[BOXBOTTOM] = y;
 	if (y>box[BOXTOP]) box[BOXTOP] = y;
+}
+
+static void SpreadHackedFlag(gl_subsectordata * glsub)
+{
+	// The subsector pointer hasn't been set yet!
+	subsector_t * sub = &subsectors[glsub-gl_subsectors];
+	for(int i=0;i<sub->numlines;i++)
+	{
+		seg_t * seg = &segs[sub->firstline+i];
+
+		if (seg->PartnerSeg)
+		{
+			gl_subsectordata * glsub2 = &gl_subsectors[seg->PartnerSeg->Subsector-subsectors];
+
+			if (!(glsub2->hacked&1) && glsub2->render_sector==glsub->render_sector)
+			{
+				glsub2->hacked|=1;
+				SpreadHackedFlag (glsub2);
+			}
+		}
+	}
 }
 
 static void PrepareSectorData()
@@ -200,6 +222,23 @@ static void PrepareSectorData()
 	{
 		gl_sector = &gl_sectors[glss->render_sector->sectornum];
 		gl_sector->gl_subsectors[gl_sector->subsectorcount++]=glss;
+	}
+
+	// marks all malformed subsectors so rendering tricks using them can be handled more easily
+	for (i = 0; i < numsubsectors; i++)
+	{
+		seg_t * seg = &segs[subsectors[i].firstline];
+		for(int j=0;j<subsectors[i].numlines;j++)
+		{
+			if (!(gl_subsectors[i].hacked&1) && seg[j].linedef==0 && 
+					seg[j].PartnerSeg!=NULL && gl_subsectors[i].render_sector != 
+					gl_subsectors[seg[j].PartnerSeg->Subsector-subsectors].render_sector)
+			{
+				gl_subsectors[i].hacked|=1;
+				SpreadHackedFlag(&gl_subsectors[i]);
+			}
+			if (seg[j].PartnerSeg==NULL) gl_subsectors[i].hacked|=2;	// used for quick termination checks
+		}
 	}
 }
 
@@ -394,6 +433,45 @@ void gl_PreprocessLevel()
 	if (gl_DebugHook) gl_DebugHook();
 }
 
+
+CCMD(dumpgeometry)
+{
+	for(int i=0;i<numsectors;i++)
+	{
+		gl_sectordata * glsec = &gl_sectors[i];
+
+		Printf("Sector %d\n",i);
+		for(int j=0;j<glsec->subsectorcount;j++)
+		{
+			gl_subsectordata * glsub = glsec->gl_subsectors[j];
+			subsector_t * sub = glsub->sub;
+
+			Printf("    Subsector %d - real sector = %d - %s\n", sub-subsectors, sub->sector->sectornum, glsub->hacked&1? "hacked":"");
+			for(int k=0;k<sub->numlines;k++)
+			{
+				seg_t * seg = &segs[sub->firstline+k];
+				if (seg->linedef)
+				{
+				Printf("      (%4.4f, %4.4f), (%4.4f, %4.4f) - seg %d, linedef %d, side %d", 
+					seg->v1->x/65536.0f, seg->v1->y/65536.0f, seg->v2->x/65536.0f, seg->v2->y/65536.0f,
+					seg-segs, seg->linedef-lines, seg->sidedef!=&sides[seg->linedef->sidenum[0]]);
+				}
+				else
+				{
+					Printf("      (%4.4f, %4.4f), (%4.4f, %4.4f) - seg %d, miniseg", 
+						seg->v1->x/65536.0f, seg->v1->y/65536.0f, seg->v2->x/65536.0f, seg->v2->y/65536.0f,
+						seg-segs);
+				}
+				if (seg->PartnerSeg) 
+				{
+					gl_subsectordata * glsub2 = &gl_subsectors[seg->PartnerSeg->Subsector-subsectors];
+					Printf(", back sector = %d, real back sector = %d", glsub2->render_sector->sectornum, seg->PartnerSeg->frontsector->sectornum);
+				}
+				Printf("\n");
+			}
+		}
+	}
+}
 
 //==========================================================================
 //

@@ -1078,6 +1078,7 @@ bool AInventory::TryPickup (AActor *toucher)
 		toucher->AddInventory (this);
 		bool usegood = DoUse (true);
 		toucher->RemoveInventory (this);
+		BecomePickup ();
 
 		if (usegood || (ItemFlags & IF_ALWAYSPICKUP))
 		{

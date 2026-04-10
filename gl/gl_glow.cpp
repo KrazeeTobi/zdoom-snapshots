@@ -131,11 +131,12 @@ void gl_GetGlowColor(unsigned int texno, float * data)
 			FGLTexture * tex = FGLTexture::ValidateTexture(texno);
 			if (tex)
 			{
-				unsigned char * buffer = tex->CreateTexBuffer(CM_DEFAULT, 0);
+				int w, h;
+				unsigned char * buffer = tex->CreateTexBuffer(CM_DEFAULT, 0, NULL, w, h);
 
 				if (buffer)
 				{
-					GlowingColors[texno]=averageColor((unsigned long *) buffer, tex->GetWidth() * tex->GetHeight(), true);
+					GlowingColors[texno]=averageColor((unsigned long *) buffer, w*h, true);
 					delete buffer;
 					GlowingColors[texno].a=1;	// mark as processed
 				}

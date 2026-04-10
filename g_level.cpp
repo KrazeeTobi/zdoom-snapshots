@@ -448,10 +448,10 @@ static void SetLevelDefaults (level_info_t *levelinfo)
 		// For maps without a BEHAVIOR, this will be cleared.
 		levelinfo->flags |= LEVEL_LAXMONSTERACTIVATION;
 	}
-	levelinfo->airsupply = 10*FRACUNIT;
+	levelinfo->airsupply = 10*TICRATE;
 
 	// new
-	levelinfo->airsupply = 20*FRACUNIT;
+	levelinfo->airsupply = 20*TICRATE;
 }
 
 //
@@ -1727,6 +1727,7 @@ void G_DoLoadLevel (int position, bool autosave)
 	}
 
 	level.starttime = gametic;
+	level.thisleveltime = 0;
 	G_UnSnapshotLevel (!savegamerestore);	// [RH] Restore the state of the level.
 	G_FinishTravel ();
 	displayplayer = consoleplayer;		// view the guy you are playing
@@ -2040,7 +2041,7 @@ void G_InitLevelLocals ()
 
 	// new stuff
 	gl_InitGlow(info->glowing);
-	level.airsupply = info->airsupply*TICRATE;
+	level.airsupply = info->airsupply;
 
 	gl_SetFogParams(info->fogdensity, info->outsidefog, info->outsidefogdensity, info->skyfog);
 }
@@ -2378,6 +2379,11 @@ void G_SerializeLevel (FArchive &arc, bool hubLoad)
 			arc << t;
 		}
 	}
+
+	// This must be saved, too, of course!
+	if (SaveVersion>=301) FCanvasTextureInfo::Serialize (arc);
+	if (SaveVersion>=302) arc << level.thisleveltime;
+
 	if (!hubLoad)
 	{
 		P_SerializePlayers (arc);
@@ -2665,6 +2671,7 @@ void level_locals_s::Tick ()
 		memset (Scrolls, 0, sizeof(*Scrolls)*numsectors);
 	}
 	totalgametime++;
+	thisleveltime++;
 }
 
 void level_locals_s::AddScroller (DScroller *scroller, int secnum)

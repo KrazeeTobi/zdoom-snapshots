@@ -58,6 +58,7 @@
 
 #include "gl/gl_functions.h"
 
+#include "fragglescript/t_script.h"
 
 extern void P_SpawnMapThing (mapthing2_t *mthing, int position);
 extern bool P_LoadBuildMap (BYTE *mapdata, size_t len, mapthing2_t **things, int *numthings);
@@ -216,13 +217,13 @@ static void SetTextureNoErr (short *texture, DWORD *color, char *name8)
 	{
 		char name2[9];
 		char *stop;
-		strncpy (name2, name, 8);
-		name2[8] = 0;
-		if (name2[0]!='#')
+		strncpy (name2, name+1, 7);
+		name2[7] = 0;
+		if (*name != '#')
 		{
 			*color = strtoul (name2, &stop, 16);
 		}
-		else if (*name=='#')			// Support for Legacy's color format!
+		else	// Support for Legacy's color format!
 		{
 			int l=strlen(name);
 			if (l>=7) 
@@ -3049,6 +3050,8 @@ void P_SetupLevel (char *lumpname, int position)
 	{
 		char lname[9];
 
+			T_LoadLevelInfo (lumpnum);    
+
 		// [RH] Check if this map is Hexen-style.
 		//		LINEDEFS and THINGS need to be handled accordingly.
 		HasBehavior = Wads.CheckLumpName (lumpnum+ML_BEHAVIOR, "BEHAVIOR");
@@ -3321,6 +3324,8 @@ void P_SetupLevel (char *lumpname, int position)
 			}
 		}
 	}
+
+	T_PreprocessScripts();        // preprocess FraggleScript scripts
 
 	// build subsector connect matrix
 	//	UNUSED P_ConnectSubsectors ();

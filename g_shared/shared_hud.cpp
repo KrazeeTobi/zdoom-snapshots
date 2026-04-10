@@ -67,7 +67,8 @@ CVAR (Int, hud_armor_yellow, 50, CVAR_ARCHIVE)				// armor amount less than whic
 CVAR (Int, hud_armor_green, 100, CVAR_ARCHIVE)				// armor amount above is blue, below is green    
 
 CVAR (Int, hudcolor_titl, CR_YELLOW, CVAR_ARCHIVE)			// color of automap title
-CVAR (Int, hudcolor_time, CR_RED, CVAR_ARCHIVE)				// color of level time
+CVAR (Int, hudcolor_time, CR_RED, CVAR_ARCHIVE)				// color of level/hub time
+CVAR (Int, hudcolor_ltim, CR_ORANGE, CVAR_ARCHIVE)			// color of single level time
 CVAR (Int, hudcolor_ttim, CR_GOLD, CVAR_ARCHIVE)			// color of total time
 CVAR (Int, hudcolor_xyco, CR_GREEN, CVAR_ARCHIVE)			// color of coordinates
 
@@ -365,7 +366,7 @@ static void SetKeyTypes()
 
 static void DrawOneKey(int xo, int & x, int & y, int & c, AInventory * inv)
 {
-	int icon;
+	int icon=0;
 
 	if (inv->SpawnState && inv->SpawnState->sprite.index!=0)
 	{
@@ -809,6 +810,14 @@ void DrawHUD()
 		seconds= level.time /TICRATE;
 		sprintf(printstr, "%02i:%02i:%02i", seconds/3600, (seconds%3600)/60, seconds%60);
 		DrawHudText(hudcolor_time, printstr, hudwidth-length, bottom-fonth, FRACUNIT);
+
+		// Single level time for hubs
+		if (level.clusterflags&CLUSTER_HUB)
+		{
+			seconds= level.thisleveltime /TICRATE;
+			sprintf(printstr, "%02i:%02i:%02i", seconds/3600, (seconds%3600)/60, seconds%60);
+			DrawHudText(hudcolor_ltim, printstr, hudwidth-length, bottom-fonth*2, FRACUNIT);
+		}
 
 		sprintf(printstr,"%s: %s",level.mapname,level.level_name);
 		screen->DrawText(hudcolor_titl, 1, hudheight-fonth-1, printstr,

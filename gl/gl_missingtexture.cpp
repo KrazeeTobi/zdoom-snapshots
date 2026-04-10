@@ -1,7 +1,7 @@
 #include "gl_pch.h"
 /*
 ** gl_missingtexture.cpp
-** Handles missing upper and lower textures
+** Handles missing upper and lower textures and self referencing sector hacks
 **
 **---------------------------------------------------------------------------
 ** Copyright 2000-2005 Christoph Oelckers
@@ -60,12 +60,19 @@ struct MissingSegInfo
 	int MTI_Index;	// tells us which MissingTextureInfo represents this seg.
 };
 
+struct SubsectorHackInfo
+{
+	gl_subsectordata * glsub;
+	byte flags;
+};
+
 static TArray<MissingTextureInfo> MissingUpperTextures;
 static TArray<MissingTextureInfo> MissingLowerTextures;
 
 static TArray<MissingSegInfo> MissingUpperSegs;
 static TArray<MissingSegInfo> MissingLowerSegs;
 
+static TArray<SubsectorHackInfo> SubsectorHacks;
 // collect all the segs
 
 
@@ -76,6 +83,7 @@ FreeList<gl_subsectorrendernode> SSR_List;
 
 static int totalupper, totallower, totalsectors;
 static QWORD totalms, showtotalms;
+static QWORD totalssms;
 static sector_t fakesec;
 
 
@@ -91,6 +99,15 @@ void AddUpperMissingTexture(seg_t * seg, fixed_t backheight)
 	clock(totalms);
 	MissingTextureInfo mti;
 	MissingSegInfo msi;
+
+	if (!seg->Subsector) 
+	{
+		msi.MTI_Index = -1;
+		msi.seg=seg;
+		MissingLowerSegs.Push(msi);
+		return;
+	}
+
 	gl_subsectordata * glsub = &gl_subsectors[seg->Subsector-subsectors];
 
 	// Should never happen because these are by definition completely self-referencing
@@ -144,6 +161,15 @@ void AddLowerMissingTexture(seg_t * seg, fixed_t backheight)
 	clock(totalms);
 	MissingTextureInfo mti;
 	MissingSegInfo msi;
+
+	if (!seg->Subsector) 
+	{
+		msi.MTI_Index = -1;
+		msi.seg=seg;
+		MissingLowerSegs.Push(msi);
+		return;
+	}
+
 	gl_subsectordata * glsub = &gl_subsectors[seg->Subsector-subsectors];
 
 	// Should never happen because these are by definition completely self-referencing
@@ -808,7 +834,8 @@ void DrawUnhandledMissingTextures()
 	validcount++;
 	for(int i=0;i<MissingUpperSegs.Size(); i++)
 	{
-		if (MissingUpperTextures[MissingUpperSegs[i].MTI_Index].seg==NULL) continue;
+		int index = MissingUpperSegs[i].MTI_Index;
+		if (index>=0 && MissingUpperTextures[index].seg==NULL) continue;
 
 		seg_t * seg = MissingUpperSegs[i].seg;
 
@@ -823,7 +850,8 @@ void DrawUnhandledMissingTextures()
 	validcount++;
 	for(int i=0;i<MissingLowerSegs.Size(); i++)
 	{
-		if (MissingLowerTextures[MissingLowerSegs[i].MTI_Index].seg==NULL) continue;
+		int index = MissingLowerSegs[i].MTI_Index;
+		if (index>=0 && MissingLowerTextures[index].seg==NULL) continue;
 
 		seg_t * seg = MissingLowerSegs[i].seg;
 
@@ -846,5 +874,267 @@ ADD_STAT(missingtextures,out)
 {
 	sprintf(out,"%d upper, %d lower, %.3f ms\n", 
 		totalupper, totallower, SecondsPerCycle*showtotalms*1000);
+}
+
+
+//==========================================================================
+//
+// Multi-sector deep water hacks
+//
+//==========================================================================
+
+void AddHackedSubsector(subsector_t * sub)
+{
+	SubsectorHackInfo sh={&gl_subsectors[sub-subsectors], 0};
+	SubsectorHacks.Push (sh);
+}
+
+//==========================================================================
+//
+// Finds a subsector whose plane can be used for rendering
+//
+//==========================================================================
+
+bool CheckAnchorFloor(gl_subsectordata * glsub)
+{
+	// This subsector has a one sided wall and can be used.
+	if (glsub->hacked==3) return true;
+
+	subsector_t * sub = glsub->sub;
+
+	for(int j=0;j<sub->numlines;j++)
+	{
+		seg_t * seg = &segs[sub->firstline+j];
+		if (!seg->PartnerSeg) return true;
+
+		subsector_t * backsub = seg->PartnerSeg->Subsector;
+		gl_subsectordata * backglsub = &gl_subsectors[backsub-subsectors];
+
+		// Find a linedef with a different visplane on the other side.
+		if (seg->linedef && 
+			(glsub->render_sector != backglsub->render_sector && sub->sector != backsub->sector))
+		{
+			// I'm ignoring slopes, scaling and rotation here. The likelihood of ZDoom maps
+			// using such crap hacks is simply too small
+			if (glsub->render_sector->floorpic==backglsub->render_sector->floorpic &&
+				glsub->render_sector->floortexz==backglsub->render_sector->floortexz &&
+				GetFloorLight(glsub->render_sector)==GetFloorLight(backglsub->render_sector))
+			{
+				continue;
+			}
+			// This means we found an adjoining subsector that clearly would go into another
+			// visplane. That means that this subsector can be used as an anchor.
+			return true;
+		}
+	}
+	return false;
+}
+
+//==========================================================================
+//
+// Collect connected subsectors that have to be rendered with the same plane
+//
+//==========================================================================
+
+void CollectSubsectorsFloor(gl_subsectordata * glsub, sector_t * anchor)
+{
+	static GLWall wall;
+	// mark it checked
+	glsub->validcount=validcount;
+
+
+	// We must collect any subsector that either is connected to this one with a miniseg
+	// or has the same visplane.
+	// We must not collect any subsector that  has the anchor's visplane!
+	if (glsub->sub->numlines>2) 
+	{
+		// Is not being rendererd so don't bother.
+		if (!(gl_ss_renderflags[glsub-gl_subsectors]&SSRF_PROCESSED)) return;
+
+		if (glsub->render_sector->floorpic!=anchor->floorpic ||
+			glsub->render_sector->floortexz!=anchor->floortexz ||
+			GetFloorLight(glsub->render_sector)!=GetFloorLight(anchor)) 
+		{
+			HandledSubsectors.Push (glsub);
+		}
+	}
+
+	// We can assume that all segs in this subsector are connected to a subsector that has
+	// to be checked as well
+	subsector_t * sub = glsub->sub;
+	for(int j=0;j<sub->numlines;j++)
+	{
+		seg_t * seg = &segs[sub->firstline+j];
+		if (seg->PartnerSeg)
+		{
+			gl_subsectordata * backglsub = &gl_subsectors[seg->PartnerSeg->Subsector-subsectors];
+
+			// could be an anchor itself.
+			if (!CheckAnchorFloor (backglsub)) // must not be an anchor itself!
+			{
+				if (backglsub->validcount!=validcount) CollectSubsectorsFloor (backglsub, anchor);
+			}
+			if (!seg->linedef || (seg->frontsector==seg->backsector && glsub->render_sector!=backglsub->render_sector))
+				wall.ProcessLowerMiniseg ( seg, glsub->render_sector, backglsub->render_sector);
+		}
+	}
+}
+
+//==========================================================================
+//
+// Finds a subsector whose plane can be used for rendering
+//
+//==========================================================================
+
+bool CheckAnchorCeiling(gl_subsectordata * glsub)
+{
+	// This subsector has a one sided wall and can be used.
+	if (glsub->hacked==3) return true;
+
+	subsector_t * sub = glsub->sub;
+
+	for(int j=0;j<sub->numlines;j++)
+	{
+		seg_t * seg = &segs[sub->firstline+j];
+		if (!seg->PartnerSeg) return true;
+
+		subsector_t * backsub = seg->PartnerSeg->Subsector;
+		gl_subsectordata * backglsub = &gl_subsectors[backsub-subsectors];
+
+		// Find a linedef with a different visplane on the other side.
+		if (seg->linedef && 
+			(glsub->render_sector != backglsub->render_sector && sub->sector != backsub->sector))
+		{
+			// I'm ignoring slopes, scaling and rotation here. The likelihood of ZDoom maps
+			// using such crap hacks is simply too small
+			if (glsub->render_sector->ceilingpic==backglsub->render_sector->ceilingpic &&
+				glsub->render_sector->ceilingtexz==backglsub->render_sector->ceilingtexz &&
+				GetCeilingLight(glsub->render_sector)==GetCeilingLight(backglsub->render_sector))
+			{
+				continue;
+			}
+			// This means we found an adjoining subsector that clearly would go into another
+			// visplane. That means that this subsector can be used as an anchor.
+			return true;
+		}
+	}
+	return false;
+}
+
+//==========================================================================
+//
+// Collect connected subsectors that have to be rendered with the same plane
+//
+//==========================================================================
+
+void CollectSubsectorsCeiling(gl_subsectordata * glsub, sector_t * anchor)
+{
+	static GLWall wall;
+	// mark it checked
+	glsub->validcount=validcount;
+
+
+	// We must collect any subsector that either is connected to this one with a miniseg
+	// or has the same visplane.
+	// We must not collect any subsector that  has the anchor's visplane!
+	if (glsub->sub->numlines>2) 
+	{
+		// Is not being rendererd so don't bother.
+		if (!(gl_ss_renderflags[glsub-gl_subsectors]&SSRF_PROCESSED)) return;
+
+		if (glsub->render_sector->ceilingpic!=anchor->ceilingpic ||
+			glsub->render_sector->ceilingtexz!=anchor->ceilingtexz ||
+			GetCeilingLight(glsub->render_sector)!=GetCeilingLight(anchor)) 
+		{
+			HandledSubsectors.Push (glsub);
+		}
+	}
+
+	// We can assume that all segs in this subsector are connected to a subsector that has
+	// to be checked as well
+	subsector_t * sub = glsub->sub;
+	for(int j=0;j<sub->numlines;j++)
+	{
+		seg_t * seg = &segs[sub->firstline+j];
+		if (seg->PartnerSeg)
+		{
+			gl_subsectordata * backglsub = &gl_subsectors[seg->PartnerSeg->Subsector-subsectors];
+
+			// could be an anchor itself.
+			if (!CheckAnchorCeiling (backglsub)) // must not be an anchor itself!
+			{
+				if (backglsub->validcount!=validcount) CollectSubsectorsCeiling (backglsub, anchor);
+			}
+		}
+	}
+}
+
+//==========================================================================
+//
+// Process the subsectors that have been marked as hacked
+//
+//==========================================================================
+
+void HandleHackedSubsectors()
+{
+	GLWall wall;
+	totalssms=0;
+	clock(totalssms);
+
+	// Each subsector may only be processed once in this loop!
+	validcount++;
+	for(int i=0;i<SubsectorHacks.Size();i++)
+	{
+		gl_subsectordata * glsub = SubsectorHacks[i].glsub;
+		if (glsub->validcount!=validcount && CheckAnchorFloor(glsub))
+		{
+			// Now collect everything that is connected with this subsector.
+			CollectSubsectorsFloor(glsub, glsub->render_sector);
+
+			for(int j=0;j<HandledSubsectors.Size();j++)
+			{				
+				gl_sectordata * glsec = &gl_sectors[glsub->render_sector->sectornum];
+				gl_subsectorrendernode * node = SSR_List.GetNew();
+
+				node->glsub = HandledSubsectors[j];
+				node->next = glsec->otherplanes[0];
+				glsec->otherplanes[0]=node;
+			}
+			HandledSubsectors.Clear();
+		}
+	}
+
+	// Each subsector may only be processed once in this loop!
+	validcount++;
+	for(int i=0;i<SubsectorHacks.Size();i++)
+	{
+		gl_subsectordata * glsub = SubsectorHacks[i].glsub;
+		if (glsub->validcount!=validcount && CheckAnchorCeiling(glsub))
+		{
+			// Now collect everything that is connected with this subsector.
+			CollectSubsectorsCeiling(glsub, glsub->render_sector);
+
+			for(int j=0;j<HandledSubsectors.Size();j++)
+			{				
+				gl_sectordata * glsec = &gl_sectors[glsub->render_sector->sectornum];
+				gl_subsectorrendernode * node = SSR_List.GetNew();
+
+				node->glsub = HandledSubsectors[j];
+				node->next = glsec->otherplanes[1];
+				glsec->otherplanes[1]=node;
+			}
+			HandledSubsectors.Clear();
+		}
+	}
+
+
+	SubsectorHacks.Clear();
+	unclock(totalssms);
+}
+
+ADD_STAT(sectorhacks,out)
+{
+	sprintf(out,"%.3f ms\n", 
+		SecondsPerCycle*totalssms*1000);
 }
 

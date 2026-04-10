@@ -45,7 +45,6 @@
 
 
 EXTERN_CVAR (Bool, gl_lights_checkside);
-int validcount2;
 SQWORD oldms;
 
 /*****************
@@ -104,7 +103,9 @@ void GLFlat::DrawSubsectorLights(gl_subsectordata * glsub)
 		}
 
 		p.Set(plane.plane);
-		if (!gl_SetupLight(p, light, nearPt, up, right, scale, !gl_isBlack(Colormap.FadeColor), Colormap.LightColor.a, false)) 
+		if (!gl_SetupLight(p, light, nearPt, up, right, scale, 
+							!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE, 
+							Colormap.LightColor.a, false)) 
 		{
 			node=node->nextLight;
 			continue;
@@ -181,10 +182,16 @@ void GLFlat::Draw(int pass)
 
 	if (pass==GLPASS_LIGHT)
 	{
-		// STYLE_Add forces black fog for lights
-		if (!gl_isBlack(Colormap.FadeColor)) gl_SetFog(lightlevel, Colormap.FadeColor, STYLE_Add);	
-		// black fog is diminsishing light and shouldn't affect the depth fading of lights that strongly.
-		else gl_SetFog((255+lightlevel)>>1, Colormap.FadeColor, STYLE_Normal);
+		if (!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE) 
+		{
+			// STYLE_Add forces black fog for lights
+			gl_SetFog(lightlevel, Colormap.FadeColor, STYLE_Add);	
+		}
+		else 
+		{
+			// black fog is diminishing light and shouldn't affect the depth fading of lights that strongly.
+			gl_SetFog((255+lightlevel)>>1, Colormap.FadeColor, STYLE_Normal);
+		}
 
 		if (sub)
 		{
@@ -225,6 +232,7 @@ void GLFlat::Draw(int pass)
 	{
 		gl_SetFog(lightlevel, Colormap.FadeColor, STYLE_Normal);
 		// gltexture==NULL means this is a plane of an FF_FOG volume.
+
 		if (gltexture) gl_SetColor(lightlevel+(extralight<<LIGHTSEGSHIFT), Colormap.LightColor,alpha);
 		else gl_SetColor(lightlevel, Colormap.LightColor, alpha);
 	}
@@ -263,7 +271,10 @@ void GLFlat::Draw(int pass)
 		{
 			gl_subsectordata * glsub = glsec->gl_subsectors[i];
 
-			if (gl_ss_renderflags[glsub-gl_subsectors]&renderflags)
+			// This is just a quick hack to make translucent 3D floors and portals work
+			// Since the translucency sorting code has to be rewritten anyway I won't
+			// add some complicated handling now because it'd get removed anyway.
+			if (gl_ss_renderflags[glsub-gl_subsectors]&renderflags || alpha < 1.0f-FLT_EPSILON)
 			{
 				DrawSubsector(glsub);
 			}
@@ -302,7 +313,17 @@ inline void GLFlat::PutFlat(bool translucent)
 	}
 	if (translucent)
 	{
-		gl_drawlist[GLDL_TRANSLUCENT].AddFlat(this);
+		if (renderflags&SSRF_RENDER3DPLANES)
+		{
+			gl_drawlist[GLDL_TRANSLUCENT].AddFlat(this);
+		}
+		else
+		{
+			// These come from a stacked sector. Sorting these polygons
+			// is not necessary and might even interfere with proper
+			// drawing order.
+			gl_drawlist[GLDL_TRANSLUCENTBORDER].AddFlat(this);
+		}
 		return;
 	}
 	else if (gl_lights && !gl_fixedcolormap)
@@ -310,7 +331,7 @@ inline void GLFlat::PutFlat(bool translucent)
 		gl_sectordata * sec = &gl_sectors[sector->sectornum];
 		for(int i=0;i<sec->subsectorcount;i++) if (sec->gl_subsectors[i]->lighthead)
 		{
-			if (!gl_isBlack(Colormap.FadeColor))
+			if (!gl_isBlack(Colormap.FadeColor) || level.flags&LEVEL_HASFADETABLE)
 				gl_drawlist[GLDL_LITFOG].AddFlat(this);
 			else if (!gltexture->tex->bMasked)
 				gl_drawlist[GLDL_LIT].AddFlat(this);
@@ -381,7 +402,6 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 	gl_sectordata * glsec = &gl_sectors[frontsector->sectornum];
 	gl_subsectordata * glsub = &gl_subsectors[sub-subsectors]; 
 	lightlist_t * light;
-	int i;
 
 #ifdef _DEBUG
 	if (frontsector==NULL)
@@ -396,6 +416,9 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 
 	sector=&sectors[frontsector->sectornum];	// this must be the real sector, not the fake one!
 	this->sub=NULL;
+
+	gl_ss_renderflags[sub-subsectors]|=SSRF_PROCESSED;
+	if (glsub->hacked&1) AddHackedSubsector(sub);
 
 	//
 	//
@@ -467,7 +490,7 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 			{
 				light = P_GetPlaneLight(sector, &sector->ceilingplane, true);
 
-				if(!(sector->CeilingFlags&SECF_ABSLIGHTING) || i!=0) lightlevel = *light->p_lightlevel;
+				if(!(sector->CeilingFlags&SECF_ABSLIGHTING)) lightlevel = *light->p_lightlevel;
 				Colormap.LightColor = (*light->p_extra_colormap)->Color;
 			}
 			if (alpha!=0.0f) Process(frontsector, true, false);

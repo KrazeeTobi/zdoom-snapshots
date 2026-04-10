@@ -83,12 +83,12 @@ static PalEntry SkyCapColor(unsigned int texno, bool bottom)
 			FGLTexture * tex = FGLTexture::ValidateTexture(texno);
 			if (tex)
 			{
-				unsigned char * buffer = tex->CreateTexBuffer(CM_DEFAULT, 0);
+				int w;
+				int h;
+				unsigned char * buffer = tex->CreateTexBuffer(CM_DEFAULT, 0, NULL, w, h);
 
 				if (buffer)
 				{
-					int w=tex->GetWidth();
-					int h=tex->GetHeight();
 					SkyColors[texno]=averageColor((unsigned long *) buffer, w * MIN(30, h), false);
 					if (h>30)
 					{
@@ -308,7 +308,7 @@ static void RenderDome(int texno, FGLTexture * tex, float x_offset, float y_offs
 	if (tex && !secondlayer) 
 	{
 		PalEntry pe = SkyCapColor(texno, false);
-		if (CM_Index!=CM_DEFAULT) ModifyPalette(&pe, CM_Index, 1);
+		if (CM_Index!=CM_DEFAULT) ModifyPalette(&pe, &pe, CM_Index, 1);
 		R=pe.r/255.0f;
 		G=pe.g/255.0f;
 		B=pe.b/255.0f;
@@ -333,7 +333,7 @@ static void RenderDome(int texno, FGLTexture * tex, float x_offset, float y_offs
 	if (tex && !secondlayer) 
 	{
 		PalEntry pe = SkyCapColor(texno, true);
-		if (CM_Index!=CM_DEFAULT) ModifyPalette(&pe, CM_Index, 1);
+		if (CM_Index!=CM_DEFAULT) ModifyPalette(&pe, &pe, CM_Index, 1);
 		R=pe.r/255.0f;
 		G=pe.g/255.0f;
 		B=pe.b/255.0f;

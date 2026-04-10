@@ -35,6 +35,7 @@
 
 #include "c_dispatch.h"
 #include "p_local.h"
+#include "vectors.h"
 #include "gl/gl_system.h"
 #include "gl/gl_struct.h"
 #include "gl/gl_lights.h"
@@ -45,7 +46,11 @@
 
 
 CVAR (Bool, gl_lights_debug, false, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
-CVAR (Bool, gl_lights, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
+CUSTOM_CVAR (Bool, gl_lights, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
+{
+	if (self) gl_RecreateAllAttachedLights();
+	else gl_DeleteAllAttachedLights();
+}
 CVAR (Bool, gl_attachedlights, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 CVAR (Bool, gl_bulletlight, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 CVAR (Bool, gl_lights_checkside, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
@@ -196,7 +201,17 @@ int gl_GetFogDensity(int lightlevel, PalEntry fogcolor)
 }
 
 
+static PalEntry cfogcolor=-1;
+static int cfogdensity=-1;
 
+void gl_InitFog()
+{
+	cfogcolor=-1;
+	cfogdensity=-1;
+	glDisable(GL_FOG);
+	glHint(GL_FOG_HINT, GL_FASTEST);
+	glFogi(GL_FOG_MODE, GL_EXP);
+}
 //==========================================================================
 //
 // Sets the fog for the current polygon
@@ -205,10 +220,15 @@ int gl_GetFogDensity(int lightlevel, PalEntry fogcolor)
 
 void gl_SetFog(int lightlevel, PalEntry fogcolor, int blendmode)
 {
-static PalEntry cfogcolor=-1;
-static int cfogdensity=-1;
 
-	int fogdensity = gl_GetFogDensity(lightlevel, fogcolor);
+	int fogdensity;
+
+	if (level.flags&LEVEL_HASFADETABLE)
+	{
+		fogdensity=70;
+		fogcolor=0x808080;
+	}
+	else fogdensity = gl_GetFogDensity(lightlevel, fogcolor);
 
 	// For additive rendering using the regular fog color here would mean applying it twice
 	// so always use black
@@ -365,10 +385,10 @@ void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int 
 		light=node->lightsource;
 		if (!(light->flags2&MF2_DORMANT))
 		{
-			fixed_t distsq = TMulScale16(thing->x - light->x, thing->x - light->x, 
-										 thing->y - light->y, thing->y - light->y, 
-										 (thing->z + thing->height)/2 - light->z, (thing->z + thing->height)/2 - light->z);
-			dist = F_TO_MAP(sqrt(distsq/65536.0f));
+			vec3_t lvec = { TO_MAP(thing->x - light->x), TO_MAP(thing->y - light->y), 
+							TO_MAP((thing->z + thing->height)/2 - light->z) };
+
+			dist = VectorLength(lvec);
 			radius = F_TO_MAP(light->GetRadius() * gl_lights_size);
 			
 			if (dist < radius)

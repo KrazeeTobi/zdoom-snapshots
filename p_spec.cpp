@@ -821,7 +821,7 @@ BOOL P_TestActivateLine (line_t *line, AActor *mo, int side, int activationType)
 	{ 
 		return false;
 	}
-	if (!mo->player &&
+	if (mo && !mo->player &&
 		!(mo->flags & MF_MISSILE) &&
 		!(line->flags & ML_MONSTERSCANACTIVATE) &&
 		(activationType != SPAC_MCROSS || lineActivation != SPAC_MCROSS))

@@ -3099,10 +3099,19 @@ void R_PrecacheLevel (void)
 			if (hitlist[i])
 			{
 				if (currentrenderer != 1) tex->GetPixels ();
+				else if (gl_precache)
+				{
+					FGLTexture * gltex = FGLTexture::ValidateTexture(tex);
+					if (gltex) gltex->Bind (CM_DEFAULT);
+				}
 			}
 			else
 			{
 				tex->Unload ();
+				if (tex->gltex)
+				{
+					tex->gltex->Clean (true);
+				}
 			}
 		}
 	}

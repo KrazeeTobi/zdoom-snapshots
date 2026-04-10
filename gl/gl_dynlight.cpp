@@ -203,6 +203,7 @@ FLightDefaults::~FLightDefaults()
 
 void FLightDefaults::ApplyProperties(ADynamicLight * light) const
 {
+	light->lighttype = m_type;
 	light->angle = m_Angle;
 	light->SetOffset(m_X, m_Y, m_Z);
 	light->halo = m_halo;
@@ -992,6 +993,7 @@ protected:
 FInternalLightAssociation::FInternalLightAssociation(FLightAssociation * asso)
 {
 
+	m_AssocLight=NULL;
 	for(int i=0;i<LightDefaults.Size();i++)
 	{
 		if (!strcmp(asso->Light(), LightDefaults[i]->GetName()))
@@ -1146,6 +1148,17 @@ void gl_DeleteAllAttachedLights()
 	}
 
 
+}
+
+void gl_RecreateAllAttachedLights()
+{
+	TThinkerIterator<AActor> it;
+	AActor * a;
+
+	while (a=it.Next()) 
+	{
+		gl_SetActorLights(a);
+	}
 }
 
 

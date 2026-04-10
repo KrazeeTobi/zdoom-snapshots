@@ -45,7 +45,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib dsound.lib dxguid.lib ddraw.lib dinput.lib fmodvc.lib winmm.lib wsock32.lib comctl32.lib"
+				AdditionalDependencies="opengl32.lib glu32.lib dsound.lib dxguid.lib ddraw.lib dinput.lib fmodvc.lib winmm.lib wsock32.lib comctl32.lib devil.lib"
 				OutputFile=".\CDoom___Win32_Optimized_Debug/CDoom.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
@@ -118,7 +118,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib dsound.lib dxguid.lib ddraw.lib dinput.lib fmodvc.lib winmm.lib wsock32.lib comctl32.lib"
+				AdditionalDependencies="opengl32.lib glu32.lib dsound.lib dxguid.lib ddraw.lib dinput.lib fmodvc.lib winmm.lib wsock32.lib comctl32.lib devil.lib"
 				OutputFile="../GZDoom.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
@@ -187,7 +187,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib dsound.lib dxguid.lib ddraw.lib dinput.lib fmodvc.lib winmm.lib wsock32.lib comctl32.lib"
+				AdditionalDependencies="opengl32.lib glu32.lib dsound.lib dxguid.lib ddraw.lib dinput.lib fmodvc.lib winmm.lib wsock32.lib comctl32.lib devil.lib"
 				OutputFile=".\Debug/GZDoom.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
@@ -13216,6 +13216,64 @@
 						PreprocessorDefinitions=""
 						AdditionalIncludeDirectories="win32"/>
 				</FileConfiguration>
+			</File>
+		</Filter>
+		<Filter
+			Name="FraggleScript"
+			Filter="">
+			<File
+				RelativePath=".\fragglescript\t_cmd.cpp">
+			</File>
+			<File
+				RelativePath=".\fragglescript\t_fspic.cpp">
+			</File>
+			<File
+				RelativePath=".\fragglescript\t_func.cpp">
+			</File>
+			<File
+				RelativePath=".\fragglescript\T_func.h">
+			</File>
+			<File
+				RelativePath=".\fragglescript\t_load.cpp">
+			</File>
+			<File
+				RelativePath=".\fragglescript\t_oper.cpp">
+			</File>
+			<File
+				RelativePath=".\fragglescript\T_oper.h">
+			</File>
+			<File
+				RelativePath=".\fragglescript\t_parse.cpp">
+			</File>
+			<File
+				RelativePath=".\fragglescript\T_parse.h">
+			</File>
+			<File
+				RelativePath=".\fragglescript\t_prepro.cpp">
+			</File>
+			<File
+				RelativePath=".\fragglescript\T_prepro.h">
+			</File>
+			<File
+				RelativePath=".\fragglescript\t_Saveg.cpp">
+			</File>
+			<File
+				RelativePath=".\fragglescript\t_script.cpp">
+			</File>
+			<File
+				RelativePath=".\fragglescript\T_script.h">
+			</File>
+			<File
+				RelativePath=".\fragglescript\t_spec.cpp">
+			</File>
+			<File
+				RelativePath=".\fragglescript\T_spec.h">
+			</File>
+			<File
+				RelativePath=".\fragglescript\t_vari.cpp">
+			</File>
+			<File
+				RelativePath=".\fragglescript\T_vari.h">
 			</File>
 		</Filter>
 	</Files>

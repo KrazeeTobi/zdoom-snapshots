@@ -1,4 +1,96 @@
+11. Sep. 2005
+- Time for 0.9.4!
+- To have some more test material I converted the XG scripts of the first 3 
+  Doom64 maps to FS. For that I also added some new functions and options.
+- Fixed: Owner-less missiles could crash the game when trying to activate
+  a shootable line special.
+- Finished adding all Legacy FS commands and all quick tests done so far
+  look good.
 
+
+10. Sep. 2005
+- Started adding the missing Legacy FS commands. Fortunately most is
+  rather trivial stuff that should be easy to do.
+- Added some rudimentary parsing of the level info block. The important
+  options should work but don't expect this to be a perfect emulation.
+  Some of it is being done too late to have any effect where it should.
+  
+  
+9. Sep. 2005
+- added a third timer to the HUD: It counts the time spent in the
+  current level and is only visible in hubs.
+- Finished adjusting the Eternity FraggleScript source. I can play
+  the Eternity version of DSV4 except it seems that Eternity isn't
+  handling Boom colormaps correctly. The maps were clearly designed
+  for a different behavior. After checking with Legacy I noticed that
+  it can't handle the colormap command properly either so I made it no-op.
+
+
+8. Sep. 2005
+- Fixed: Light types weren't transferred for associated lights.
+- Fixed: Undefined dynamic lights weren't properly detected and crashed.
+- Did a first quick FS check with Nimrod. Noticed that I had to modify
+  the sound and music commands because the way they work is far too
+  hard coded to Doom's naming conventions and are logically not aware
+  of SNDINFO.
+  For sounds it first checks whether a sound of that name already exists.
+  If not 'DS' is prepended to the name and a new logical sound defined.
+  For music it first checks for an exact name match. If that fails it
+  prepends 'D_' to the name and checks again.
+- Continued with FraggleScript. Most importantly cameras, moving floors
+  and ceilings and light level changers are working now.
+
+
+7. Sep. 2005
+- Finished with the deep sector hack code. 
+- Did some work on FraggleScript's t_func.cpp. Approx 15% of it are
+  done and I can run some simple scripts.
+
+
+6. Sep. 2005
+- Started adding code to handle vanilla deep sector hacks like
+  in Strain MAP21. It mostly works but still has a few bugs.
+- Fixed: The GWA loader didn't set the subsector for minisegs.
+- Added some fallback options to the OpenGL startup code so that
+  it runs on older cards.
+- Fixed: Hitscan decals didn't show on 3D-floor faces.
+- Added support for sector action things in 3D-floor control sectors.
+
+
+5. Sep. 2005
+- Fixed: Before drawing any 2D stuff the fragment programs must be
+  disabled.
+- Changed DElevator to be aware of 3D floors
+- Fixed several issues from adding hires texture support.
+
+
+4. Sep. 2005
+- Fixed: The depth fog menu option had incorrect parameter settings.
+- Added support for Doomsday hires texture packs. Also added precaching
+  for GL textures because loading the hires textures when needed causes
+  quite noticable delays.
+- Fixed: The r_drawplayersprites CVAR was ignored by the GL renderer.
+- Added support for Hexen's standard fog table. This doesn't support
+  custom fog tables though.
+- Continued with FraggleScript. Loading/Saving and actor management are
+  done. Actor management was particularly ugly and only possible by using
+  some intermediate class derived from DObject to handle the automatic
+  pointer cleanup.
+- Fixed: The parser for Legacy's linedef color format was broken.
+
+
+3. Sep. 2005
+- Changed the horizon renderer again. Now it draws a large set of 256x256
+  tiles across the entire level. I hope this solves all the fog issues I had.
+- Changed ZDoom.wad to GZDoom.wad because some people tried to put both
+  ports into the same directory. Now they can.
+- Started with the integration of FraggleScript. So far it compiles and
+  I can link but it doesn't work yet. I hope the memory management works.
+  FS depends so heavily on the zone heap (which ZDoom has thrown away
+  quite some time ago) that there are probably a few leaks that remain
+  undiscovered. I hope it isn't too bad.
+  
+  
 2. Sep. 2005
 -fixed: Volume changes for streamed sound formats did not work because
   it didn't store the channel's ID.
