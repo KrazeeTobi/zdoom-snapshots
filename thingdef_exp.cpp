@@ -278,8 +278,8 @@ struct ExpData
 		{
 			if (Children[0]->Type == EX_Const)
 			{
-				Type = EX_Const;
 				Value = EvalExpression (this, NULL);
+				Type = EX_Const;
 			}
 		}
 		else if (Type == EX_Cond)
@@ -314,6 +314,9 @@ struct ExpData
 	}
 	bool Compare (ExpData *other)
 	{
+		if (!other)
+			return false;
+
 		if (Type != other->Type ||
 			Value.Type != other->Value.Type ||
 			Value.Float != other->Value.Float)

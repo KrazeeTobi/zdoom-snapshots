@@ -37,6 +37,7 @@
 #define __GL_PORTAL_H
 
 #include "tarray.h"
+#include "gl/gl_intern.h"
 #include "gl/gl_renderstruct.h"
 
 struct skycube_t
@@ -69,6 +70,7 @@ private:
 	fixed_t savedviewz;
 	angle_t savedviewangle;
 	AActor * savedviewactor;
+	area_t savedviewarea;
 
 protected:
 	TArray<GLWall> lines;
@@ -201,6 +203,7 @@ struct GLHorizonPortal : public GLPortal
 
 protected:
 	int CreateGeometry();
+	void RenderGeometry();
 	virtual void DrawContents();
 	virtual void * GetSource() const { return origin; }
 

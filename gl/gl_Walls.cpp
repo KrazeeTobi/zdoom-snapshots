@@ -835,6 +835,7 @@ bool GLWall::DoHorizon(seg_t * seg,sector_t * fs, vertex_t * v1,vertex_t * v2)
 			hi.plane.GetFromSector(fs, true);
 			hi.lightlevel=GetCeilingLight(fs);
 			hi.colormap=fs->ColorMap;
+			if (gl_fixedcolormap) hi.colormap.GetFixedColormap();
 			horizon=&hi;
 			topflat=1;
 			PutWall(0);
@@ -855,6 +856,7 @@ bool GLWall::DoHorizon(seg_t * seg,sector_t * fs, vertex_t * v1,vertex_t * v2)
 			hi.plane.GetFromSector(fs, false);
 			hi.lightlevel=GetFloorLight(fs);
 			hi.colormap=fs->ColorMap;
+			if (gl_fixedcolormap) hi.colormap.GetFixedColormap();
 			horizon=&hi;
 			topflat=0;
 			PutWall(0);
@@ -1608,7 +1610,7 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 #ifdef _DEBUG
 	if (seg->linedef-lines==break_renderlinedef && IsDebuggerPresent())
 		__asm int 3;	
-	if (seg->linedef-lines==107)
+	if (seg->linedef-lines==19243)
 		__asm nop
 #endif
 

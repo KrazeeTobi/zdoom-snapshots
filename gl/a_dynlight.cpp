@@ -652,7 +652,7 @@ float ADynamicLight::DistToSeg(seg_t *seg)
    float seg_dy = FIX2FLT(seg->v2->y - seg->v1->y);
    float seg_length_sq = seg_dx * seg_dx + seg_dy * seg_dy;
 
-   u = (  FIX2FLT(x - seg->v1->x) * seg_dx +  (FIX2FLT(y) - seg->v1->y) * seg_dy) / seg_length_sq;
+   u = (  FIX2FLT(x - seg->v1->x) * seg_dx + FIX2FLT(y - seg->v1->y) * seg_dy) / seg_length_sq;
    if (u < 0.f) u = 0.f; // clamp the test point to the line segment
    if (u > 1.f) u = 1.f;
 

@@ -1,4 +1,39 @@
 
+2. Sep. 2005
+-fixed: Volume changes for streamed sound formats did not work because
+  it didn't store the channel's ID.
+-added some checking code to the GWA loader to verify the validity of
+  the loaded GL nodes. If the first seg in one subsector is found to
+  be a miniseg the nodes will be considered invalid now.
+-added code that handles the absence of wglChoosePixelFormatARB because
+  There appaer to be drivers which still don't support it.
+-fixed: The horizon code did not check for invulnerability colormaps.
+-fixed: The code that handles missing upper/lower textures by flooding
+  the gap with a flat texture did not remove its rotation matrix from
+  the texture matrix stack.
+
+
+1. Sep. 2005
+-fixed a bug in the distance calculation of ADynamicLight::LinkLights.  
+-reverted to my original horizon code with a few changes. Drawing the
+  entire plane with one large polygon caused fog inaccuracies.
+-fixed: The portal initialization code forgot so save the view area.
+-fixed: Flooding gaps caused by missing lower textures checked for the
+  ceiling height instead of the floor height.
+-added: Dynamic lights now affect the player's weapon sprite.
+-fixed: Lighting actors with dynamic lights did not work correctly.
+-fixed: Fog state check was done incorrectly resulting in fog not being
+ switched off properly if required.
+-added: 3D floors can now use transparent textures without screwing up
+  dynamic lighting.
+-fixed: Invalid light definitions were not removed properly.
+-fixed: Decals smaller than 2 map units didn't get displayed properly.
+-fixed: GZDoom was still using DECORATE code from the buggy 7.8. release of
+  ZDoom .96x
+-changed: Fullbright items under water no longer override the sector's color.
+  Same for the player's weapon sprite.
+-changed GL_FOG_HINT to GL_FASTEST because it appears to work better on ATI cards.
+
 
 31. Aug. 2005
 - fixed: The top sides of 3D floors were drawn one unit too low.

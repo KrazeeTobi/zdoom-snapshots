@@ -484,6 +484,25 @@ bool gl_DoLoadGLNodes(FILE * f, wadlump_t * lumps)
 		segs = NULL;
 		return false;
 	}
+
+	// Quick check for the validity of the nodes
+	// For invalid nodes there is a high chance that this test will fail
+
+	for (int i = 0; i < numsubsectors; i++)
+	{
+		seg_t * seg = &segs[subsectors[i].firstline];
+		if (!seg->sidedef) 
+		{
+			Printf("GWA file contains invalid nodes. The BSP has to be rebuilt.\n");
+			delete [] nodes;
+			nodes = NULL;
+			delete [] subsectors;
+			subsectors = NULL;
+			delete [] segs;
+			segs = NULL;
+			return false;
+		}
+	}
 	return true;
 }
 

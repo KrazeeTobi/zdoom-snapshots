@@ -1045,7 +1045,15 @@ void gl_InitializeActorLights()
 					defaults->lightassociations = new TArray<FInternalLightAssociation*>;
 				}
 				TArray<FInternalLightAssociation *> * lights = gl_GetActorLights(defaults);
-				lights->Push(iasso);
+				if (iasso->Light()==NULL)
+				{
+					// The definition was not valid.
+					delete iasso;
+				}
+				else
+				{
+					lights->Push(iasso);
+				}
 			}
 		}
 	}

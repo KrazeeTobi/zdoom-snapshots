@@ -202,10 +202,10 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 	a = actor->alpha / (FRACUNIT * 1.f);
 	
 	// now clip the decal to the actual polygon - we do this in full texel coordinates
-	int decalwidth=(tex->TextureWidth()*actor->xscale)>>6;
-	int decalheight=(tex->TextureHeight()*actor->xscale)>>6;
-	int decallefto=(tex->GetLeftOffset()*actor->xscale)>>6;
-	int decaltopo=(tex->GetTopOffset()*actor->xscale)>>6;
+	int decalwidth=((1<<5)+tex->TextureWidth()*actor->xscale)>>6;
+	int decalheight=((1<<5)+tex->TextureHeight()*actor->xscale)>>6;
+	int decallefto=((1<<5)+tex->GetLeftOffset()*actor->xscale)>>6;
+	int decaltopo=((1<<5)+tex->GetTopOffset()*actor->xscale)>>6;
 	
 	// texel index of the decal's left edge
 	int decalpixpos=MulScale20(side->TexelLength, actor->floorclip)	- (flipx? decalwidth-decallefto : decallefto);

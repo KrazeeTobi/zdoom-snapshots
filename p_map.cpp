@@ -151,10 +151,11 @@ static BOOL PIT_FindFloorCeiling (line_t *ld)
 	fixed_t sx, sy;
 
 	// set openrange, opentop, openbottom
-	if (((ld->frontsector->floorplane.a | ld->frontsector->floorplane.b) |
+	if ((((ld->frontsector->floorplane.a | ld->frontsector->floorplane.b) |
 		 (ld->backsector->floorplane.a | ld->backsector->floorplane.b) |
 		 (ld->frontsector->ceilingplane.a | ld->frontsector->ceilingplane.b) |
 		 (ld->backsector->ceilingplane.a | ld->backsector->ceilingplane.b)) == 0)
+		 && ld->backsector->e->ffloors.Size()==0 && ld->frontsector->e->ffloors.Size()==0)
 	{
 		P_LineOpening (tmfthing, ld, sx=tmx, sy=tmy, tmx, tmy);
 	}
@@ -651,7 +652,6 @@ BOOL PIT_CheckLine (line_t *ld)
 	if (P_BoxOnLineSide (tmbbox, ld) != -1)
 		return true;
 
-	// A line has been hit
 /*
 =
 = The moving thing's destination position will cross the given line.
@@ -722,10 +722,11 @@ BOOL PIT_CheckLine (line_t *ld)
 	fixed_t sx, sy;
 
 	// set openrange, opentop, openbottom
-	if (((ld->frontsector->floorplane.a | ld->frontsector->floorplane.b) |
+	if ((((ld->frontsector->floorplane.a | ld->frontsector->floorplane.b) |
 		 (ld->backsector->floorplane.a | ld->backsector->floorplane.b) |
 		 (ld->frontsector->ceilingplane.a | ld->frontsector->ceilingplane.b) |
 		 (ld->backsector->ceilingplane.a | ld->backsector->ceilingplane.b)) == 0)
+		 && ld->backsector->e->ffloors.Size()==0 && ld->frontsector->e->ffloors.Size()==0)
 	{
 		P_LineOpening (tmthing, ld, sx=tmx, sy=tmy, tmx, tmy);
 	}
@@ -764,7 +765,8 @@ BOOL PIT_CheckLine (line_t *ld)
 		// the floorplane on both sides is identical with the current one
 		// so don't mess around with the z-position
 		if (ld->frontsector->floorplane==ld->backsector->floorplane &&
-			ld->frontsector->floorplane==tmthing->Sector->floorplane)
+			ld->frontsector->floorplane==tmthing->Sector->floorplane &&
+			!ld->frontsector->e->ffloors.Size() && !ld->backsector->e->ffloors.Size())
 		{
 			openbottom=INT_MIN;
 		}

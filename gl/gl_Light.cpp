@@ -223,11 +223,8 @@ static int cfogdensity=-1;
 	// no fog in enhanced vision modes!
 	if (fogdensity==0 || !gl_depthfog)
 	{
-		if (cfogcolor!=-1 || cfogdensity!=-1)
-		{
-			cfogcolor=cfogdensity=-1;
-			glDisable(GL_FOG);
-		}
+		cfogcolor=cfogdensity=-1;
+		glDisable(GL_FOG);
 	}
 	else
 	{
@@ -361,7 +358,6 @@ void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int 
 	ADynamicLight *light;
 	float frac, dist, tr, tg, tb, lr, lg, lb;
 	float radius;
-	float intensity=0;
 	
 	tr=tg=tb=0;
 	while (node)
@@ -371,7 +367,7 @@ void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int 
 		{
 			fixed_t distsq = TMulScale16(thing->x - light->x, thing->x - light->x, 
 										 thing->y - light->y, thing->y - light->y, 
-										 thing->z - light->z, thing->z - light->z);
+										 (thing->z + thing->height)/2 - light->z, (thing->z + thing->height)/2 - light->z);
 			dist = F_TO_MAP(sqrt(distsq/65536.0f));
 			radius = F_TO_MAP(light->GetRadius() * gl_lights_size);
 			
@@ -379,21 +375,23 @@ void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int 
 			{
 				frac = 1.0f - (dist / radius);
 				
-				intensity += frac;
-				lr = light->GetRed() / 255.0f * gl_lights_intensity;
-				lg = light->GetGreen() / 255.0f * gl_lights_intensity;
-				lb = light->GetBlue() / 255.0f * gl_lights_intensity;
-				if (light->IsSubtractive())
+				if (frac > 0)
 				{
-					lightColor.Set(lr, lg, lb);
-					lr = (lightColor.Length() - lightColor.X()) * -1;
-					lg = (lightColor.Length() - lightColor.Y()) * -1;
-					lb = (lightColor.Length() - lightColor.Z()) * -1;
+					lr = light->GetRed() / 255.0f * gl_lights_intensity;
+					lg = light->GetGreen() / 255.0f * gl_lights_intensity;
+					lb = light->GetBlue() / 255.0f * gl_lights_intensity;
+					if (light->IsSubtractive())
+					{
+						lightColor.Set(lr, lg, lb);
+						lr = (lightColor.Length() - lightColor.X()) * -1;
+						lg = (lightColor.Length() - lightColor.Y()) * -1;
+						lb = (lightColor.Length() - lightColor.Z()) * -1;
+					}
+					
+					tr += lr * frac;
+					tg += lg * frac;
+					tb += lb * frac;
 				}
-				
-				tr += lr * frac;
-				tg += lg * frac;
-				tb += lb * frac;
 				
 			}
 		}
@@ -409,7 +407,6 @@ void gl_SetSpriteLight( AActor * thing, int lightlevel, int red, int green, int 
 		tb= (tb*(32-desaturation)+ gray*desaturation)/32;
 	}
 
-	lightlevel = clamp<int>(lightlevel + quickertoint(intensity)*255, 0, 255);
 	gl_GetLightColor(lightlevel,red,green,blue,&r,&g,&b);
 	r = clamp<float>(r+tr, 0, 1.0f);
 	g = clamp<float>(g+tg, 0, 1.0f);

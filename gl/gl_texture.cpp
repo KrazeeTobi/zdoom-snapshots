@@ -333,9 +333,6 @@ void FMultiPatchTexture::CopyTrueColorPixels(BYTE * buffer, int buf_width, int b
 {
 	for(int i=0;i<NumParts;i++)
 	{
-		if (!stricmp(Name, "Brown144") && (i==5 || i==5)) 
-			__asm nop
-
 		Parts[i].Texture->GetWidth();
 		Parts[i].Texture->CopyTrueColorPixels(buffer, buf_width, buf_height, 
 											  x+Parts[i].OriginX, y+Parts[i].OriginY, cm, translation);
@@ -591,6 +588,9 @@ FPicZTexture::FPicZTexture (int lumpnum)
 	Wads.GetLumpName (Name, lumpnum);
 	Name[8] = 0;
 
+	if (!stricmp(Name, "playa2a8"))
+		__asm nop
+
 	UseType = TEX_MiscPatch;
 	bMasked = true;
 
@@ -636,7 +636,14 @@ FPicZTexture::FPicZTexture (int lumpnum)
 		PaletteMap = new BYTE[256];
 		memcpy(PaletteMap, GPalette.Remap, 256);
 	}
-	if (transcolor!=-1) PaletteMap[transcolor]=0;
+	if (transcolor!=-1) 
+	{
+		PaletteMap[transcolor]=0;
+	}
+	else
+	{
+		bMasked=false;
+	}
 }
 
 FPicZTexture::~FPicZTexture ()
@@ -804,6 +811,21 @@ FGLTexture::FGLTexture(FTexture * tx)
 
 	scalex = tex->ScaleX? tex->ScaleX/8.0f : 1.0f;
 	scaley = tex->ScaleY? tex->ScaleY/8.0f : 1.0f;
+
+	if (tex->bHasCanvas)
+	{
+		if (!GLTexture::supportsNonPower2)
+		{
+			// We have to resize to the nearest power of 2 
+			int p = 2 << (int)(log10f(Width)/log10f(2)); 
+			int q = 2 << (int)(log10f(Height)/log10f(2)); 
+
+			scalex = (float)p * scalex / Width;
+			scaley = (float)q * scaley / Height;
+			Width=p;
+			Height=q;
+		}
+	}
 	RenderWidth=(short)(Width/scalex);
 	RenderHeight=(short)(Height/scaley);
 
@@ -822,6 +844,9 @@ FGLTexture::FGLTexture(FTexture * tx)
 	}
 	if (!gltextures) gltextures = new TArray<FGLTexture *>;
 	index = gltextures->Push(this);
+
+	if (tex->bHasCanvas) scaley=-scaley;
+
 }
 
 //===========================================================================
@@ -1105,7 +1130,7 @@ const WorldTextureInfo * FGLTexture::Bind(int cm)
 
 		// If this is a warped texture that needs updating
 		// delete all system textures created for this
-		if (tex->CheckModified())
+		if (tex->CheckModified() && !tex->bHasCanvas)
 		{
 			gltexture->Clean(true);
 		}
@@ -1162,7 +1187,7 @@ const PatchTextureInfo * FGLTexture::BindPatch(int cm, int translation, const by
 
 		// If this is a warped texture that needs updating
 		// delete all system textures created for this
-		if (tex->CheckModified())
+		if (tex->CheckModified() && !tex->bHasCanvas)
 		{
 			glpatch->Clean(true);
 		}

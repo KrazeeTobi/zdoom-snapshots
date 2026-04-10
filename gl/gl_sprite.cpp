@@ -386,7 +386,7 @@ void GLSprite::Process(AActor* thing,sector_t * sector)
 		if (gl_fixedcolormap==CM_LITE)
 		{
 			if (gl_enhanced_lightamp &&
-				(thing->flags&(MF_SPECIAL) || thing->flags3&MF3_ISMONSTER || thing->flags&MF_MISSILE || thing->flags&MF_CORPSE))
+				(thing->IsKindOf(RUNTIME_CLASS(AInventory)) || thing->flags3&MF3_ISMONSTER || thing->flags&MF_MISSILE || thing->flags&MF_CORPSE))
 			{
 				Colormap.LightColor.a=CM_LITE;
 			}
@@ -397,10 +397,14 @@ void GLSprite::Process(AActor* thing,sector_t * sector)
 		Colormap=rendersector->ColorMap;
 		if (fullbright)
 		{
-			// Only make the light white but keep everything else (fog, desaturation and Boom colormap.)
-			Colormap.LightColor.r=
-			Colormap.LightColor.g=
-			Colormap.LightColor.b=0xff;
+			if (rendersector == &sectors[rendersector->sectornum] || in_area != area_below)	
+				// under water areas keep their color for fullbright objects
+			{
+				// Only make the light white but keep everything else (fog, desaturation and Boom colormap.)
+				Colormap.LightColor.r=
+				Colormap.LightColor.g=
+				Colormap.LightColor.b=0xff;
+			}
 		}
 		else if (level.flags&LEVEL_NOCOLOREDSPRITELIGHTING)
 		{
@@ -494,7 +498,7 @@ void GLSprite::Process(AActor* thing,sector_t * sector)
 		// Tests show that this doesn't look good for many decorations and corpses
 		if (gl_spriteclip>0)
 		{
-			if (((thing->player || thing->flags3&MF3_ISMONSTER || thing->flags&MF_SPECIAL) && 
+			if (((thing->player || thing->flags3&MF3_ISMONSTER || thing->IsKindOf(RUNTIME_CLASS(AInventory))) && 
 				(thing->flags&MF_ICECORPSE || !(thing->flags&MF_CORPSE))) || gl_spriteclip==2)
 			{
 				float btm=1000000.0f;

@@ -530,6 +530,8 @@ bool Win32GLFrameBuffer::ReadInitExtensions()
 	CollectExtensions();
 
 	wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
+	
+	/*
 	if (wglChoosePixelFormatARB == NULL)
 	{
 		Printf("ZGL: Couldn't find wglChoosePixelFormatARB.\n");
@@ -539,6 +541,7 @@ bool Win32GLFrameBuffer::ReadInitExtensions()
 		ShutdownDummy(dummy);
 		return false;
 	}
+	*/
 
 	// any extra stuff here?
 
@@ -624,64 +627,103 @@ bool Win32GLFrameBuffer::SetupPixelFormat()
 		return false;
 	}
 
-	attributes[0]	=	WGL_RED_BITS_ARB; //bits
-	attributes[1]	=	8;
-	attributes[2]	=	WGL_GREEN_BITS_ARB; //bits
-	attributes[3]	=	8;
-	attributes[4]	=	WGL_BLUE_BITS_ARB; //bits
-	attributes[5]	=	8;
-	attributes[6]	=	WGL_ALPHA_BITS_ARB;
-	attributes[7]	=	8;
-	attributes[8]	=	WGL_DEPTH_BITS_ARB;
-	attributes[9]	=	24;
-	attributes[10]	=	WGL_STENCIL_BITS_ARB;
-	attributes[11]	=	8;
-
-	attributes[12]	=	WGL_DRAW_TO_WINDOW_ARB;	//required to be true
-	attributes[13]	=	true;
-	attributes[14]	=	WGL_SUPPORT_OPENGL_ARB;
-	attributes[15]	=	true;
-	attributes[16]	=	WGL_DOUBLE_BUFFER_ARB;
-	attributes[17]	=	true;
-
-	attributes[18]	=	WGL_ACCELERATION_ARB;	//required to be FULL_ACCELERATION_ARB
-	if (gl_vid_allowsoftware)
+	if (wglChoosePixelFormatARB)
 	{
-		attributes[19]	=	WGL_NO_ACCELERATION_ARB;
+		attributes[0]	=	WGL_RED_BITS_ARB; //bits
+		attributes[1]	=	8;
+		attributes[2]	=	WGL_GREEN_BITS_ARB; //bits
+		attributes[3]	=	8;
+		attributes[4]	=	WGL_BLUE_BITS_ARB; //bits
+		attributes[5]	=	8;
+		attributes[6]	=	WGL_ALPHA_BITS_ARB;
+		attributes[7]	=	8;
+		attributes[8]	=	WGL_DEPTH_BITS_ARB;
+		attributes[9]	=	24;
+		attributes[10]	=	WGL_STENCIL_BITS_ARB;
+		attributes[11]	=	8;
+	
+		attributes[12]	=	WGL_DRAW_TO_WINDOW_ARB;	//required to be true
+		attributes[13]	=	true;
+		attributes[14]	=	WGL_SUPPORT_OPENGL_ARB;
+		attributes[15]	=	true;
+		attributes[16]	=	WGL_DOUBLE_BUFFER_ARB;
+		attributes[17]	=	true;
+	
+		attributes[18]	=	WGL_ACCELERATION_ARB;	//required to be FULL_ACCELERATION_ARB
+		if (gl_vid_allowsoftware)
+		{
+			attributes[19]	=	WGL_NO_ACCELERATION_ARB;
+		}
+		else
+		{
+			attributes[19]	=	WGL_FULL_ACCELERATION_ARB;
+		}
+	
+		if (gl_vid_multisample > 0)
+		{
+			attributes[20]	=	WGL_SAMPLE_BUFFERS_ARB;
+			attributes[21]	=	true;
+			attributes[22]	=	WGL_SAMPLES_ARB;
+			attributes[23]	=	gl_vid_multisample;
+		}
+		else
+		{
+			attributes[20]	=	0;
+			attributes[21]	=	0;
+			attributes[22]	=	0;
+			attributes[23]	=	0;
+		}
+	
+		attributes[24]	=	0;
+		attributes[25]	=	0;
+	
+		if (!wglChoosePixelFormatARB(m_hDC, attributes, attribsFloat, 1, &pixelFormat, &numFormats))
+		{
+			Printf("ZGL: Couldn't choose pixel format.\n");
+			return false;
+		}
+	
+		if (numFormats == 0)
+		{
+			Printf("ZGL: No valid pixel formats found.\n");
+			return false;
+		}
 	}
 	else
 	{
-		attributes[19]	=	WGL_FULL_ACCELERATION_ARB;
-	}
+		// If wglChoosePixelFormatARB is not found we have to do it the old fashioned way.
+		static PIXELFORMATDESCRIPTOR pfd = {
+			sizeof(PIXELFORMATDESCRIPTOR),
+				1,
+				PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+				PFD_TYPE_RGBA,
+				32, // color depth
+				0, 0, 0, 0, 0, 0,
+				0,
+				0,
+				0,
+				0, 0, 0, 0,
+				32, // z depth
+				8, // stencil buffer
+				0,
+				PFD_MAIN_PLANE,
+				0,
+				0, 0, 0
+		};
 
-	if (gl_vid_multisample > 0)
-	{
-		attributes[20]	=	WGL_SAMPLE_BUFFERS_ARB;
-		attributes[21]	=	true;
-		attributes[22]	=	WGL_SAMPLES_ARB;
-		attributes[23]	=	gl_vid_multisample;
-	}
-	else
-	{
-		attributes[20]	=	0;
-		attributes[21]	=	0;
-		attributes[22]	=	0;
-		attributes[23]	=	0;
-	}
+		pixelFormat = ChoosePixelFormat(m_hDC, &pfd);
+		DescribePixelFormat(m_hDC, pixelFormat, sizeof(pfd), &pfd);
 
-	attributes[24]	=	0;
-	attributes[25]	=	0;
-
-	if (!wglChoosePixelFormatARB(m_hDC, attributes, attribsFloat, 1, &pixelFormat, &numFormats))
-	{
-		Printf("ZGL: Couldn't choose pixel format.\n");
-		return false;
-	}
-
-	if (numFormats == 0)
-	{
-		Printf("ZGL: No valid pixel formats found.\n");
-		return false;
+		if (pfd.dwFlags & PFD_GENERIC_FORMAT)
+		{
+			if (!gl_vid_allowsoftware)
+			{
+				// not accelerated!
+				vid_renderer = 0;
+				Printf("ZGL: OpenGL driver not accelerated!  Falling back to software renderer.\n");
+				return false;
+			}
+		}
 	}
 
 	if (!SetPixelFormat(m_hDC, pixelFormat, NULL))
@@ -735,8 +777,7 @@ void Win32GLFrameBuffer::InitializeState()
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glShadeModel(GL_SMOOTH);
 
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-	glHint(GL_FOG_HINT, GL_NICEST);
+	glHint(GL_FOG_HINT, GL_FASTEST);
 	glFogi(GL_FOG_MODE, GL_EXP);
 	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);

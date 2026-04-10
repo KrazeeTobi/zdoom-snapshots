@@ -312,8 +312,10 @@ inline void GLFlat::PutFlat(bool translucent)
 		{
 			if (!gl_isBlack(Colormap.FadeColor))
 				gl_drawlist[GLDL_LITFOG].AddFlat(this);
-			else
+			else if (!gltexture->tex->bMasked)
 				gl_drawlist[GLDL_LIT].AddFlat(this);
+			else
+				gl_drawlist[GLDL_MASKED].AddFlat(this);
 
 			return;
 		}
@@ -339,6 +341,7 @@ void GLFlat::Process(sector_t * sector, bool whichplane, bool notexture)
 	if (!notexture)
 	{
 		if (plane.texture==skyflatnum) return;
+
 		gltexture=FGLTexture::ValidateTexture(plane.texture);
 		if (!gltexture) 
 		{
@@ -385,7 +388,7 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 	{
 		__asm int 3
 	}
-	if (frontsector->sectornum==15)
+	if (frontsector->sectornum==869)
 	{
 		__asm nop
 	}

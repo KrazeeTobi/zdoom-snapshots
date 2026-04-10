@@ -138,12 +138,12 @@ public:
 
 	bool Play (float volume)
 	{
-		int channel = FSOUND_Stream_PlayEx (FSOUND_FREE, Stream, NULL, true);
-		if (channel != -1)
+		Channel = FSOUND_Stream_PlayEx (FSOUND_FREE, Stream, NULL, true);
+		if (Channel != -1)
 		{
-			FSOUND_SetVolumeAbsolute (channel, clamp<int>((int)(volume * relative_volume * 255), 0, 255));
-			FSOUND_SetPan (channel, FSOUND_STEREOPAN);
-			FSOUND_SetPaused (channel, false);
+			FSOUND_SetVolumeAbsolute (Channel, clamp<int>((int)(volume * relative_volume * 255), 0, 255));
+			FSOUND_SetPan (Channel, FSOUND_STEREOPAN);
+			FSOUND_SetPaused (Channel, false);
 			return true;
 		}
 		return false;

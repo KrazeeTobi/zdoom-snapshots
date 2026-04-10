@@ -700,6 +700,9 @@ static void DrawFloodedPlane(wallseg * ws, float planez, sector_t * sec, bool ce
 
 	glEnd();
 
+	glMatrixMode(GL_TEXTURE);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
 }
 
 //==========================================================================
@@ -802,7 +805,6 @@ void DrawUnhandledMissingTextures()
 	glAlphaFunc(GL_GEQUAL,0.5f);
 	glBlendFunc(GL_ONE,GL_ZERO);
 
-
 	validcount++;
 	for(int i=0;i<MissingUpperSegs.Size(); i++)
 	{
@@ -828,7 +830,7 @@ void DrawUnhandledMissingTextures()
 		// already done!
 		if (seg->linedef->validcount==validcount) continue;		// already done
 		seg->linedef->validcount=validcount;
-		if (seg->frontsector->ceilingtexz < viewz) continue;	// out of sight
+		if (seg->frontsector->floortexz > viewz) continue;	// out of sight
 
 		if (!gl_notexturefill) FloodLowerGap(seg);
 	}

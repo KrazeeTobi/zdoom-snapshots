@@ -186,7 +186,7 @@ void gl_DrawPlayerSprites(sector_t * viewsector)
 		else 
 		{
 			lightlevel=255;
-			cm.ClearColor();
+			//if (area!=area_below) cm.ClearColor();
 			// keep desaturation/colormap!
 		}
 	}
@@ -216,7 +216,15 @@ void gl_DrawPlayerSprites(sector_t * viewsector)
 		gl_SetColor(lightlevel,cm.LightColor,playermo->alpha/65536.0f);
 		break;
 	case STYLE_Normal:
-		gl_SetColor(lightlevel,cm.LightColor,1.0f);
+
+		if (gl_light_sprites && !fullbright)
+		{
+			gl_SetSpriteLight(playermo, lightlevel, cm.LightColor, 1.0, 0xffffff);
+		}
+		else
+		{
+			gl_SetColor(lightlevel,cm.LightColor,1.0f);
+		}
 		break;
 
 	}

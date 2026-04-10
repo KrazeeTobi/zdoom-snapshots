@@ -12,7 +12,6 @@ void StartGLLightMenu (void);
 
 EXTERN_CVAR (Bool, vid_vsync)
 EXTERN_CVAR(Int, gl_spriteclip)
-EXTERN_CVAR(Bool, gl_depthfog)
 
 static value_t SpriteclipModes[]=
 {
