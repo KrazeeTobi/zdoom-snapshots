@@ -671,6 +671,7 @@ static void TakeStrifeItem (const TypeInfo *itemtype, int amount)
 	}
 }
 
+void I_SetMusicVolume (float volume);
 //============================================================================
 //
 // P_StartConversation
@@ -730,6 +731,7 @@ void P_StartConversation (AActor *npc, AActor *pc)
 
 	if (CurNode->SpeakerVoice != 0)
 	{
+		I_SetMusicVolume(0.5f);
 		S_SoundID (npc, CHAN_VOICE, CurNode->SpeakerVoice, 1, ATTN_NORM);
 	}
 
@@ -1012,6 +1014,7 @@ static void PickConversationReply ()
 	}
 
 	ConversationNPC->angle = ConversationNPCAngle;
+	I_SetMusicVolume(1.f);
 }
 
 //============================================================================
@@ -1044,5 +1047,6 @@ void CleanupConversationMenu ()
 		DialogueLines = NULL;
 	}
 	ConversationItems.Clear ();
+	I_SetMusicVolume(1.f);
 }
 

@@ -266,12 +266,15 @@ static void PrepareTransparentDoors(sector_t * sector)
 			return;
 		}
 
-		// This is a crude attempt to fix an incorrect transparent door effect I found in some
-		// WolfenDoom maps but considering the amount of code required to handle it I left it in.
-		if (solidwall && nextsec)
+		if (solidwall)
 		{
-			sector->heightsec=nextsec;
-			sector->heightsec->MoreFlags=0;
+			// This is a crude attempt to fix an incorrect transparent door effect I found in some
+			// WolfenDoom maps but considering the amount of code required to handle it I left it in.
+			if (nextsec)
+			{
+				sector->heightsec=nextsec;
+				sector->heightsec->MoreFlags=0;
+			}
 			glsec->transdoor=false;
 		}
 	}

@@ -214,6 +214,7 @@ static void gl_StartDrawScene(GL_IRECT * bounds, float fov, float ratio)
 		int height, width;
 
 		// Special handling so the view with a visible status bar displays properly
+
 		if (screenblocks >= 10)
 		{
 			height = SCREENHEIGHT;
@@ -493,11 +494,15 @@ void gl_DrawScene()
 	gl_drawlist[GLDL_LITFOG].Draw(GLPASS_DECALS);
 	gl_drawlist[GLDL_LIT].Draw(GLPASS_DECALS);
 
-	glPolygonOffset(0.0f, 0.0f);
-	glDisable(GL_POLYGON_OFFSET_FILL);
+	/// Push bleeding floor/ceiling textures back a little in the z-buffer
+	// so they don't interfere with overlapping mid textures.
+	glPolygonOffset(1.0f, 128.0f);
 
 	// flood all the gaps with the back sector's flat texture
 	DrawUnhandledMissingTextures();
+
+	glPolygonOffset(0.0f, 0.0f);
+	glDisable(GL_POLYGON_OFFSET_FILL);
 
 	RenderAll.Stop();
 	// Handle all portals after rendering the opaque objects but before
@@ -729,8 +734,8 @@ void gl_EndDrawScene()
 	glDisable(GL_FOG); 
 	gl_Set2DMode();
 
-	gl_DrawPlayerSprites (viewsector);
 	gl_ResetViewport();
+	gl_DrawPlayerSprites (viewsector);
 	gl_DrawBlend(viewsector);
 
 	// Restore standard rendering state

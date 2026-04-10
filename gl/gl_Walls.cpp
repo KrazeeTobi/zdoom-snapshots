@@ -289,50 +289,53 @@ void GLWall::DoRenderGlowingPoly(bool textured, bool dolight, ADynamicLight * li
 
 void GLWall::RenderFogSheet()
 {
-	int fogdensity=gl_GetFogDensity(lightlevel, Colormap.FadeColor);
+	if (gl_depthfog)
+	{
+		int fogdensity=gl_GetFogDensity(lightlevel, Colormap.FadeColor);
 
-#if 0
-	// It works but the banding effects it creates are rather distracting on Geforce cards
-	PalEntry fog=Colormap.FadeColor;
-	fog.a=fogdensity*1.6f;
-	gl_SetFog(lightlevel, fog, STYLE_Normal);
-	glColor3f(0,0,0);
-	glDisable(GL_TEXTURE_2D);
-	glBlendFunc(GL_ONE,GL_ONE);
-	glDepthFunc(GL_LEQUAL);
-	glAlphaFunc(GL_GREATER,0);
-	DoRenderWall(false, NULL);
-	glDepthFunc(GL_LESS);
-	glAlphaFunc(GL_GEQUAL,0.5f);
-	glEnable(GL_TEXTURE_2D);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-#else
-	float xcamera=-(float)viewx/MAP_SCALE;
-	float zcamera=(float)viewy/MAP_SCALE;
+	#if 0
+		// It works but the banding effects it creates are rather distracting on Geforce cards
+		PalEntry fog=Colormap.FadeColor;
+		fog.a=fogdensity*1.6f;
+		gl_SetFog(lightlevel, fog, STYLE_Normal);
+		glColor3f(0,0,0);
+		glDisable(GL_TEXTURE_2D);
+		glBlendFunc(GL_ONE,GL_ONE);
+		glDepthFunc(GL_LEQUAL);
+		glAlphaFunc(GL_GREATER,0);
+		DoRenderWall(false, NULL);
+		glDepthFunc(GL_LESS);
+		glAlphaFunc(GL_GEQUAL,0.5f);
+		glEnable(GL_TEXTURE_2D);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	#else
+		float xcamera=-(float)viewx/MAP_SCALE;
+		float zcamera=(float)viewy/MAP_SCALE;
 
-	float dist1=Dist2(xcamera,zcamera, glseg.x1,glseg.z1);
-	float dist2=Dist2(xcamera,zcamera, glseg.x2,glseg.z2);
+		float dist1=Dist2(xcamera,zcamera, glseg.x1,glseg.z1);
+		float dist2=Dist2(xcamera,zcamera, glseg.x2,glseg.z2);
 
 
-	// these values were determined by trial and error and are scale dependent!
-	float fogd1=(0.95f-exp(-fogdensity*dist1/488.28125f)) * 1.05f;
-	float fogd2=(0.95f-exp(-fogdensity*dist2/488.28125f)) * 1.05f;
+		// these values were determined by trial and error and are scale dependent!
+		float fogd1=(0.95f-exp(-fogdensity*dist1/488.28125f)) * 1.05f;
+		float fogd2=(0.95f-exp(-fogdensity*dist2/488.28125f)) * 1.05f;
 
-	float fc[4]={Colormap.FadeColor.r/255.0f,Colormap.FadeColor.g/255.0f,Colormap.FadeColor.b/255.0f,fogd2};
+		float fc[4]={Colormap.FadeColor.r/255.0f,Colormap.FadeColor.g/255.0f,Colormap.FadeColor.b/255.0f,fogd2};
 
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_FOG);
-	glAlphaFunc(GL_GREATER,0);
-	glDepthFunc(GL_LEQUAL);
-	glColor4f(fc[0],fc[1],fc[2], fogd1);
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_FOG);
+		glAlphaFunc(GL_GREATER,0);
+		glDepthFunc(GL_LEQUAL);
+		glColor4f(fc[0],fc[1],fc[2], fogd1);
 
-	DoRenderWall(false,fc);
+		DoRenderWall(false,fc);
 
-	glDepthFunc(GL_LESS);
-	glEnable(GL_FOG);
-	glAlphaFunc(GL_GEQUAL,0.5f);
-	glEnable(GL_TEXTURE_2D);
-#endif
+		glDepthFunc(GL_LESS);
+		glEnable(GL_FOG);
+		glAlphaFunc(GL_GEQUAL,0.5f);
+		glEnable(GL_TEXTURE_2D);
+	#endif
+	}
 }
 
 

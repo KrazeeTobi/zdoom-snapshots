@@ -358,9 +358,8 @@ void GLFlat::Process(sector_t * sector, bool whichplane, bool notexture)
 	// get height from vplane
 	z=(float)plane.texheight/MAP_SCALE;
 
-	if (sector->sectornum==142)
-		__asm nop
-	if (!whichplane && gl_sectors[sector->sectornum].transdoor) z -= F_TO_MAP(1.f);
+	if (!whichplane && gl_sectors[sector->sectornum].transdoor) 
+		z -= F_TO_MAP(1.f);
 	
 	// dont check for alpha==1.0f due to precision problems. It never is equal!
 	PutFlat(alpha<1.0f-FLT_EPSILON);
@@ -382,11 +381,11 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 	int i;
 
 #ifdef _DEBUG
-	if (sector==NULL)
+	if (frontsector==NULL)
 	{
 		__asm int 3
 	}
-	if (sector-sectors==468)
+	if (frontsector->sectornum==15)
 	{
 		__asm nop
 	}

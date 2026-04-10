@@ -55,6 +55,7 @@ CVAR (Bool, gl_light_sprites, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 CVAR (Bool, gl_light_particles, true, CVAR_ARCHIVE | CVAR_GLOBALCONFIG);
 
 CVAR(Bool,gl_enhanced_lightamp,true,CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
+CVAR(Bool,gl_depthfog,true,CVAR_ARCHIVE|CVAR_GLOBALCONFIG)
 
 
 static byte distfogtable[256];	// light to fog conversion table for black fog
@@ -201,18 +202,11 @@ int gl_GetFogDensity(int lightlevel, PalEntry fogcolor)
 // Sets the fog for the current polygon
 //
 //==========================================================================
-CVAR(Bool, colortest, false, 0)
 
 void gl_SetFog(int lightlevel, PalEntry fogcolor, int blendmode)
 {
 static PalEntry cfogcolor=-1;
 static int cfogdensity=-1;
-
-	if (colortest)
-	{
-		glDisable(GL_FOG);
-		return;
-	}
 
 	int fogdensity = gl_GetFogDensity(lightlevel, fogcolor);
 
@@ -227,10 +221,13 @@ static int cfogdensity=-1;
 	if (GLPortal::inskybox) fogdensity+=fogdensity/2;
 
 	// no fog in enhanced vision modes!
-	if (fogdensity==0)
+	if (fogdensity==0 || !gl_depthfog)
 	{
-		cfogcolor=cfogdensity=-1;
-		glDisable(GL_FOG);
+		if (cfogcolor!=-1 || cfogdensity!=-1)
+		{
+			cfogcolor=cfogdensity=-1;
+			glDisable(GL_FOG);
+		}
 	}
 	else
 	{

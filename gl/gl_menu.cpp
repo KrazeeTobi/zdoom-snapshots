@@ -11,7 +11,15 @@ extern value_t OnOff[2];
 void StartGLLightMenu (void);
 
 EXTERN_CVAR (Bool, vid_vsync)
+EXTERN_CVAR(Int, gl_spriteclip)
+EXTERN_CVAR(Bool, gl_depthfog)
 
+static value_t SpriteclipModes[]=
+{
+	{ 0.0, "Never" },
+	{ 1.0, "Smart" },
+	{ 2.0, "Always" },
+};
 
 static value_t FilterModes[] =
 {
@@ -46,6 +54,8 @@ menuitem_t OpenGLItems[] = {
 	{ discrete, "Vertical Sync",			{&vid_vsync},					{2.0}, {0.0}, {0.0}, {OnOff} },
 	{ discrete, "Environment map on mirrors",{&gl_mirror_envmap},			{2.0}, {0.0}, {0.0}, {OnOff} },
 	{ discrete, "Enhanced Nightvision mode",{&gl_enhanced_lightamp},		{2.0}, {0.0}, {0.0}, {OnOff} },
+	{ discrete, "Adjust sprite clipping",	{&gl_spriteclip},				{3.0}, {0.0}, {0.0}, {SpriteclipModes} },
+	{ discrete, "Depth Fog",				{&gl_depthfog},					{3.0}, {0.0}, {0.0}, {OnOff} },
 	{ redtext,	" ",						{NULL},							{0.0}, {0.0}, {0.0}, {NULL} },
 	{ discrete, "Textures enabled",			{&gl_texture},					{2.0}, {0.0}, {0.0}, {YesNo} },
 	{ discrete, "Texture Filter mode",		{&gl_texture_filter},			{5.0}, {0.0}, {0.0}, {FilterModes} },

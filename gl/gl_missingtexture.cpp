@@ -86,6 +86,8 @@ static sector_t fakesec;
 //==========================================================================
 void AddUpperMissingTexture(seg_t * seg, fixed_t backheight)
 {
+	if (!seg->backsector) return;
+
 	clock(totalms);
 	MissingTextureInfo mti;
 	MissingSegInfo msi;
@@ -133,6 +135,7 @@ void AddUpperMissingTexture(seg_t * seg, fixed_t backheight)
 //==========================================================================
 void AddLowerMissingTexture(seg_t * seg, fixed_t backheight)
 {
+	if (!seg->backsector) return;
 	if (gl_sectors[seg->backsector->sectornum].transdoor)
 	{
 		if (gl_sectors[seg->backsector->sectornum].transdoorheight == seg->backsector->floortexz) return;

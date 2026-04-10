@@ -38,6 +38,7 @@
 #include "w_wad.h"
 #include "m_png.h"
 #include "r_draw.h"
+#include "sbar.h"
 
 #include "gl/gl_struct.h"
 #include "gl/gl_texture.h"
@@ -237,9 +238,10 @@ static void CopyPixelData(BYTE * buffer, int texwidth, int texheight, int origin
 
 				default:
 					const unsigned char * tbl = &translationtables[translation>>8][256*(translation&0xff)];
-					for(i =0;i<256;i++)
+					penew[0]=PalEntry(255,0,0,0);
+					for(i =1;i<256;i++)
 					{
-						penew[i] = palette[tbl[i]];
+						penew[i] = palette[GPalette.Remap[tbl[i]]];
 					}
 				}
 			}
@@ -1202,6 +1204,8 @@ void FGLTexture::FlushAll()
 			(*gltextures)[i]->Clean(true);
 		}
 	}
+
+	if (StatusBar && screen) StatusBar->NewGame();
 }
 
 //==========================================================================

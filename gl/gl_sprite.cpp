@@ -44,6 +44,8 @@
 #include "gl/models.h"
 
 CVAR(Bool, gl_usecolorblending, true, CVAR_ARCHIVE)
+CVAR(Int, gl_spriteclip, 1, CVAR_ARCHIVE)
+
 EXTERN_CVAR (Float, transsouls)
 
 const BYTE SF_FRAMEMASK  = 0x1f;
@@ -490,10 +492,10 @@ void GLSprite::Process(AActor* thing,sector_t * sector)
 		y2=y1-r.height/(float)MAP_COEFF;
 
 		// Tests show that this doesn't look good for many decorations and corpses
-		if ((thing->player || thing->flags3&MF3_ISMONSTER || thing->flags&MF_SPECIAL) && 
-			(thing->flags&MF_ICECORPSE || !(thing->flags&MF_CORPSE)))
+		if (gl_spriteclip>0)
 		{
-			//if (!thing->floorclip)
+			if (((thing->player || thing->flags3&MF3_ISMONSTER || thing->flags&MF_SPECIAL) && 
+				(thing->flags&MF_ICECORPSE || !(thing->flags&MF_CORPSE))) || gl_spriteclip==2)
 			{
 				float btm=1000000.0f;
 

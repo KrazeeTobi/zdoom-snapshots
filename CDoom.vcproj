@@ -100,7 +100,7 @@
 				AdditionalIncludeDirectories="flac,.,sound,win32,zlib,g_shared,g_raven,g_heretic,g_doom,g_strife,g_hexen,private"
 				PreprocessorDefinitions="NDEBUG;USEASM;WIN32;_WINDOWS;HAVE_STRUPR;HAVE_FILELENGTH;SILENT_INSTANT_FLOORS"
 				StringPooling="TRUE"
-				RuntimeLibrary="2"
+				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderThrough=""

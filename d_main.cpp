@@ -537,15 +537,16 @@ void D_Display (bool screenshot)
 
 		if (automapactive)
 		{
+			int saved_ST_Y=ST_Y;
+			if (hud_althud && realviewheight == SCREENHEIGHT) ST_Y=realviewheight;
 			AM_Drawer ();
+			ST_Y = saved_ST_Y;
 		}
 
 #ifdef ALTERNATIVE_HUD
 
-		ST_Y = Scale (StatusBar->ST_Y, SCREENHEIGHT, 200);
 		if (hud_althud && realviewheight == SCREENHEIGHT)
 		{
-			ST_Y=realviewheight;
 			if (DrawFSHUD || automapactive) DrawHUD();
 			StatusBar->DrawTopStuff (DrawFSHUD ? HUD_Fullscreen : HUD_None);
 		}

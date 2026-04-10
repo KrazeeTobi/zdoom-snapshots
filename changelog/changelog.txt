@@ -1,0 +1,17 @@
+
+
+31. Aug. 2005
+- fixed: The top sides of 3D floors were drawn one unit too low.
+- added gl_depthfog CVar for graphics cards that have problems with fog
+- fixed: The code that adds the missing segs left out by the node builder
+  forgot to relocate all pointers to the old array.
+  
+
+30. Aug. 2005
+- added gl_spriteclip option so that the user can specify how sprites are
+  clipped to the floor.
+- fixed: Translations must not map to palette index 0. 0 is always transparent.
+- fixed: After purging all textures Doom's status bar must be reinitialized as
+  well so that it can set up its background texture again.
+- fixed some screen size issues regarding automap and alt_hud.
+- updated thingdef_exp.cpp to the latest version

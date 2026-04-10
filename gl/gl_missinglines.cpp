@@ -68,6 +68,8 @@ static int STACK_ARGS segcmp(const void * a, const void * b)
 
 void gl_CollectMissingLines()
 {
+	firstmissingseg=numsegs;
+
 	TArray<seg_t> MissingSides;
 	TArray<seg_t*> * linesegs = new TArray<seg_t*>[numsides];
 
@@ -152,7 +154,6 @@ void gl_CollectMissingLines()
 		}
 	}
 
-	firstmissingseg=numsegs;
 	if (MissingSides.Size()) 
 	{
 		// Now we have to add the newly created segs to the segs array so
@@ -161,6 +162,12 @@ void gl_CollectMissingLines()
 
 		memcpy(newsegs, segs, sizeof(seg_t) * numsegs);
 		memcpy(newsegs+numsegs, &MissingSides[0], sizeof(seg_t)*MissingSides.Size());
+		for(int i = 0; i < numsegs; i++)
+		{
+			if (newsegs[i].PartnerSeg && newsegs[i].PartnerSeg>=segs && newsegs[i].PartnerSeg<segs+numsegs) 
+				newsegs[i].PartnerSeg = newsegs + (newsegs[i].PartnerSeg - segs);
+			else newsegs[i].PartnerSeg=NULL;
+		}
 		numsegs += MissingSides.Size();
 		delete [] segs;
 		segs=newsegs;
