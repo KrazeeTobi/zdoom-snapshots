@@ -211,7 +211,7 @@ static int P_Set3DFloor(line_t * line, int param,int param2, int alpha)
 										  FF_SWIMMABLE|FF_BOTHPLANES|FF_ALLSIDES, 
 										  FF_BOTHPLANES|FF_ALLSIDES};
 
-			flags = defflags[param&3] | FF_EXISTS|FF_RENDERALL;
+			flags = defflags[param&7] | FF_EXISTS|FF_RENDERALL;
 
 			if (param2&1) flags|=FF_NOSHADE;
 			if (param2&2) flags|=FF_DOUBLESHADOW;
@@ -229,7 +229,7 @@ static int P_Set3DFloor(line_t * line, int param,int param2, int alpha)
 			}
 			*/
 			if (alpha==0) flags&=~(FF_RENDERALL|FF_BOTHPLANES|FF_ALLSIDES);
-			else if (alpha!=255) flags|=FF_TRANSLUCENT;;
+			else if (alpha!=255) flags|=FF_TRANSLUCENT;
 		}
 		P_Add3DFloor(ss, sec, line, flags, alpha);
 	}

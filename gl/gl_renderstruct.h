@@ -238,7 +238,6 @@ public:
 	float alpha;
 	GLSectorPlane plane;
 	short lightlevel;
-	short loopindex;
 	bool use_fog;
 	bool ceiling;
 	byte renderflags;

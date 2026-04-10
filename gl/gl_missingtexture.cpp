@@ -75,6 +75,8 @@ static TArray<MissingSegInfo> MissingLowerSegs;
 static TArray<SubsectorHackInfo> SubsectorHacks;
 // collect all the segs
 
+static TArray<subsector_t *> CeilingStacks;
+static TArray<subsector_t *> FloorStacks;
 
 
 static TArray<gl_subsectordata *> HandledSubsectors;
@@ -843,6 +845,7 @@ void DrawUnhandledMissingTextures()
 		if (seg->linedef->validcount==validcount) continue;		// already done
 		seg->linedef->validcount=validcount;
 		if (seg->frontsector->ceilingtexz < viewz) continue;	// out of sight
+		if (gl_sectors[seg->backsector->sectornum].transdoor) continue;
 
 		if (!gl_notexturefill) FloodUpperGap(seg);
 	}
@@ -859,6 +862,7 @@ void DrawUnhandledMissingTextures()
 		if (seg->linedef->validcount==validcount) continue;		// already done
 		seg->linedef->validcount=validcount;
 		if (seg->frontsector->floortexz > viewz) continue;	// out of sight
+		if (gl_sectors[seg->backsector->sectornum].transdoor) continue;
 
 		if (!gl_notexturefill) FloodLowerGap(seg);
 	}
@@ -1137,4 +1141,205 @@ ADD_STAT(sectorhacks,out)
 	sprintf(out,"%.3f ms\n", 
 		SecondsPerCycle*totalssms*1000);
 }
+
+
+//==========================================================================
+//
+// This merges visplanes that lie inside a sector stack together
+// to avoid rendering these unneeded flats
+//
+//==========================================================================
+
+void AddFloorStack(subsector_t * sub)
+{
+	FloorStacks.Push(sub);
+}
+
+void AddCeilingStack(subsector_t * sub)
+{
+	CeilingStacks.Push(sub);
+}
+
+//==========================================================================
+//
+//
+//
+//==========================================================================
+
+void CollectSectorStacksCeiling(gl_subsectordata * glsub, sector_t * anchor)
+{
+	static GLWall wall;
+	// mark it checked
+	glsub->validcount=validcount;
+
+	// Has a sector stack or skybox itself!
+	if (glsub->render_sector->CeilingSkyBox && glsub->render_sector->CeilingSkyBox->bAlways) return;
+
+	// Don't bother processing unrendered subsectors
+	if (glsub->sub->numlines>2 && !(gl_ss_renderflags[glsub-gl_subsectors]&SSRF_PROCESSED)) return;
+
+	// Must be the exact same visplane
+	if (glsub->render_sector->ceilingpic != anchor->ceilingpic ||
+		glsub->render_sector->ceilingplane != anchor->ceilingplane ||
+		GetCeilingLight(glsub->render_sector) != GetCeilingLight(anchor) ||
+		glsub->render_sector->ColorMap != anchor->ColorMap ||
+		glsub->render_sector->ceiling_xoffs != anchor->ceiling_xoffs || 
+		glsub->render_sector->ceiling_yoffs + glsub->render_sector->base_ceiling_yoffs !=
+			anchor->ceiling_yoffs + anchor->base_ceiling_yoffs ||
+		glsub->render_sector->ceiling_xscale != anchor->ceiling_xscale || 
+		glsub->render_sector->ceiling_yscale != anchor->ceiling_yscale ||
+		glsub->render_sector->ceiling_angle + glsub->render_sector->base_ceiling_angle !=
+			anchor->ceiling_angle + anchor->base_ceiling_angle)
+	{
+		// different visplane so it can't belong to this stack
+		return;
+	}
+
+	HandledSubsectors.Push (glsub);
+
+	subsector_t * sub = glsub->sub;
+	for(int j=0;j<sub->numlines;j++)
+	{
+		seg_t * seg = &segs[sub->firstline+j];
+		if (seg->PartnerSeg)
+		{
+			gl_subsectordata * backglsub = &gl_subsectors[seg->PartnerSeg->Subsector-subsectors];
+
+			if (backglsub->validcount!=validcount) CollectSectorStacksCeiling (backglsub, anchor);
+		}
+	}
+}
+
+//==========================================================================
+//
+//
+//
+//==========================================================================
+
+void CollectSectorStacksFloor(gl_subsectordata * glsub, sector_t * anchor)
+{
+	static GLWall wall;
+	// mark it checked
+	glsub->validcount=validcount;
+
+	// Has a sector stack or skybox itself!
+	if (glsub->render_sector->FloorSkyBox && glsub->render_sector->FloorSkyBox->bAlways) return;
+
+	// Don't bother processing unrendered subsectors
+	if (glsub->sub->numlines>2 && !(gl_ss_renderflags[glsub-gl_subsectors]&SSRF_PROCESSED)) return;
+
+	// Must be the exact same visplane
+	if (glsub->render_sector->floorpic != anchor->floorpic ||
+		glsub->render_sector->floorplane != anchor->floorplane ||
+		GetFloorLight(glsub->render_sector) != GetFloorLight(anchor) ||
+		glsub->render_sector->ColorMap != anchor->ColorMap ||
+		glsub->render_sector->floor_xoffs != anchor->floor_xoffs || 
+		glsub->render_sector->floor_yoffs + glsub->render_sector->base_floor_yoffs !=
+		anchor->floor_yoffs + anchor->base_floor_yoffs ||
+		glsub->render_sector->floor_xscale != anchor->floor_xscale || 
+		glsub->render_sector->floor_yscale != anchor->floor_yscale ||
+		glsub->render_sector->floor_angle + glsub->render_sector->base_floor_angle !=
+		anchor->floor_angle + anchor->base_floor_angle)
+	{
+		// different visplane so it can't belong to this stack
+		return;
+	}
+
+	HandledSubsectors.Push (glsub);
+
+	subsector_t * sub = glsub->sub;
+	for(int j=0;j<sub->numlines;j++)
+	{
+		seg_t * seg = &segs[sub->firstline+j];
+		if (seg->PartnerSeg)
+		{
+			gl_subsectordata * backglsub = &gl_subsectors[seg->PartnerSeg->Subsector-subsectors];
+
+			if (backglsub->validcount!=validcount) CollectSectorStacksFloor (backglsub, anchor);
+		}
+	}
+}
+
+//==========================================================================
+//
+//
+//
+//==========================================================================
+
+void ProcessSectorStacks()
+{
+	int i;
+
+	validcount++;
+	for (i=0;i<CeilingStacks.Size (); i++)
+	{
+		subsector_t * sub = CeilingStacks[i];
+		gl_subsectordata * glsub = &gl_subsectors[sub-subsectors];
+
+		for(int j=0;j<sub->numlines;j++)
+		{
+			seg_t * seg = &segs[sub->firstline+j];
+			if (seg->PartnerSeg)
+			{
+				gl_subsectordata * backglsub = &gl_subsectors[seg->PartnerSeg->Subsector-subsectors];
+
+				if (backglsub->validcount!=validcount) CollectSectorStacksCeiling (backglsub, glsub->render_sector);
+			}
+		}
+
+		for(int j=0;j<HandledSubsectors.Size();j++)
+		{				
+			gl_sectordata * glsec = &gl_sectors[glsub->render_sector->sectornum];
+
+			gl_ss_renderflags[HandledSubsectors[j]-gl_subsectors] &= ~SSRF_RENDERCEILING;
+
+			if (glsub->render_sector->CeilingSkyBox->PlaneAlpha!=0)
+			{
+				gl_subsectorrendernode * node = SSR_List.GetNew();
+				node->glsub = HandledSubsectors[j];
+				node->next = glsec->otherplanes[1];
+				glsec->otherplanes[1]=node;
+			}
+		}
+		HandledSubsectors.Clear();
+	}
+
+	validcount++;
+	for (i=0;i<FloorStacks.Size (); i++)
+	{
+		subsector_t * sub = FloorStacks[i];
+		gl_subsectordata * glsub = &gl_subsectors[sub-subsectors];
+
+		for(int j=0;j<sub->numlines;j++)
+		{
+			seg_t * seg = &segs[sub->firstline+j];
+			if (seg->PartnerSeg)
+			{
+				gl_subsectordata * backglsub = &gl_subsectors[seg->PartnerSeg->Subsector-subsectors];
+
+				if (backglsub->validcount!=validcount) CollectSectorStacksFloor (backglsub, glsub->render_sector);
+			}
+		}
+
+		for(int j=0;j<HandledSubsectors.Size();j++)
+		{				
+			gl_sectordata * glsec = &gl_sectors[glsub->render_sector->sectornum];
+
+			gl_ss_renderflags[HandledSubsectors[j]-gl_subsectors] &= ~SSRF_RENDERFLOOR;
+
+			if (glsub->render_sector->FloorSkyBox->PlaneAlpha!=0)
+			{
+				gl_subsectorrendernode * node = SSR_List.GetNew();
+				node->glsub = HandledSubsectors[j];
+				node->next = glsec->otherplanes[0];
+				glsec->otherplanes[0]=node;
+			}
+		}
+		HandledSubsectors.Clear();
+	}
+
+	FloorStacks.Clear();
+	CeilingStacks.Clear();
+}
+
 

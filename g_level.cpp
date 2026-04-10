@@ -448,10 +448,10 @@ static void SetLevelDefaults (level_info_t *levelinfo)
 		// For maps without a BEHAVIOR, this will be cleared.
 		levelinfo->flags |= LEVEL_LAXMONSTERACTIVATION;
 	}
-	levelinfo->airsupply = 10*TICRATE;
+	levelinfo->airsupply = 10;
 
 	// new
-	levelinfo->airsupply = 20*TICRATE;
+	levelinfo->airsupply = 20;
 }
 
 //
@@ -1966,7 +1966,7 @@ void G_InitLevelLocals ()
 		NormalLight.ChangeFade (level.fadeto);
 		*/
 	}
-	level.airsupply = info->airsupply ? info->airsupply*TICRATE : 10*TICRATE;
+	level.airsupply = info->airsupply*TICRATE;
 	level.outsidefog = info->outsidefog;
 	level.WallVertLight = info->WallVertLight;
 	level.WallHorizLight = info->WallHorizLight;
@@ -2041,7 +2041,6 @@ void G_InitLevelLocals ()
 
 	// new stuff
 	gl_InitGlow(info->glowing);
-	level.airsupply = info->airsupply;
 
 	gl_SetFogParams(info->fogdensity, info->outsidefog, info->outsidefogdensity, info->skyfog);
 }

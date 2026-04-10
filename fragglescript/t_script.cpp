@@ -331,7 +331,7 @@ void T_DelayedScripts()
 			
 			// continue the script
 			continue_script(current->script, current->savepoint);
-			
+
 			// free
 			current->Destroy();
 		}
@@ -345,7 +345,7 @@ static DRunningScript *T_SaveCurrentScript()
 {
 	DRunningScript *runscr;
 	int i;
-	
+
 	runscr = new DRunningScript();
 	runscr->script = current_script;
 	runscr->savepoint = rover;
@@ -465,7 +465,7 @@ void SF_StartScript()
     }
 	
 	snum = intvalue(t_argv[0]);
-	
+
 	if(snum < 0 || snum >= MAXSCRIPTS)
 	{
 		script_error("script number %d out of range\n",snum);

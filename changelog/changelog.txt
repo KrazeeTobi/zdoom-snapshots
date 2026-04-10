@@ -1,3 +1,41 @@
+21. Sep. 2005
+- Improved handling of stacked sectors. MAP04 of Zen Dynamics now displays
+  as intended.
+  
+
+20. Sep. 2005
+- Fixed: The color parser for Static_Init was broken.
+- Fixed: The decal creation code can create invalid decals. These should
+  not be rendered of course.
+- Fixed: Sector_Set3DFloor ignored the 'draw all sides' bit.
+- Fixed: The insides of a 3D floor were only rendered when the back side of 
+  the linedef in question also had 3D-floors defined
+- Fixed: The SpawnedThings array for FraggleScript was not saved.
+- Added configuration lump for the alternative HUD so icons can be selectively
+  replaced or removed
+
+
+19. Sep. 2005
+- Fixed: FraggleScript instant sector movers didn't clear the sector's
+  floor or ceilingdata right away.
+
+
+17. Sep. 2005
+- Added support for GL nodes V5.
+- Disabled HIRESTEX pending the outcome of an ongoing discussion about texture
+  management at the forums of newdoom.com. If that works out it should offer
+  all the required functionality in a manner that would be compatible across
+  source ports so I won't do a non-standard implementation for now.
+
+
+16. Sep. 2005
+- Fixed: The flickering dynamcic light types had some properties mixed up.
+
+
+14. Sep. 2005
+- Added support for ZDoomGL's HIRESTEX lump
+
+
 11. Sep. 2005
 
 - Fixed: If non-power-of-2 textures are not supported a patch's scaling

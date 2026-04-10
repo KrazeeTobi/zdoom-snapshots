@@ -157,6 +157,9 @@ void HandleMissingTextures();
 void DrawUnhandledMissingTextures();
 void AddHackedSubsector(subsector_t * sub);
 void HandleHackedSubsectors();
+void AddFloorStack(subsector_t * sub);
+void AddCeilingStack(subsector_t * sub);
+void ProcessSectorStacks();
 
 // ZDBSP shittiness compensation
 void gl_CollectMissingLines();

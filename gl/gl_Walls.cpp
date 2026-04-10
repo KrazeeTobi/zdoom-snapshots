@@ -1117,7 +1117,7 @@ void GLWall::DoMidTexture(seg_t * seg, bool drawfogsheet,
 			topleft=max(bch1,fch1);
 			topright=max(bch2,fch2);
 		}
-		else if (!((bch1<=fch1 && bch2<=fch2) || (bch1>=fch1 && bch2>=fch2)))
+		else if (bch1>fch1 || bch2>fch2) // (!((bch1<=fch1 && bch2<=fch2) || (bch1>=fch1 && bch2>=fch2)))
 		{
 			// the ceiling planes intersect. Use the backsector's ceiling for drawing so that
 			// drawing the front sector's plane clips the polygon automatically.
@@ -1144,7 +1144,7 @@ void GLWall::DoMidTexture(seg_t * seg, bool drawfogsheet,
 			bottomleft=min(bfh1,ffh1);
 			bottomright=min(bfh2,ffh2);
 		}
-		else if (!((bfh1<=ffh1 && bfh2<=ffh2) || (bfh1>=ffh1 && bfh2>=ffh2)))
+		else if (bfh1<ffh1 || bfh2<ffh2) // (!((bfh1<=ffh1 && bfh2<=ffh2) || (bfh1>=ffh1 && bfh2>=ffh2)))
 		{
 			// the floor planes intersect. Use the backsector's floor for drawing so that
 			// drawing the front sector's plane clips the polygon automatically.
@@ -1619,6 +1619,11 @@ void GLWall::DoFFloorBlocks(seg_t * seg,sector_t * frontsector,sector_t * backse
 		renderedsomething=true;
 		if (topleft<=bottomleft && topright<=bottomright) return;
 	}
+
+	if (backffloors.Size() == 0 && frontsector->e->ffloors.Size() > 0)
+	{
+		InverseFloors(seg, frontsector, topleft, topright, bottomleft, bottomright);
+	}
 }
 
 
@@ -1641,7 +1646,7 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 #ifdef _DEBUG
 	if (seg->linedef-lines==break_renderlinedef && IsDebuggerPresent())
 		__asm int 3;	
-	if (seg->linedef-lines==19243)
+	if (seg->linedef-lines==14)
 		__asm nop
 #endif
 
@@ -1885,49 +1890,44 @@ void GLWall::Process(seg_t *seg, sector_t * frontsector, sector_t * backsector, 
 //==========================================================================
 void GLWall::ProcessLowerMiniseg(seg_t *seg, sector_t * frontsector, sector_t * backsector)
 {
-	vertex_t * v1, * v2;
-	fixed_t ffh;
-	fixed_t bfh;
-
 	if (frontsector->floorpic==skyflatnum) return;
 
-	this->seg=seg;
-	this->sub=NULL;
-
-	v1=seg->v1;
-	v2=seg->v2;
-	vertexes[0]=v1;
-	vertexes[1]=v2;
-
-	glseg.x1=-v1->x/(float)MAP_SCALE;
-	glseg.z1= v1->y/(float)MAP_SCALE;
-	glseg.x2=-v2->x/(float)MAP_SCALE;
-	glseg.z2= v2->y/(float)MAP_SCALE;
-	glseg.noorigverts=true;
-	clampx=clampy=false;
-
-	lightlevel=frontsector->lightlevel;
-
-	alpha=1.0f;
-	RenderStyle=STYLE_Normal;
-	Colormap=frontsector->ColorMap;
-
-	topflat=frontsector->ceilingpic;	// for glowing textures
-	bottomflat=frontsector->floorpic;
-
-	ffh = frontsector->floortexz; 
-	bfh = backsector->floortexz; 
-	yfloor[0] = yfloor[1] = ffh/MAP_SCALE;
-
-
+	fixed_t ffh = frontsector->floortexz; 
+	fixed_t bfh = backsector->floortexz; 
 	if (bfh>ffh)
 	{
+		this->seg=seg;
+		this->sub=NULL;
+
+		vertex_t * v1=seg->v1;
+		vertex_t * v2=seg->v2;
+		vertexes[0]=v1;
+		vertexes[1]=v2;
+
+		glseg.x1=-v1->x/(float)MAP_SCALE;
+		glseg.z1= v1->y/(float)MAP_SCALE;
+		glseg.x2=-v2->x/(float)MAP_SCALE;
+		glseg.z2= v2->y/(float)MAP_SCALE;
+		glseg.noorigverts=true;
+		clampx=clampy=false;
+
+		lightlevel=frontsector->lightlevel;
+
+		alpha=1.0f;
+		RenderStyle=STYLE_Normal;
+		Colormap=frontsector->ColorMap;
+
+		topflat=frontsector->ceilingpic;	// for glowing textures
+		bottomflat=frontsector->floorpic;
+
+		yfloor[0] = yfloor[1] = ffh/MAP_SCALE;
+
 		gltexture=FGLTexture::ValidateTexture(frontsector->floorpic);
 
 		if (gltexture) 
 		{
 			flag=RENDERWALL_BOTTOM;
-			SetWallCoordinates(seg, backsector->floortexz, bfh, bfh, ffh, ffh);
+			SetWallCoordinates(seg, bfh, bfh, bfh, ffh, ffh);
 			PutWall(false);
 		}
 	}

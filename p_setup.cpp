@@ -221,7 +221,7 @@ static void SetTextureNoErr (short *texture, DWORD *color, char *name8)
 		name2[7] = 0;
 		if (*name != '#')
 		{
-			*color = strtoul (name2, &stop, 16);
+			*color = strtoul (name, &stop, 16);
 		}
 		else	// Support for Legacy's color format!
 		{

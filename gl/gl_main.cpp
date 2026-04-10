@@ -37,6 +37,7 @@
 #include "gl/gltexture.h"
 #include "gl/gl_functions.h"
 #include "gl/gl_renderstruct.h"
+#include "gl/gl_texture.h"
 
 //==========================================================================
 //
@@ -82,4 +83,8 @@ AT_GAME_SET(OpenGL)
 {
 	const TypeInfo * ti = TypeInfo::FindType("WallTorch");
 	GetDefaultByType(ti)->radius = 3*FRACUNIT;
+
+	// Disabled for now, pending the outcome of the discussion of a
+	// better method of defining textures.
+	//FGLTexture::LoadHiresTextures();
 }

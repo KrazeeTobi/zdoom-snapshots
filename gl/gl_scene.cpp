@@ -411,11 +411,16 @@ void gl_DrawScene()
 	GLPortal::StartFrame();
 
 	ProcessAll.Start();
+
 	// clip the scene and fill the drawlists
 	gl_RenderBSPNode (nodes + numnodes - 1);
-	gl_RenderMissingLines();
-	HandleMissingTextures();
-	HandleHackedSubsectors();
+
+	// And now the crappy hacks that have to be done to avoid rendering anomalies:
+
+	gl_RenderMissingLines();	// Omitted lines by the node builder
+	HandleMissingTextures();	// Missing upper/lower textures
+	HandleHackedSubsectors();	// open sector hacks for deep water
+	ProcessSectorStacks();		// merge visplanes of sector stacks
 
 	ProcessAll.Stop();
 	RenderAll.Start();

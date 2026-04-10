@@ -51,6 +51,7 @@ EXTERN_CVAR (Float, vid_winscale)
 
 #include "gl/win32gliface.h"
 #include "gl/gl_texture.h"
+#include "il/il.h"
 
 bool ForceWindowed;
 
@@ -148,6 +149,10 @@ void I_InitHardware ()
 {
 	UCVarValue val;
 
+	ilInit();
+	ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
+	ilEnable(IL_ORIGIN_SET);
+	
 	val.Bool = !!Args.CheckParm ("-devparm");
 	ticker.SetGenericRepDefault (val, CVAR_Bool);
 

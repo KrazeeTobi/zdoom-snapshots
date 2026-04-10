@@ -87,8 +87,11 @@ void GLWall::DrawDecal(ADecal *actor, seg_t *seg, sector_t *frontSector, sector_
 	switch (actor->renderflags & RF_RELMASK)
 	{
 	default:
-		zpos = actor->z;
-		break;
+		// No valid decal can have this flag. If one is encountered anyway
+		// it is in some way invalid.
+		return;
+		//zpos = actor->z;
+		//break;
 
 	case RF_RELUPPER:
 		if (flag!=RENDERWALL_TOP) return;

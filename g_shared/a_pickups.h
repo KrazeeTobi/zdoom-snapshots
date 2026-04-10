@@ -124,6 +124,7 @@ public:
 	int MaxAmount;				// Max amount of item this instance can have
 	int RespawnTics;			// Tics from pickup time to respawn time
 	int Icon;					// Icon to show on status bar or HUD
+	int AltIcon;				// Icon for alternate HUD
 	int DropTime;				// Countdown after dropping
 	FState * UseState;			// state sequence that is executed when the item is being used
 	FState * PickupState;		// state sequence that is executed when the item is being picked up or given by other means

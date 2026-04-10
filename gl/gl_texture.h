@@ -92,7 +92,7 @@ private:
 	int index;
 
 	signed char areacount;
-	byte isHires;
+	int HiresLump;
 	const char * hirespath;
 	GL_RECT * areas;
 
@@ -108,8 +108,8 @@ private:
 	static bool SmoothEdges(unsigned char * buffer,int w, int h, bool clampsides);
 	bool CheckExternalFile();
 	unsigned char * LoadFile(const char *fileName, int *width, int *height, int cm);
-	unsigned char * LoadExternalFile(int *width, int *height,int cm);
-	unsigned char * LoadFromLump(const char *lumpName, int *width, int *height, int cm);
+	unsigned char * LoadFromLump(int lumpnum, int *width, int *height, int cm);
+	unsigned char * LoadHiresTexture(int *width, int *height,int cm);
 
 
 	void SetSize(int w, int h)
@@ -136,6 +136,7 @@ public:
 	static void FlushAll();
 	static FGLTexture * ValidateTexture(FTexture * tex);
 	static FGLTexture * ValidateTexture(int no, bool translate=true);
+	static void LoadHiresTextures();
 
 
 	// Patch drawing utilities
@@ -150,13 +151,13 @@ public:
 
 	fixed_t RowOffset(fixed_t rowoffset) const
 	{
-		if (tex->ScaleY==0 || tex->ScaleY==8 || !tex->bWorldPanning) return rowoffset;
+		if (tex->ScaleY==0 || tex->ScaleY==8 || tex->bWorldPanning) return rowoffset;
 		else return quickertoint(rowoffset/scaley);
 	}
 
 	fixed_t TextureOffset(fixed_t textureoffset) const
 	{
-		if (tex->ScaleX==0 || tex->ScaleX==8 || !tex->bWorldPanning) return textureoffset;
+		if (tex->ScaleX==0 || tex->ScaleX==8 || tex->bWorldPanning) return textureoffset;
 		else return quickertoint(textureoffset/scalex);
 	}
 

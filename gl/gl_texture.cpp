@@ -236,9 +236,9 @@ void ModifyPalette(PalEntry * pout, PalEntry * pin, int cm, int count, bool bgra
 //
 //===========================================================================
 static void CopyPixelData(BYTE * buffer, int texwidth, int texheight, int originx, int originy,
-				  const BYTE * patch, int pix_width, int pix_height, 
-				  int step_x, int step_y,
-				  int cm, int translation, PalEntry * palette)
+						  const BYTE * patch, int pix_width, int pix_height, 
+						  int step_x, int step_y,
+						  int cm, int translation, PalEntry * palette)
 {
 	PalEntry penew[256];
 	int srcwidth=pix_width;
@@ -371,7 +371,7 @@ static void CopyPixelData(BYTE * buffer, int texwidth, int texheight, int origin
 // any properly implemented texture for software rendering.
 // Its drawback is that it is limited to the base palette which is
 // why all classes that handle different palettes should subclass this
-// methos
+// method
 //
 //===========================================================================
 
@@ -442,7 +442,7 @@ void FPNGTexture::CopyTrueColorPixels(BYTE * buffer, int buf_width, int buf_heig
 			break;
 
 		case MAKE_ID('t','R','N','S'):
-			for(int i=0;i<PaletteSize;i++)
+			for(int i=0;i<len;i++)
 			{
 				lump >> pe[i].a;
 				pe[i].a=255-pe[i].a;	// use inverse alpha so the default palette can be used unchanged
@@ -869,7 +869,7 @@ FGLTexture::FGLTexture(FTexture * tx)
 	glpatch=NULL;
 	gltexture=NULL;
 
-	isHires=0;
+	HiresLump=-1;
 	hirespath=NULL;
 
 	areacount = 0;
@@ -1112,12 +1112,12 @@ void FGLTexture::Clean(bool all)
 	PatchTextureInfo::Clean(all);
 	if (all)
 	{
-		if (isHires==1)
+		if (HiresLump==-2)
 		{
 			if (hirespath) delete [] hirespath;
 			hirespath=NULL;
 		}
-		isHires=0;
+		if (HiresLump<0) HiresLump=-1;
 	}
 }
 
@@ -1135,7 +1135,8 @@ unsigned char * FGLTexture::CreateTexBuffer(int cm, int translation, const byte 
 	// by hires textures
 	if (gl_texture_usehires && scalex==1.f && scaley==1.f)
 	{
-		buffer = LoadExternalFile (&w, &h, cm<CM_FIRSTCOLORMAP? cm : CM_DEFAULT);
+		// Hires textures will not be subject to translations or Boom colormaps!
+		buffer = LoadHiresTexture (&w, &h, cm<CM_FIRSTCOLORMAP? cm : CM_DEFAULT);
 		if (buffer)
 		{
 			return buffer;
@@ -1240,8 +1241,9 @@ const WorldTextureInfo * FGLTexture::Bind(int cm)
 		}
 
 		// If this is a warped texture that needs updating
-		// delete all system textures created for this
-		if (tex->CheckModified() && !tex->bHasCanvas)
+		// delete all system textures created for this but only
+		// if it is not a hires replacement.
+		if (tex->CheckModified() && !tex->bHasCanvas && HiresLump<0 && HiresLump!=-2)
 		{
 			gltexture->Clean(true);
 		}
@@ -1300,7 +1302,7 @@ const PatchTextureInfo * FGLTexture::BindPatch(int cm, int translation, const by
 
 		// If this is a warped texture that needs updating
 		// delete all system textures created for this
-		if (tex->CheckModified() && !tex->bHasCanvas)
+		if (tex->CheckModified() && !tex->bHasCanvas && HiresLump<0 && HiresLump!=-2)
 		{
 			glpatch->Clean(true);
 		}
@@ -1327,310 +1329,6 @@ const PatchTextureInfo * FGLTexture::BindPatch(int cm, int translation, const by
 }
 
 
-//==========================================================================
-//
-// Checks for the presence of a hires texture replacement
-//
-//==========================================================================
-bool FGLTexture::CheckExternalFile()
-{
-	static const char * doom1texpath[]= {
-		"./textures/doom/doom1/%s.%s", "./textures/doom/doom1/%s-ck.%s", 
-		"./textures/doom/%s.%s", "./textures/doom/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
-	};
-
-	static const char * doom2texpath[]= {
-		"./textures/doom/doom2/%s.%s", "./textures/doom/doom2/%s-ck.%s", 
-		"./textures/doom/%s.%s", "./textures/doom/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
-	};
-
-	static const char * pluttexpath[]= {
-		"./textures/doom/plut/%s.%s", "./textures/doom/plut/%s-ck.%s", 
-		"./textures/doom/%s.%s", "./textures/doom/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
-	};
-
-	static const char * tnttexpath[]= {
-		"./textures/doom/tnt/%s.%s", "./textures/doom/tnt/%s-ck.%s", 
-		"./textures/doom/%s.%s", "./textures/doom/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
-	};
-
-	static const char * heretictexpath[]= {
-		"./textures/heretic/%s.%s", "./textures/heretic/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
-	};
-
-	static const char * hexentexpath[]= {
-		"./textures/hexen/%s.%s", "./textures/hexen/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
-	};
-
-	static const char * strifetexpath[]= {
-		"./textures/strife/%s.%s", "./textures/strife/%s-ck.%s", "./textures/%s.%s", "./textures/%s-ck.%s", NULL
-	};
-
-	static const char * doom1flatpath[]= {
-		"./flats/doom/doom1/%s.%s", "./textures/doom/doom1/flat-%s.%s", 
-		"./flats/doom/%s.%s", "./textures/doom/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
-	};
-
-	static const char * doom2flatpath[]= {
-		"./flats/doom/doom2/%s.%s", "./textures/doom/doom2/flat-%s.%s", 
-		"./flats/doom/%s.%s", "./textures/doom/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
-	};
-
-	static const char * plutflatpath[]= {
-		"./flats/doom/plut/%s.%s", "./textures/doom/plut/flat-%s.%s", 
-		"./flats/doom/%s.%s", "./textures/doom/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
-	};
-
-	static const char * tntflatpath[]= {
-		"./flats/doom/tnt/%s.%s", "./textures/doom/tnt/flat-%s.%s", 
-		"./flats/doom/%s.%s", "./textures/doom/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
-	};
-
-	static const char * hereticflatpath[]= {
-		"./flats/heretic/%s.%s", "./textures/heretic/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
-	};
-
-	static const char * hexenflatpath[]= {
-			"./flats/hexen/%s.%s", "./textures/hexen/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
-	};
-
-	static const char * strifeflatpath[]= {
-			"./flats/strife/%s.%s", "./textures/strife/flat-%s.%s", "./flats/%s.%s", "./textures/flat-%s.%s", NULL
-	};
-
-	static const char * doom1patchpath[]= {
-		"./patches/doom/doom1/%s.%s", "./patches/doom/%s.%s", "./patches/%s.%s", NULL
-	};
-
-	static const char * doom2patchpath[]= {
-		"./patches/doom/doom2/%s.%s", "./patches/doom/%s.%s", "./patches/%s.%s", NULL
-	};
-
-	static const char * plutpatchpath[]= {
-		"./patches/doom/plut/%s.%s", "./patches/doom/%s.%s", "./patches/%s.%s", NULL
-	};
-
-	static const char * tntpatchpath[]= {
-		"./patches/doom/tnt/%s.%s", "./patches/doom/%s.%s", "./patches/%s.%s", NULL
-	};
-
-	static const char * hereticpatchpath[]= {
-		"./patches/heretic/%s.%s", "./patches/%s.%s", NULL
-	};
-
-	static const char * hexenpatchpath[]= {
-		"./patches/hexen/%s.%s", "./patches/%s.%s", NULL
-	};
-
-	static const char * strifepatchpath[]= {
-		"./patches/strife/%s.%s", "./patches/%s.%s", NULL
-	};
-
-	char checkName[50];
-	const char ** checklist;
-	BYTE useType=tex->UseType;
-
-	if (useType==FTexture::TEX_SkinSprite || useType==FTexture::TEX_Decal || useType==FTexture::TEX_FontChar)
-	{
-		return false;
-	}
-
-	bool ispatch = (useType==FTexture::TEX_MiscPatch || useType==FTexture::TEX_Sprite) ;
-
-	// for patches this doesn't work yet
-	if (ispatch) return false;
-
-	switch (gameinfo.gametype)
-	{
-	case GAME_Doom:
-		switch (gamemission)
-		{
-		case doom:
-			checklist = ispatch ? doom1patchpath : useType==FTexture::TEX_Flat? doom1flatpath : doom1texpath;
-			break;
-		case doom2:
-			checklist = ispatch ? doom2patchpath : useType==FTexture::TEX_Flat? doom2flatpath : doom2texpath;
-			break;
-		case pack_tnt:
-			checklist = ispatch ? tntpatchpath : useType==FTexture::TEX_Flat? tntflatpath : tnttexpath;
-			break;
-		case pack_plut:
-			checklist = ispatch ? plutpatchpath : useType==FTexture::TEX_Flat? plutflatpath : pluttexpath;
-			break;
-		default:
-			return false;
-		}
-		break;
-
-	case GAME_Heretic:
-		checklist = ispatch ? hereticpatchpath : useType==FTexture::TEX_Flat? hereticflatpath : heretictexpath;
-		break;
-	case GAME_Hexen:
-		checklist = ispatch ? hexenpatchpath : useType==FTexture::TEX_Flat? hexenflatpath : hexentexpath;
-		break;
-	case GAME_Strife:
-		checklist = ispatch ?strifepatchpath : useType==FTexture::TEX_Flat? strifeflatpath : strifetexpath;
-		break;
-	default:
-		return false;
-	}
-
-	while (*checklist)
-	{
-		static const char * extensions[] = { "PNG", "JPG", "TGA", "PCX", NULL };
-
-		for (const char ** extp=extensions; *extp; extp++)
-		{
-			sprintf(checkName, *checklist, tex->Name, *extp);
-			if (_access(checkName, 0) == 0) 
-			{
-				hirespath=copystring(checkName);
-				return true;
-			}
-		}
-		checklist++;
-	}
-	return false;
-}
-
-
-//==========================================================================
-//
-// Loads a hires texture
-//
-//==========================================================================
-static bool ilinited=false;
-
-unsigned char *FGLTexture::LoadFile(const char *fileName, int *width, int *height, int cm)
-{
-	unsigned char *buffer = NULL;
-	byte *data;
-	ILuint imgID;
-	int imgSize;
-
-	if (!ilinited)
-	{
-		ilinited=true;
-		ilInit();
-	}
-
-	ilGenImages(1, &imgID);
-	ilBindImage(imgID);
-	ilLoad(IL_TYPE_UNKNOWN, (const ILstring)fileName);
-	ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE);
-
-	*width = ilGetInteger(IL_IMAGE_WIDTH);
-	*height = ilGetInteger(IL_IMAGE_HEIGHT);
-	imgSize = *width * *height;
-	buffer = new unsigned char[4*imgSize];
-	data = ilGetData();
-
-	// for some reason, tga's load upside down
-	if (strstr(fileName, ".TGA") != NULL) 
-	{
-		for(int i=0;i< *height/2;i++)
-		{
-			DWORD * p1 = ((DWORD*)data) + i * *width;
-			DWORD * p2 = ((DWORD*)data) + (*height-1-i) * *width;
-
-			for(int j=0;i< *width; j++)
-			{
-				DWORD v1 = *p1;
-				*p1=*p2;
-				*p2=v1;
-				p1++;
-				p2++;
-			}
-		}
-	}
-	if (strstr(fileName, "-ck."))
-	{
-		// This is a crappy Doomsday color keyed image
-		// We have to remove the key manually. :(
-		DWORD * dwdata=(DWORD*)data;
-		for(int i=0;i<imgSize;i++)
-		{
-			if (dwdata[i]==0xffffff00 || dwdata[i]==0xffff00ff) dwdata[i]=0;
-		}
-	}
-
-	// Since I have to copy the image anyway I'll do the 
-	// palette manipulation in the same step.
-	ModifyPalette((PalEntry*)buffer, (PalEntry*)data, cm, imgSize, true);
-
-	ilDeleteImages(1, &imgID);
-	return buffer;
-}
-
-
-//==========================================================================
-//
-// Checks for the presence of a hires texture replacement and loads it
-//
-//==========================================================================
-unsigned char *FGLTexture::LoadExternalFile(int *width, int *height,int cm)
-{
-	if (isHires==0)
-	{
-		isHires = CheckExternalFile()? 1:2;
-	}
-	if (hirespath != NULL)
-	{
-		unsigned char * buffer = LoadFile(hirespath, width, height, cm);
-		if (buffer) return buffer;
-
-		// don't try again
-		isHires=2;
-		delete [] hirespath;
-		hirespath=NULL;
-	}
-	return NULL;
-}
-
-//==========================================================================
-//
-// Loads a hires texture from a lump (to be moved into a subclass!)
-//
-//==========================================================================
-unsigned char * FGLTexture::LoadFromLump(const char *lumpName, int *width, int *height, int cm)
-{
-	unsigned char *buffer = NULL;
-	byte *data;
-	ILuint imgID;
-	int lumpNum, imgSize;
-	FMemLump memLump;
-
-	lumpNum=Wads.CheckNumForName (lumpName);
-	if (lumpNum == -1) return NULL;
-
-	memLump = Wads.ReadLump(lumpNum);
-
-	if (!ilinited)
-	{
-		ilinited=true;
-		ilInit();
-	}
-
-	ilGenImages(1, &imgID);
-	ilBindImage(imgID);
-	ilLoadL(IL_TYPE_UNKNOWN, memLump.GetMem(), Wads.LumpLength(lumpNum));
-
-	ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE);
-
-	*width = ilGetInteger(IL_IMAGE_WIDTH);
-	*height = ilGetInteger(IL_IMAGE_HEIGHT);
-	imgSize = *width * *height;
-	buffer = new unsigned char[imgSize*4];
-	data = ilGetData();
-
-	// Since I have to copy the image anyway I'll do the 
-	// palette manipulation in the same step.
-	ModifyPalette((PalEntry*)buffer, (PalEntry*)data, cm, imgSize, true);
-
-	ilDeleteImages(1, &imgID);
-
-	return buffer;
-}
 
 //==========================================================================
 //
@@ -1648,6 +1346,7 @@ void FGLTexture::FlushAll()
 		}
 	}
 
+	// This is the only means to properly reinitialize the status bar from Doom.
 	if (StatusBar && screen) StatusBar->NewGame();
 }
 

@@ -43,6 +43,7 @@
 #include "w_wad.h"
 #include "a_keys.h"
 #include "sbar.h"
+#include "sc_man.h"
 
 EXTERN_CVAR(Bool,am_follow)
 EXTERN_CVAR (Int, con_scaletext)
@@ -368,7 +369,13 @@ static void DrawOneKey(int xo, int & x, int & y, int & c, AInventory * inv)
 {
 	int icon=0;
 
-	if (inv->SpawnState && inv->SpawnState->sprite.index!=0)
+	if (inv->AltIcon==-1) return;
+
+	if (inv->AltIcon>0) 
+	{
+		icon = inv->AltIcon;
+	}
+	else if (inv->SpawnState && inv->SpawnState->sprite.index!=0)
 	{
 		FState * state = inv->SpawnState;
 		if (state &&  (unsigned)state->sprite.index < (unsigned)sprites.Size ())
@@ -504,12 +511,17 @@ static int DrawAmmo(player_t * CPlayer, int x, int y)
 
 	for(i=orderedammos.Size()-1;i>=0;i--)
 	{
+
 		const TypeInfo * type = orderedammos[i];
 		AAmmo * ammoitem = (AAmmo*)CPlayer->mo->FindInventory(type);
 
+		AAmmo * inv = ammoitem? ammoitem : (AAmmo*)GetDefaultByType(orderedammos[i]);
+		int icon = inv->AltIcon!=0? inv->AltIcon : inv->Icon;
+		if (icon<=0) continue;
+
 		int trans= (wi && (type==wi->AmmoType1 || type==wi->AmmoType2)) ? 0xc000:0x6000;
 
-		int maxammo = ammoitem? ammoitem->MaxAmount : ((AAmmo*)GetDefaultByType(orderedammos[i]))->MaxAmount;
+		int maxammo = inv->MaxAmount;
 		int ammo = ammoitem? ammoitem->Amount : 0;
 
 		sprintf(buf,"%3d/%3d", ammo,maxammo);
@@ -519,7 +531,7 @@ static int DrawAmmo(player_t * CPlayer, int x, int y)
 						 ammo < ( (maxammo * hud_ammo_yellow) / 100) ? CR_GOLD : CR_GREEN );
 
 		DrawHudText(fontcolor, buf, x, y+yadd, trans);
-		DrawImageToBox(TexMan[((AInventory*)GetDefaultByType(orderedammos[i]))->Icon], x-20, y, 16, 8, trans);
+		DrawImageToBox(TexMan[icon], x-20, y, 16, 8, trans);
 		y-=10;
 	}
 	return y;
@@ -549,7 +561,8 @@ static void DrawOneWeapon(player_t * CPlayer, int x, int & y, AWeapon * weapon)
 
 	FState * state;
 	
-	picnum = weapon->Icon;
+	picnum = weapon->AltIcon? weapon->AltIcon : weapon->Icon;
+
 	if (picnum == 0)
 	{
 		if (weapon->SpawnState && weapon->SpawnState->sprite.index!=0)
@@ -639,11 +652,11 @@ static void DrawInventory(player_t * CPlayer, int x,int y)
 
 		for(i=0;i<numitems && rover;rover=rover->NextInv())
 		{
-			if (rover->Amount && rover->Icon)
+			if (rover->Amount && rover->AltIcon>=0 && (rover->Icon>0 || rover->AltIcon>0) )
 			{
 				int trans = rover==CPlayer->InvSel ? FRACUNIT : 0x6666;
 
-				DrawImageToBox(TexMan[rover->Icon], x, y, 19, 25, trans);
+				DrawImageToBox(TexMan[rover->AltIcon? rover->AltIcon : rover->Icon], x, y, 19, 25, trans);
 				if (rover->Amount>1)
 				{
 					char buffer[10];
@@ -902,6 +915,47 @@ AT_GAME_SET(Hud)
 
 	KeyTypes.Clear();
 	UnassignedKeyTypes.Clear();
+
+	// Now read custom icon overrides
+	int lump, lastlump = 0;
+
+	while ((lump = Wads.FindLump ("ALTHUDCF", &lastlump)) != -1)
+	{
+		SC_OpenLumpNum(lump, "ALTHUDCF");
+		while (SC_GetString())
+		{
+			if (SC_Compare("Health"))
+			{
+				SC_MustGetString();
+				int tex = TexMan.AddPatch(sc_String);
+				if (tex<=0) tex = TexMan.AddPatch(sc_String, ns_sprites);
+				if (tex>0) healthpic = TexMan[tex];
+			}
+			else
+			{
+				const TypeInfo * ti = TypeInfo::FindType(sc_String);
+				if (!ti)
+				{
+					Printf("Unknown item class '%s' in ALTHUDCF\n", sc_String);
+				}
+				else if (!ti->IsDescendantOf(RUNTIME_CLASS(AInventory)))
+				{
+					Printf("Invalid item class '%s' in ALTHUDCF\n", sc_String);
+					ti=NULL;
+				}
+				SC_MustGetString();
+				int tex=0;
+
+				if (!SC_Compare("0") && !SC_Compare("NULL"))
+				{
+					tex = TexMan.AddPatch(sc_String);
+					if (tex<=0) tex = TexMan.AddPatch(sc_String, ns_sprites);
+				}
+				else tex=-1;
+				((AInventory*)GetDefaultByType(ti))->AltIcon = tex;
+			}
+		}
+	}
 
 	SetIcon("ArmorBonus", "BON2A0");	// Just a personal preference. ;)
 	SetIcon("Fist", "PUNGC0");			// PUNGA0 is not the best sprite for this

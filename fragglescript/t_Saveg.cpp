@@ -27,6 +27,8 @@
 
 #include "t_script.h"
 #include "farchive.h"
+#include "doomstat.h"
+#include "i_system.h"
 
 //==========================================================================
 //
@@ -310,6 +312,23 @@ void T_UnArchiveRunningScripts(FArchive & ar)
 //
 //==========================================================================
 
+void T_ArchiveSpawnedThings(FArchive & ar)
+{
+	int count = SpawnedThings.Size ();
+	ar << count;
+	if (ar.IsLoading()) SpawnedThings.Resize(count);
+	for(int i=0;i<count;i++)
+	{
+		ar << SpawnedThings[i];
+	}
+}
+
+//==========================================================================
+//
+// 
+//
+//==========================================================================
+
 void T_SerializeScripts(FArchive & ar)
 {
 	if(!HasScripts) return;
@@ -319,12 +338,18 @@ void T_SerializeScripts(FArchive & ar)
 		T_ArchiveScript(ar, &levelscript);
 		T_ArchiveScript(ar, &hub_script);
 		T_ArchiveRunningScripts(ar);
+		T_ArchiveSpawnedThings(ar);
 	}
 	else
 	{
 		T_UnArchiveScript(ar, &levelscript);
 		T_UnArchiveScript(ar, &hub_script);
 		T_UnArchiveRunningScripts(ar);
+		if (SaveVersion<303)
+		{
+			I_Error("Unable to load old savegame with FraggleScript!\n");
+		}
+		T_ArchiveSpawnedThings(ar);
 	}
 }
 

@@ -35,6 +35,7 @@
 
 #include "p_lnspec.h"
 #include "p_local.h"
+#include "a_sharedglobal.h"
 #include "gl/gl_renderstruct.h"
 #include "gl/gl_clipper.h"
 #include "gl/gl_lights.h"
@@ -71,6 +72,12 @@ static bool CheckClip(seg_t * seg, sector_t * frontsector, sector_t * backsector
 
 	// Mirrors and horizons always block the view
 	if (linedef->special==Line_Mirror || linedef->special==Line_Horizon) return true;
+
+	// Lines with stacked sectors must never block!
+	if (backsector->CeilingSkyBox && backsector->CeilingSkyBox->bAlways) return false;
+	if (backsector->FloorSkyBox && backsector->FloorSkyBox->bAlways) return false;
+	if (frontsector->CeilingSkyBox && frontsector->CeilingSkyBox->bAlways) return false;
+	if (frontsector->FloorSkyBox && frontsector->FloorSkyBox->bAlways) return false;
 
 	// on large levels this distinction can save a some of time
 	// That's a lot of avoided multiplications if there's a lot to see!
@@ -165,9 +172,6 @@ static bool CheckClip(seg_t * seg, sector_t * frontsector, sector_t * backsector
 
 static void AddLine (seg_t *seg,sector_t * sector,subsector_t * polysub)
 {
-	if (seg->linedef-lines==1480)
-		__asm nop
-
 	angle_t startAngle, endAngle;
 	sector_t * backsector = NULL;
 	sector_t bs;

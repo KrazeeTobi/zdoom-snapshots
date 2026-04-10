@@ -89,6 +89,16 @@ typedef struct
 } glseg3_t;
 
 
+typedef struct
+{
+	short 	x,y,dx,dy;	// partition line
+	short 	bbox[2][4];	// bounding box for each child
+	// If NF_SUBSECTOR is or'ed in, it's a subsector,
+	// else it's a node of another subtree.
+	unsigned int children[2];
+} gl5_mapnode_t;
+
+#define GL5_NF_SUBSECTOR (1 << 31)
 //==========================================================================
 //
 // Checks whether the nodes are suitable for GL rendering
@@ -137,8 +147,11 @@ bool gl_CheckForGLNodes()
 //
 //==========================================================================
 #define gNd2            0x32644E67
+#define gNd4            0x34644E67
+#define gNd5            0x35644E67
 #define GL_VERT_OFFSET  4
 static int firstglvertex;
+static bool format5;
 
 static bool gl_LoadVertexes(FILE * f, wadlump_t * lump)
 {
@@ -153,13 +166,22 @@ static bool gl_LoadVertexes(FILE * f, wadlump_t * lump)
 	fseek(f, lump->FilePos, SEEK_SET);
 	fread(gldata, gllen, 1, f);
 
-	if (*(int *)gldata != gNd2) 
+	if (*(int *)gldata == gNd5) 
 	{
-		// I won't bother with these. For rendering they are
-		// not precise enough so recreating the BSP seems to be a better idea.
+		format5=true;
+	}
+	else if (*(int *)gldata != gNd2) 
+	{
+		// GLNodes V1 and V4 are unsupported.
+		// V1 because the precision is insufficient and
+		// V4 due to the missing partner segs
+		Printf("GL nodes v%d found. This format is not supported by GZDoom\n",
+			(*(int *)gldata == gNd4)? 4:1);
+
 		delete [] gldata;
 		return false;
 	}
+	else format5=false;
 
 	mapglvertex_t*	mgl;
 
@@ -200,7 +222,7 @@ static inline int checkGLVertex(int num)
 
 static inline int checkGLVertex3(int num)
 {
-	if (num & 0x40000000)
+	if (num & 0xc0000000)
 		num = (num&0x3FFFFFFF)+firstglvertex;
 	return num;
 }
@@ -222,7 +244,7 @@ bool gl_LoadGLSegs(FILE * f, wadlump_t * lump)
 	fseek(f, lump->FilePos, SEEK_SET);
 	fread(data, lump->Size, 1, f);
 
-	if (memcmp(data, "gNd3", 4))
+	if (!format5 && memcmp(data, "gNd3", 4))
 	{
 		numsegs/=sizeof(glseg_t);
 		segs = new seg_t[numsegs];
@@ -266,12 +288,12 @@ bool gl_LoadGLSegs(FILE * f, wadlump_t * lump)
 	}
 	else
 	{
-		numsegs-=4;
+		if (!format5) numsegs-=4;
 		numsegs/=sizeof(glseg3_t);
 		segs = new seg_t[numsegs];
 		memset(segs,0,sizeof(seg_t)*numsegs);
 		
-		glseg3_t * ml = (glseg3_t*)(data+4);
+		glseg3_t * ml = (glseg3_t*)(data+ (format5? 0:4));
 		for(i = 0; i < numsegs; i++)
 		{							// check for gl-vertices
 			segs[i].v1 = &vertexes[checkGLVertex3(LONG(ml->v1))];
@@ -332,7 +354,7 @@ bool gl_LoadGLSubsectors(FILE * f, wadlump_t * lump)
 		return false;
 	}
 	
-	if (memcmp(datab, "gNd3", 4))
+	if (!format5 && memcmp(datab, "gNd3", 4))
 	{
 		mapsubsector_t * data = (mapsubsector_t*) datab;
 		numsubsectors /= sizeof(mapsubsector_t);
@@ -352,7 +374,7 @@ bool gl_LoadGLSubsectors(FILE * f, wadlump_t * lump)
 	}
 	else
 	{
-		gl3_mapsubsector_t * data = (gl3_mapsubsector_t*) (datab+4);
+		gl3_mapsubsector_t * data = (gl3_mapsubsector_t*) (datab+(format5? 0:4));
 		numsubsectors /= sizeof(gl3_mapsubsector_t);
 		subsectors = new subsector_t[numsubsectors];
 		memset(subsectors,0,numsubsectors * sizeof(subsector_t));
@@ -393,69 +415,129 @@ static bool gl_LoadNodes (FILE * f, wadlump_t * lump)
 	int 		i;
 	int 		j;
 	int 		k;
-	mapnode_t*	mn, * basemn;
 	node_t* 	no;
 	WORD*		used;
 
-	numnodes = lump->Size / sizeof(mapnode_t);
-
-	if (numnodes == 0)
+	if (!format5)
 	{
-		return false;
-	}
-	
-	nodes = new node_t[numnodes];		
-	fseek(f, lump->FilePos, SEEK_SET);
+		mapnode_t*	mn, * basemn;
+		numnodes = lump->Size / sizeof(mapnode_t);
 
-	basemn = mn = new mapnode_t[numnodes];
-	fread(mn, lump->Size, 1, f);
+		if (numnodes == 0) return false;
 
-	used = (WORD *)alloca (sizeof(WORD)*numnodes);
-	memset (used, 0, sizeof(WORD)*numnodes);
+		nodes = new node_t[numnodes];		
+		fseek(f, lump->FilePos, SEEK_SET);
 
-	no = nodes;
-	
-	for (i = 0; i < numnodes; i++, no++, mn++)
-	{
-		no->x = SHORT(mn->x)<<FRACBITS;
-		no->y = SHORT(mn->y)<<FRACBITS;
-		no->dx = SHORT(mn->dx)<<FRACBITS;
-		no->dy = SHORT(mn->dy)<<FRACBITS;
-		for (j = 0; j < 2; j++)
+		basemn = mn = new mapnode_t[numnodes];
+		fread(mn, lump->Size, 1, f);
+
+		used = (WORD *)alloca (sizeof(WORD)*numnodes);
+		memset (used, 0, sizeof(WORD)*numnodes);
+
+		no = nodes;
+
+		for (i = 0; i < numnodes; i++, no++, mn++)
 		{
-			WORD child = SHORT(mn->children[j]);
-			if (child & NF_SUBSECTOR)
+			no->x = SHORT(mn->x)<<FRACBITS;
+			no->y = SHORT(mn->y)<<FRACBITS;
+			no->dx = SHORT(mn->dx)<<FRACBITS;
+			no->dy = SHORT(mn->dy)<<FRACBITS;
+			for (j = 0; j < 2; j++)
 			{
-				child &= ~NF_SUBSECTOR;
-				if (child >= numsubsectors)
+				WORD child = SHORT(mn->children[j]);
+				if (child & NF_SUBSECTOR)
+				{
+					child &= ~NF_SUBSECTOR;
+					if (child >= numsubsectors)
+					{
+						delete [] basemn;
+						return false;
+					}
+					no->children[j] = (BYTE *)&subsectors[child] + 1;
+				}
+				else if (child >= numnodes)
 				{
 					delete [] basemn;
 					return false;
 				}
-				no->children[j] = (BYTE *)&subsectors[child] + 1;
-			}
-			else if (child >= numnodes)
-			{
-				delete [] basemn;
-				return false;
-			}
-			else if (used[child])
-			{
-				delete [] basemn;
-				return false;
-			}
-			else
-			{
-				no->children[j] = &nodes[child];
-				used[child] = j + 1;
-			}
-			for (k = 0; k < 4; k++)
-			{
-				no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
+				else if (used[child])
+				{
+					delete [] basemn;
+					return false;
+				}
+				else
+				{
+					no->children[j] = &nodes[child];
+					used[child] = j + 1;
+				}
+				for (k = 0; k < 4; k++)
+				{
+					no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
+				}
 			}
 		}
+		delete [] basemn;
 	}
-	delete [] basemn;
+	else
+	{
+		gl5_mapnode_t*	mn, * basemn;
+		numnodes = lump->Size / sizeof(gl5_mapnode_t);
+
+		if (numnodes == 0) return false;
+
+		nodes = new node_t[numnodes];		
+		fseek(f, lump->FilePos, SEEK_SET);
+
+		basemn = mn = new gl5_mapnode_t[numnodes];
+		fread(mn, lump->Size, 1, f);
+
+		used = (WORD *)alloca (sizeof(WORD)*numnodes);
+		memset (used, 0, sizeof(WORD)*numnodes);
+
+		no = nodes;
+
+		for (i = 0; i < numnodes; i++, no++, mn++)
+		{
+			no->x = SHORT(mn->x)<<FRACBITS;
+			no->y = SHORT(mn->y)<<FRACBITS;
+			no->dx = SHORT(mn->dx)<<FRACBITS;
+			no->dy = SHORT(mn->dy)<<FRACBITS;
+			for (j = 0; j < 2; j++)
+			{
+				SDWORD child = LONG(mn->children[j]);
+				if (child & GL5_NF_SUBSECTOR)
+				{
+					child &= ~GL5_NF_SUBSECTOR;
+					if (child >= numsubsectors)
+					{
+						delete [] basemn;
+						return false;
+					}
+					no->children[j] = (BYTE *)&subsectors[child] + 1;
+				}
+				else if (child >= numnodes)
+				{
+					delete [] basemn;
+					return false;
+				}
+				else if (used[child])
+				{
+					delete [] basemn;
+					return false;
+				}
+				else
+				{
+					no->children[j] = &nodes[child];
+					used[child] = j + 1;
+				}
+				for (k = 0; k < 4; k++)
+				{
+					no->bbox[j][k] = SHORT(mn->bbox[j][k])<<FRACBITS;
+				}
+			}
+		}
+		delete [] basemn;
+	}
 	return true;
 }
 

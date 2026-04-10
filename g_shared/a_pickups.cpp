@@ -703,7 +703,7 @@ void AInventory::BecomePickup ()
 	}
 	flags = GetDefault()->flags | MF_DROPPED;
 	renderflags &= ~RF_INVISIBLE;
-	SetState (SpawnState);
+	SetStateNF (SpawnState);
 }
 
 //===========================================================================

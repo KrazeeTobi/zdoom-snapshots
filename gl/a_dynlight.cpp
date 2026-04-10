@@ -452,7 +452,7 @@ void ADynamicLight::Tick()
 		break;
 	}
 
-	case RandomFlickerLight:
+	case FlickerLight:
 	{
 		byte rnd = randLight();
 		float pct = this->angle * 1.f / ANGLE_MAX;
@@ -468,7 +468,7 @@ void ADynamicLight::Tick()
 		break;
 	}
 
-	case FlickerLight:
+	case RandomFlickerLight:
 	{
 		byte flickerRange = args[LIGHT_SECONDARY_INTENSITY] - args[LIGHT_INTENSITY];
 		float amt = randLight() / 255.f;
@@ -535,7 +535,7 @@ void ADynamicLight::UpdateLocation()
 		// The radius being used here is always the maximum possible with the
 		// current settings. This avoids constant relinking of flickering lights
 
-		if (lighttype == FlickerLight) 
+		if (lighttype == FlickerLight || lighttype == RandomFlickerLight) 
 		{
 			intensity = args[LIGHT_SECONDARY_INTENSITY];
 		}

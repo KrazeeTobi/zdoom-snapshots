@@ -108,7 +108,8 @@ void GLWall::SkyTexture(int sky1,ASkyViewpoint * skyboxx, bool ceiling)
 				skyinfo.doublesky = true;
 			}
 			
-			if (level.flags&LEVEL_SWAPSKIES || (sky1==PL_SKYFLAT && !gl_nostencil) || (level.flags&LEVEL_DOUBLESKY))
+			if ((level.flags&LEVEL_SWAPSKIES || (sky1==PL_SKYFLAT && !gl_nostencil) || (level.flags&LEVEL_DOUBLESKY)) &&
+				sky2texture!=sky1texture)	// If both skies are equal use the scroll offset of the first!
 			{
 				skyinfo.texture[0]=FGLTexture::ValidateTexture(sky2texture);
 				skyinfo.skytexno1=sky2texture;
@@ -225,14 +226,22 @@ void GLWall::SkyBottom(seg_t * seg,sector_t * fs,sector_t * bs,vertex_t * v1,ver
 		FTexture * tex = TexMan(seg->sidedef->bottomtexture);
 		
 		// For lower skies the normal logic only applies to walls with no lower texture!
-		if (bs->floorpic==skyflatnum && tex->UseType==FTexture::TEX_Null)
+		if (tex->UseType==FTexture::TEX_Null)
 		{
-			// if the back sector is closed the sky must be drawn!
-			if (bs->ceilingplane.ZatPoint(v1) > bs->floorplane.ZatPoint(v1) ||
-				bs->ceilingplane.ZatPoint(v2) > bs->floorplane.ZatPoint(v2))
-					return;
-		}
+			if (bs->floorpic==skyflatnum)
+			{
+				// if the back sector is closed the sky must be drawn!
+				if (bs->ceilingplane.ZatPoint(v1) > bs->floorplane.ZatPoint(v1) ||
+					bs->ceilingplane.ZatPoint(v2) > bs->floorplane.ZatPoint(v2))
+						return;
 
+			}
+			else
+			{
+				// Special hack for Vrack2b
+				if (bs->floorplane.ZatPoint(viewx, viewy) > viewz) return;
+			}
+		}
 		ybottom[0]=ybottom[1]=-10000.0f;
 
 		if (tex && tex->UseType!=FTexture::TEX_Null)

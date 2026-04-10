@@ -92,6 +92,12 @@ void GLFlat::DrawSubsectorLights(gl_subsectordata * glsub)
 	while (node)
 	{
 		ADynamicLight * light = node->lightsource;
+		
+		if (light->flags2&MF2_DORMANT)
+		{
+			node=node->nextLight;
+			continue;
+		}
 
 		// we must do the side check here because gl_SetupLight needs the correct plane orientation
 		// which we don't have for Legacy-style 3D-floors
@@ -432,7 +438,7 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 		gl_ss_renderflags[sub-subsectors]|=SSRF_RENDERFLOOR;
 
 		// process the original floor first.
-		// If we later find out that this subsector doesn't require it just delete the flag from the subsector.
+		if (frontsector->FloorSkyBox && frontsector->FloorSkyBox->bAlways) AddFloorStack(sub);
 
 		if (!(glsec->renderflags&SSRF_RENDERFLOOR))
 		{
@@ -445,7 +451,6 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 
 			ceiling=false;
 			renderflags=SSRF_RENDERFLOOR;
-			loopindex=-1;
 
 			if (sector->e->ffloors.Size())
 			{
@@ -455,7 +460,7 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 
 				Colormap.LightColor = (*light->p_extra_colormap)->Color;
 			}
-			Process(frontsector, false, false);
+			if (alpha!=0.0f) Process(frontsector, false, false);
 		}
 	}
 	
@@ -471,7 +476,7 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 		gl_ss_renderflags[sub-subsectors]|=SSRF_RENDERCEILING;
 
 		// process the original ceiling first.
-		// If we later find out that this loop doesn't require it just delete the flag from the loop.
+		if (frontsector->CeilingSkyBox && frontsector->CeilingSkyBox->bAlways) AddCeilingStack(sub);
 
 		if (!(glsec->renderflags&SSRF_RENDERCEILING))
 		{
@@ -484,7 +489,6 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 
 			ceiling=true;
 			renderflags=SSRF_RENDERCEILING;
-			loopindex=-1;
 
 			if (sector->e->ffloors.Size())
 			{
@@ -515,8 +519,6 @@ void GLFlat::ProcessSector(sector_t * frontsector, subsector_t * sub)
 		if (!(glsec->renderflags&SSRF_RENDER3DPLANES))
 		{
 			glsec->renderflags |= SSRF_RENDER3DPLANES;
-			loopindex=-1;
-
 			// 3d-floors must not overlap!
 			fixed_t lastceilingheight=sector->CenterCeiling();	// render only in the range of the
 			fixed_t lastfloorheight=sector->CenterFloor();		// current sector part (if applicable)

@@ -299,6 +299,7 @@ IMPLEMENT_ACTOR (AAcolyteToBe, Strife, 201, 0)
 	PROP_SpawnState (S_BECOMING_STND)
 	PROP_PainState (S_BECOMING_PAIN)
 	PROP_DeathState (S_BECOMING_DIEJUMP)
+	PROP_FlagsClear (MF_COUNTKILL)
 
 	PROP_SpawnHealth (61)
 	PROP_PainChance (255)

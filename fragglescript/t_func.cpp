@@ -1600,6 +1600,9 @@ public:
 	{
 		bool res = DMover::crushed != MoveFloor(speed, dest, crush, direction);
 		Destroy();
+		m_Sector->floordata=NULL;
+		m_Sector=NULL;
+		stopinterpolation (INTERP_SectorFloor, m_Sector);
 		return res;
 	}
 };
@@ -1738,6 +1741,9 @@ public:
 	{
 		bool res = DMover::crushed != MoveCeiling(speed, dest, crush, direction);
 		Destroy();
+		m_Sector->ceilingdata=NULL;
+		stopinterpolation (INTERP_SectorCeiling, m_Sector);
+		m_Sector=NULL;
 		return res;
 	}
 };

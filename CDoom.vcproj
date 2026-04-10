@@ -5460,6 +5460,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\gl\gl_hirestex.cpp">
+			</File>
+			<File
 				RelativePath="gl\gl_Light.cpp">
 				<FileConfiguration
 					Name="Optimized Debug|Win32">

@@ -308,6 +308,35 @@ void get_tokens(char *s)
 
 void print_tokens()	// DEBUG
 {
+	int i;
+	for (i = 0; i < num_tokens; i++)
+	{
+		Printf("\n'%s' \t\t --", tokens[i]);
+		switch (tokentype[i])
+		{
+		case string:
+			Printf("string");
+			break;
+		case operator_:
+			Printf("operator");
+			break;
+		case name_:
+			Printf("name");
+			break;
+		case number:
+			Printf("number");
+			break;
+		case unset:
+			Printf("duh");
+			break;
+		case function:
+			Printf("function name");
+			break;
+		}
+	}
+	Printf("\n");
+	if (current_section)
+		Printf("current section: offset %i\n", (int) (current_section->start - current_script->data));
 }
 
 
