@@ -13,5 +13,4 @@ ZDoom-snapshots is a repository that aims to replicate in-dev builds of ZDoom fr
 
 ## Useful resources
 ・[ZDoom source backups](https://github.com/KrazeeTobi/zdoom-snapshots/tree/zdoom-trunk)<br>
-・[GZDoom source backups](https://github.com/KrazeeTobi/zdoom-snapshots/tree/gzdoom-trunk)<br>
-・[pineapples](http://famitsu.krazeetobi.org:1986/pineapples.txt)
+・[GZDoom source backups](https://github.com/KrazeeTobi/zdoom-snapshots/tree/gzdoom-trunk)
